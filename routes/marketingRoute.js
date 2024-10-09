@@ -1,0 +1,63 @@
+const express = require("express");
+const authServices = require("../services/authServices");
+const {
+  calculateProfitsManual,
+  startMarketing,
+  getMarketLog,
+  getMarketerChildren,
+  createInvoice,
+} = require("../services/marketingService");
+
+const {
+  checkAuthority,
+  createInvoiceValidator,
+} = require("../utils/validators/marketingValidator");
+
+const router = express.Router();
+
+router.use(authServices.protect);
+
+router.get(
+  "/getMarketLog/:id",
+  authServices.protect,
+  authServices.allowedTo("user", "admin"),
+  checkAuthority,
+  getMarketLog
+);
+router.get(
+  "/getMyMarketLog",
+  authServices.protect,
+  authServices.allowedTo("user", "admin"),
+  getMarketLog
+);
+//check if req is the owner or admin
+router.get(
+  "/getMarketerChildren/:id", //id is the marketer id
+  authServices.protect,
+  authServices.allowedTo("user", "admin"),
+  getMarketerChildren
+);
+
+router.put(
+  "/calculateProfitsManual",
+  authServices.protect,
+  authServices.allowedTo("user", "admin"),
+  calculateProfitsManual
+);
+router.put(
+  "/createInvoice/:id", //user id
+  authServices.protect,
+  authServices.allowedTo("user", "admin"),
+  checkAuthority,
+  createInvoiceValidator,
+  createInvoice
+);
+
+router.put(
+  "/startMarketing",
+  authServices.protect,
+  authServices.allowedTo("user", "admin"),
+  startMarketing
+);
+
+module.exports = router;

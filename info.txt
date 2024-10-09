@@ -1,0 +1,90 @@
+// check in submut answer that all questiuon are sending in response
+
+
+// the user cannot update his profile before he buy any thing
+
+//اليوزر يمتحن placement مره واحده فقط
+
+// عرض احصائيات اليوزر للمسوق اللي جايبو
+
+
+
+
+// عند شراء كورس لا يمكن شراءه الا بعد شراء الكورسات القبيليه له يعرض له ما هيا الكورسات التي يجب شراءها اولا
+
+
+// validate on create course package that all courses in array is exist and complete all validation of the system
+
+// important thing ##########$      handle when the user subscription is Done to tell user that user is need to renew that package 
+
+
+
+//chat subscription related with package
+
+
+
+
+
+
+
+
+//TODO 5/5
+    -middleware on delete marketrequest   check if user is the owner || admin
+    -validation on inputs
+    -routes of market general => done
+
+
+//TODO 
+1-make routes 
+    -file => done 
+    -add to index file =>done
+    -validate authority    
+
+27/6 june 
+TODO   
+    1-make route for distribute profits function  done
+    2-test function on test data base  done 
+    3-upload to host + make all order.calulated => false
+
+
+plan in instructor_profits 
+
+1-make different collection for instructor profits => done 
+2-assign 15% of profits to each sale one course => done  
+3-make new role in marletLog --> instructor => done
+4-in -> make percentage for each course 
+	-make a him a document in InstructorProfits automatically 
+5- start marketing ? -> if user.role==instructor ? role -> instructor 
+
+
+note :
+what is the point of makeing new role (instructor) , in marketLogs docs ??
+1-cause in his marketPage , if he is instructor ? get his doc in InstructorProfits
+2-in create Invoice if he is instructor ? het his doc in Instructor profis => ask dawood in this point    
+
+admin {65edd0c1024a12daed11854e,admin}
+    : {6621f8267d8a764871f78da1 , m1@gmail}
+        :{6621f8467d8a764871f78da5,m2@gmail}
+            :{6621f9985834a7385bbf4791:m3@gmail}
+
+
+TODO (Gomaa) 16/8/2024
+1-send key in 'purchaseForUser' Request to decide whether he paid or not 
+    - no keys is added in models , just the students who paid will be made order for them 
+        1 -i checked for isPaid key , if true => function work as expected , else 
+        i make order but , paymentMethodType is null and paidAt is null
+        2-i made orderValidator and made purchaseForUserValidator
+        3- need to test => done
+
+2-filter in TrainingService => not working well 
+    -people who passed exam come in response
+3-also get firt level for marketer  in TrainingService is alrady made   'done' 
+
+testing
+
+
+
+4-make community => students to post posts and other students in their courses    
+
+!!!
+5- get all invoices <==
