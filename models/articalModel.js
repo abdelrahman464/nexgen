@@ -1,22 +1,22 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const ArticalSchema = new mongoose.Schema(
   {
     title: {
       type: String,
-      required: [true, "Artical title required"],
+      required: [true, 'Article title required'],
       trim: true,
       minlength: 2,
     },
     description: {
       type: String,
-      required: [true, "Artical description required"],
+      required: [true, 'Article description required'],
       trim: true,
       minlength: 10,
     },
     content: {
       type: String,
-      required: [true, "Artical content required"],
+      required: [true, 'Article content required'],
     },
     date: {
       type: Date,
@@ -28,12 +28,20 @@ const ArticalSchema = new mongoose.Schema(
       required: true,
     },
     images: [String],
+    author: {
+      type: String,
+      required: true,
+    },
+    readTime: {
+      type: String,
+      required: true,
+    },
   },
   {
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-  }
+  },
 );
 
 const setImageURL = (doc) => {
@@ -43,11 +51,11 @@ const setImageURL = (doc) => {
   }
 };
 
-ArticalSchema.post("init", (doc) => {
+ArticalSchema.post('init', (doc) => {
   setImageURL(doc);
 });
-ArticalSchema.post("save", (doc) => {
+ArticalSchema.post('save', (doc) => {
   setImageURL(doc);
 });
 
-module.exports = mongoose.model("Artical", ArticalSchema);
+module.exports = mongoose.model('Artical', ArticalSchema);

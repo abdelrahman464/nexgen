@@ -66,22 +66,28 @@ exports.processQuestionImages = asyncHandler(async (req, res, next) => {
 
   next();
 });
-//filters --------------------------------------------------------------
-exports.createFilterObjCourseExam = async (req, res, next) => {
-  const filterObject = { course: req.params.courseId, type: 'course' };
+// Middleware to check if the user has access to the exam----------------
+exports.createFilterObj = (examType) => async (req, res, next) => {
+  let filterObject = {};
+
+  switch (examType) {
+    case 'course':
+      filterObject = { course: req.params.courseId, type: 'course' };
+      break;
+    case 'lesson':
+      filterObject = { lesson: req.params.lessonId, type: 'lesson' };
+      break;
+    case 'placement':
+      filterObject = { course: req.params.courseId, type: 'placement' };
+      break;
+    default:
+      return next(new ApiError('Invalid exam type', 400));
+  }
+
   req.filterObj = filterObject;
   next();
 };
-exports.createFilterObjLessonExam = async (req, res, next) => {
-  const filterObject = { lesson: req.params.lessonId, type: 'lesson' };
-  req.filterObj = filterObject;
-  next();
-};
-exports.createFilterObjPlacementExam = async (req, res, next) => {
-  const filterObject = { course: req.params.courseId, type: 'placement' };
-  req.filterObj = filterObject;
-  next();
-};
+
 exports.sendLoggedUserIdToParams = async (req, res, next) => {
   req.params.userId = req.user._id;
   next();
@@ -230,600 +236,124 @@ exports.removeQuestionsFromExam = asyncHandler(async (req, res, next) => {
     data: exam.questions,
   });
 });
-//
 
-function calculateScore(questions, answers) {
-  let score = 0;
-  const wrongAnswers = [];
-  questions.forEach((question) => {
-    const answerObj = answers.find(
-      (ans) => ans.questionId.toString() === question._id.toString(),
-    );
-    if (answerObj && answerObj.answer === question.correctOption) {
-      score += question.grade; // Add the question's grade to the score if the answer is correct
-    } else if (answerObj && answerObj.answer) {
-      wrongAnswers.push({
-        question: question._id,
-        answer: answerObj.answer,
-      });
-    }
-  });
-  return { score: score, wrongAnswers: wrongAnswers };
-}
-
-exports.lessonExam = async (req, res, next) => {
-  const { id } = req.params; // 'id' is the lesson ID
-  const { courseProgress, lesson } = req;
-
-  // Error handling for missing data
-  if (!lesson || !courseProgress) {
-    return next(new ApiError('Missing required data.', 400));
-  }
-
-  // Check if the progress array is empty or if the lesson can be taken based on order and last status
-  const lastProgress =
-    courseProgress.progress[courseProgress.progress.length - 1];
-
-  if (courseProgress.progress.length > 0) {
-    if (
-      lastProgress.lesson._id.toString() === lesson._id.toString() &&
-      lastProgress.status === 'Completed'
-    ) {
-      // User has already completed this lesson successfully
-      return next(new ApiError('You have already completed this lesson', 401));
-    }
-
-    if (
-      !(
-        lesson.order === lastProgress.lesson.order + 1 ||
-        (lesson.order === lastProgress.lesson.order &&
-          lastProgress.status === 'failed')
-      )
-    ) {
-      // Lesson order is not sequential or not a retake after failure
-      return next(
-        new ApiError(
-          'Cannot take this lesson exam out of order or without failing the previous attempt',
-          401,
-        ),
-      );
-    }
-  }
-
-  let examModel = 'A'; // Default exam model
-
-  if (
-    lastProgress &&
-    lesson.order === lastProgress.lesson.order &&
-    lastProgress.status === 'failed'
-  ) {
-    // Check if Model B exists
-    const modelBExists = await Exam.exists({ lesson: id, model: 'B' });
-
-    if (!modelBExists) {
-      // Assign Model A if Model B exists
-      examModel = 'A';
-    } else {
-      // Switch exam model for retake
-      examModel = lastProgress.modelExam === 'A' ? 'B' : 'A';
-    }
-  }
-  // Fetch the appropriate exam based on the logic above
-  const exam = await Exam.findOne({ lesson: id, model: examModel });
-
-  // Error handling for no exam found
-  if (!exam) {
-    return next(new ApiError('No exam found for this lesson', 404));
-  }
-
-  // Exclude the correctOption from each question
-  const modifiedExam = exam.toObject(); // Convert the Mongoose document to a plain JavaScript object
-  modifiedExam.questions.forEach((question) => {
-    delete question.correctOption; // Remove the correctOption from each question
-  });
-
-  return res.status(200).json({ status: 'success', exam: modifiedExam });
-};
-//---------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------
-exports.CourseExam = asyncHandler(async (req, res, next) => {
-  const { id } = req.params; // Course ID
-
-  // Fetch all lesson IDs for the course
-  const lessonIds = await Lesson.find({ course: id }).select('_id');
-
-  // Fetch the user's course progress
-  const examResult = await CourseProgress.findOne({
-    user: req.user._id,
-    course: id,
-  });
-
-  if (!examResult) {
-    return next(
-      new ApiError('You must start the course before taking the exam', 401),
-    );
-  }
-
-  if (examResult.status === 'Completed') {
-    return next(new ApiError('You have already completed this course', 401));
-  }
-
-  // Check if each lesson has a corresponding "Completed" entry in the progress array
-  const hasCompletedAllLessons = lessonIds.every((lesson) =>
-    examResult.progress.some(
-      (p) =>
-        p.lesson._id.toString() === lesson._id.toString() &&
-        p.status === 'Completed',
-    ),
-  );
-
-  if (!hasCompletedAllLessons) {
-    return next(
-      new ApiError(
-        'You must complete all lesson exams before taking the course exam',
-        401,
-      ),
-    );
-  }
-
-  // Proceed to find the exam (handle retakes or initial takes as before)
-  let exam;
-  if (examResult.status === 'failed') {
-    // Determine model for retake (if model B is available)
-    if (examResult.modelExam === 'B') {
-      exam = await Exam.findOne({ course: id, model: 'B' });
-    }
-    // If model B is not available or not specified, fallback to model A
-    if (!exam) {
-      exam = await Exam.findOne({ course: id, model: 'A' });
-    }
-  } else {
-    exam = await Exam.findOne({ course: id, model: 'A' });
-  }
-
-  if (!exam) {
-    return next(new ApiError('No exam found for this course', 404));
-  }
-
-  // Exclude the correctOption from each question
-  const modifiedExam = exam.toObject(); // Convert the Mongoose document to a plain JavaScript object
-  modifiedExam.questions.forEach((question) => {
-    delete question.correctOption; // Remove the correctOption from each question
-  });
-  return res.status(200).json({ status: 'success', exam: modifiedExam });
-});
-
-exports.placmentExam = async (req, res, next) => {
-  const courseId = req.params.id;
-  const { user } = req;
-  //check if theres is exam for this course
-  const examExist = await Exam.findOne({
-    course: courseId,
-    type: 'placement',
-  });
-  if (!examExist) {
-    return next(
-      new ApiError('There is no placement exam for this course', 404),
-    );
-  }
-
-  // Check user's exam status and determine the appropriate exam model
-  let modelExam;
-  if (user.placmentExam && user.placmentExam.status === 'Completed') {
-    return next(new ApiError('You have already taken placement exam', 401));
-  }
-  if (
-    user.placmentExam &&
-    user.placmentExam.status === 'failed' &&
-    user.placmentExam.course.toString() === courseId
-  ) {
-    const theLastExam = await Exam.findOne({
-      course: user.placmentExam.course,
-      type: 'placement',
-    });
-    modelExam = theLastExam.model === 'A' ? 'B' : 'A';
-  } else {
-    modelExam = 'A'; // Default model
-  }
-
-  // Get the exam based on the determined model
-  const finalExam = await Exam.findOne({
-    course: courseId,
-    model: modelExam,
-    type: 'placement',
-  });
-
-  if (!finalExam) {
-    return next(new ApiError('No exam found for this course', 404));
-  }
-  // Exclude the correctOption from each question
-  const modifiedExam = finalExam.toObject(); // Convert the Mongoose document to a plain JavaScript object
-  modifiedExam.questions.forEach((question) => {
-    delete question.correctOption; // Remove the correctOption from each question
-  });
-  return res.status(200).json({ status: 'success', exam: modifiedExam });
-};
-
-exports.submitCoursePlacmentAnswers = async (req, res, next) => {
-  const { id } = req.params;
-  const { answers } = req.body;
-  const { user } = req;
-  const exam = await Exam.findById(id);
-  if (!exam) {
-    return next(new ApiError('Exam not found', 404));
-  }
-
-  if (
-    user.placmentExam.status === 'failed' &&
-    exam.model === user.placmentExam.modelExam
-  ) {
-    return next(new ApiError('You have already failed this exam.', 400));
-  }
-
-  // Calculate the score
-  const examResult = calculateScore(exam.questions, answers);
-
-  const totalPossibleScore = exam.questions.reduce(
-    (total, question) => total + question.grade,
-    0,
-  );
-
-  // Convert the obtained score to a percentage
-  const scorePercentage = (examResult.score / totalPossibleScore) * 100;
-
-  // Check if the user has passed the exam
-  const passed = scorePercentage >= exam.passingScore;
-  const userEsss = await User.findOneAndUpdate(
-    { _id: req.user._id },
-    {
-      $set: {
-        placmentExam: {
-          exam: exam._id,
-          score: examResult.score,
-          status: passed ? 'Completed' : 'failed',
-          course: exam.course,
-          attemptDate: Date.now(),
-          wrongAnswers: examResult.wrongAnswers,
-        },
-      },
-    },
-    { new: true },
-  );
-  //return response
-  if (!passed) {
-    return res.status(200).json({
-      status: 'failed',
-      score: examResult.score,
-      passed: passed,
-      message: 'unfortunately you failed in placment exam',
-    });
-  }
-
-  return res.status(200).json({
-    status: `${passed ? 'Congrats' : 'unfortunately'} you got ${
-      examResult.score
-    } out of ${totalPossibleScore},
-      ${
-        passed ? 'You have passed the exam.' : 'You have not passed the exam.'
-      }`,
-  });
-};
-//--------------------------------------------------------------------------
-exports.submitLessonAnswers = async (req, res, next) => {
-  const { id } = req.params; // Exam ID
-  const { answers } = req.body; // User's answers
-
-  // Fetch the exam by its ID
-  const exam = await Exam.findOne({ _id: id, type: 'lesson' });
-  if (!exam) {
-    return next(new ApiError('Exam not found', 404));
-  }
-
-  const lesson = await Lesson.findById(exam.lesson);
-  if (!lesson) {
-    return next(new ApiError('Lesson not found', 404));
-  }
-  //#######################################################################
-  // Check if the user has already successfully completed the exam for this lesson
-  //get user progress on the lesson course
-  const existingProgress = await CourseProgress.findOne({
-    user: req.user._id,
-    course: lesson.course,
-  });
-
-  // extract the object of that lesson
-  if (existingProgress) {
-    const lessonProgresses = existingProgress.progress.filter(
-      (p) => p.lesson._id.toString() === exam.lesson.toString(),
-    );
-    if (lessonProgresses.length > 0) {
-      const lastProgress = lessonProgresses[lessonProgresses.length - 1];
-      if (lastProgress.status === 'Completed') {
-        return next(new ApiError('You have already passed this exam.', 400));
-      }
-      //####################################################################### UNDER TESTING $#$##$#$
-      // if (
-      //   lastProgress.status === "failed" &&
-      //   exam.model === lastProgress.modelExam
-      // ) {
-      //   return next(new Error("You have already failed this exam."));
-      // }
-    }
-  }
-  //#######################################################################
-  // Calculate the score
-  const examResult = calculateScore(exam.questions, answers);
-  // Calculate the total possible score
-  const totalPossibleScore = exam.questions.reduce(
-    (total, question) => total + question.grade,
-    0,
-  );
-
-  // Convert the obtained score to a percentage
-  const scorePercentage = (examResult.score / totalPossibleScore) * 100;
-
-  // Check if the user has passed the exam
-  const passed = scorePercentage >= exam.passingScore;
-  console.log(examResult.wrongAnswers);
-  // Update the course progress
-  await CourseProgress.findOneAndUpdate(
-    {
-      user: req.user._id,
-      course: lesson.course,
-    },
-    {
-      $push: {
-        progress: {
-          lesson: exam.lesson,
-          modelExam: exam.model,
-          status: passed ? 'Completed' : 'failed',
-          examScore: scorePercentage,
-          attemptDate: new Date(),
-          wrongAnswers: examResult.wrongAnswers,
-        },
-      },
-    },
-    { new: true, upsert: false },
-  );
-
-  return res.status(200).json({
-    status: `${passed ? 'Congrats' : 'unfortunately'} you got ${
-      examResult.score
-    } out of ${totalPossibleScore}, ${
-      passed ? 'You have passed the exam.' : 'You have not passed the exam.'
-    }`,
-  });
-};
-
-//--------------------------------------------------------------------------
-
-exports.submitCourseAnswers = asyncHandler(async (req, res, next) => {
+//@desc Get user scores in a course
+//@route GET /api/v1/exams/userScore/:courseId/:userId
+// @access Private
+exports.userScores = async (req, res, next) => {
   try {
-    const { id } = req.params; // exam ID
-    const { answers } = req.body;
-    const adminId = mongoose.Types.ObjectId('66447ad7a7957a07c0ae9e69');
+    const { courseId, userId } = req.params;
 
-    const exam = await Exam.findById(id);
-    if (!exam) {
-      return next(new ApiError('Exam not found', 404));
+    if (!userId) {
+      return next(new ApiError('User not found', 404));
     }
 
-    const course = await Course.findById(exam.course);
-    if (!course) {
-      return next(new ApiError('Course not found', 404));
+    // Fetch the user's course progress
+    const courseProgress = await CourseProgress.findOne({
+      user: userId,
+      course: courseId,
+    }).populate('progress.lesson', 'title order');
+
+    if (!courseProgress) {
+      return next(new ApiError('No course progress found for this user.', 404));
     }
 
-    // Check if the user has already successfully completed the exam
-    let existingProgress = await CourseProgress.findOne({
-      user: req.user._id,
-      course: exam.course,
-    });
-
-    if (existingProgress && existingProgress.status === 'Completed') {
-      return next(new ApiError('You have already passed this exam.', 400));
-    }
-
-    // Calculate the score
-    const examResult = calculateScore(exam.questions, answers);
-    const totalPossibleScore = exam.questions.reduce(
-      (total, question) => total + question.grade,
-      0,
+    // Fetch all lessons associated with the course
+    const allLessons = await Lesson.find(
+      { course: courseId },
+      '_id title order',
     );
 
-    // Convert the obtained score to a percentage
-    const scorePercentage = (examResult.score / totalPossibleScore) * 100;
+    // Filter completed lessons and calculate total exam score
+    const completedLessons = courseProgress.progress.filter(
+      (item) => item.status === 'Completed',
+    );
+    const completedLessonsCount = completedLessons.length;
 
-    // Determine if the user passed
-    const passed = scorePercentage >= exam.passingScore;
-
-    const updateData = {
-      modelExam: exam.model,
-      status: passed ? 'Completed' : 'failed',
-      score: scorePercentage.toFixed(2),
-      attemptDate: Date.now(),
-      wrongAnswers: examResult.wrongAnswers,
-    };
-
-    // If course progress exists, update it; if not, create a new record
-    if (existingProgress) {
-      existingProgress = await CourseProgress.findOneAndUpdate(
-        { user: req.user._id, course: exam.course },
-        { $set: updateData },
-        { new: true, upsert: true },
-      );
-    } else {
-      updateData.user = req.user._id;
-      updateData.course = exam.course;
-      existingProgress = await CourseProgress.create(updateData);
-    }
-
-    // Calculate the user's overall course performance
-    const totalExamScore = existingProgress.progress.reduce(
-      (total, progress) => total + progress.examScore,
+    // Calculate total exam score and number of exams attempted
+    const totalExamScore = completedLessons.reduce(
+      (total, item) => total + item.examScore,
       0,
     );
-    const numberOfLessons = existingProgress.progress.length;
-    const totalPossibleCourseScore = numberOfLessons * 100; // Assuming each lesson's exam score is out of 100
-    const courseAvgScore =
-      (totalExamScore / totalPossibleCourseScore) * 100 || 0;
+    const examsAttemptedCount = completedLessonsCount; // Since only completed lessons are attempted
 
-    // Check if the user deserves a certificate
-    if (courseAvgScore >= 90 && passed === true) {
-      await CourseProgress.findOneAndUpdate(
-        { user: req.user._id, course: exam.course },
-        { $set: { 'certificate.isdeserve': true } },
-      );
+    // Track attempted lesson IDs
+    const attemptedLessonIds = new Set(
+      completedLessons.map((item) => item.lesson._id.toString()),
+    );
 
-      // Send a notification to the user
-      await Notification.create({
-        user: req.user._id,
-        message: `You have earned a certificate for the course ${course.title}. Please wait for the admin to issue it.`,
-      });
+    // Calculate the number of lessons not attempted
+    const notAttemptedLessonsCount = allLessons.filter(
+      (lesson) => !attemptedLessonIds.has(lesson._id.toString()),
+    ).length;
 
-      // Send a notification to the admin
-      await Notification.create({
-        user: adminId,
-        message: `User ${req.user.email} has earned a certificate for the course ${course.title}.`,
-      });
-    }
+    const totalLessons = allLessons.length;
 
-    // Respond to the user
-    return res.status(200).json({
-      status: passed ? 'Congrats' : 'unfortunately',
-      message: `${
-        passed ? 'You have passed the exam.' : 'You have not passed the exam.'
-      } You scored ${examResult.score} out of ${totalPossibleScore}.`,
+    // Calculate the total possible course score (assuming each lesson's score is out of 100)
+    const totalPossibleCourseScore = totalLessons * 100;
+
+    // Calculate the average grade percentage for completed lessons
+    const averageLessonScore =
+      examsAttemptedCount > 0
+        ? (totalExamScore / examsAttemptedCount).toFixed(2)
+        : 0;
+    const averageGradePercentage =
+      ((totalExamScore / totalPossibleCourseScore) * 100).toFixed(2) || 0;
+
+    // Calculate the percentages of exams completed and not attempted
+    const examsCompletedPercentage = (
+      (completedLessonsCount / totalLessons) *
+      100
+    ).toFixed(2);
+    const examsNotAttemptedPercentage = (
+      (notAttemptedLessonsCount / totalLessons) *
+      100
+    ).toFixed(2);
+
+    // Final exam score and percentage (adjust based on your data structure)
+    const finalExamScore = courseProgress.score || 0;
+    const finalExamCompletionPercentage = finalExamScore > 0 ? 100 : 0;
+
+    // Calculate the total progress with weighted averages (lesson exams 80%, final exam 20%)
+    const lessonExamsWeight = 0.8;
+    const finalExamWeight = 0.2;
+    const totalProgress = (
+      examsCompletedPercentage * lessonExamsWeight +
+      finalExamCompletionPercentage * finalExamWeight
+    ).toFixed(2);
+
+    // Determine the completion status of the course
+    const completionStatus =
+      completedLessonsCount === totalLessons &&
+      finalExamCompletionPercentage === 100
+        ? 'Course completed'
+        : 'Course in progress';
+
+    // Return the calculated statistics
+    res.status(200).json({
+      status: 'success',
+      data: {
+        //These stats give insights into how well the user performed in the completed lessons.
+        averageGradePercentage,
+        averageLessonScore,
+        totalProgress,
+        finalExamCompletionPercentage,
+        //These percentages show how many exams the user has completed and how many are still pending.
+        examsCompletedPercentage,
+        examsNotAttemptedPercentage,
+        totalLessons,
+        completedLessonsCount,
+        notAttemptedLessonsCount,
+        totalExamScore,
+        finalExamScore,
+        examsAttemptedCount,
+        completionStatus, //This is a simple string indicating whether the course is fully completed or still in progress
+      },
     });
   } catch (err) {
-    return res.status(400).json({ status: 'error', message: err.message });
+    return next(new ApiError(err.message, 400));
   }
-});
-
-//--------------------------------------------------------------------------
-// Assuming `canRetakeExam` middleware is meant to allow retake, you should use `retakeExam` method correctly.
-// But since `retakeExam` is not directly related to allowing retake but performing it, the middleware name might be misleading.
-// Ensure this middleware's logic aligns with its purpose or rename it accordingly.
-// exports.canRetakeExam = asyncHandler(async (req, res, next) => {
-//   try {
-//     const { userId, examId } = req.params; // Assuming userId is correctly obtained
-//     await this.retakeExam(userId, examId); // Correctly call retakeExam without directly using examService
-//     next();
-//   } catch (error) {
-//     res.status(400).json({ message: error.message });
-//   }
-// });
-
-// exports.userScores = asyncHandler(async (req, res, next) => {
-//   const { courseId } = req.params;
-//   const { userId } = req.body;
-//   const course = await CourseProgress.findOne({
-//     course: courseId,
-//   });
-//   if (!course) {
-//     throw new ApiError("Course not found", 404);
-//   }
-//   const user = await User.findOne({
-//     _id: userId,
-//   });
-//   if (!user) {
-//     throw new ApiError("User not found", 404);
-//   }
-
-//   const userScores = await CourseProgress.findOne({
-//     user: userId,
-//     course: courseId,
-//   });
-//   res.status(200).json({ status: "success", data: userScores });
-// });
-//userScores
-exports.userScores = asyncHandler(async (req, res, next) => {
-  const { courseId, userId } = req.params;
-
-  if (!userId) {
-    return next(new ApiError('User not found', 404));
-  }
-
-  // Fetch the user's course progress
-  const courseProgress = await CourseProgress.findOne({
-    user: userId,
-    course: courseId,
-  }).populate('progress.lesson', 'title order');
-
-  // Fetch all lessons associated with the course
-  const allLessons = await Lesson.find({ course: courseId }, '_id').populate(
-    'course',
-    'title',
-  );
-
-  if (!courseProgress) {
-    return next(new Error('No course progress found for this user.'));
-  }
-
-  const attemptedLessonIds = new Set();
-  let totalExamScore = 0;
-  let completedLessonsCount = 0;
-
-  // Process completed exams
-  courseProgress.progress.forEach((item) => {
-    if (item.status === 'Completed') {
-      completedLessonsCount += 1;
-      totalExamScore += item.examScore;
-      attemptedLessonIds.add(item.lesson._id.toString());
-    }
-  });
-
-  const notAttemptedLessonsCount = allLessons.filter(
-    (lesson) => !attemptedLessonIds.has(lesson._id.toString()),
-  ).length;
-
-  //////////////
-  const numberOfLessons = courseProgress.progress.length;
-  const totalPossibleCourseScore = numberOfLessons * 100; // Assuming each lesson's exam score is out of 100
-  const averageGradePercentage =
-    (totalExamScore / totalPossibleCourseScore) * 100 || 0;
-
-  //////////////
-
-  const totalLessons = allLessons.length;
-  const examsCompletedPercentage = (
-    (completedLessonsCount / totalLessons) *
-    100
-  ).toFixed(2);
-  const examsNotAttemptedPercentage = (
-    (notAttemptedLessonsCount / totalLessons) *
-    100
-  ).toFixed(2);
-
-  const completedLessonsPercentage = (
-    (completedLessonsCount / totalLessons) *
-    100
-  ).toFixed(2);
-  // Assuming finalExamScore is available, adjust according to your actual data structure
-  const finalExamScore = courseProgress.score || 0;
-  const finalExamCompletionPercentage = finalExamScore > 0 ? 100 : 0; // Simplified for illustration
-
-  // Calculate total progress with weights
-  const lessonExamsWeight = 0.8;
-  const finalExamWeight = 0.2;
-  const totalProgress = (
-    examsCompletedPercentage * lessonExamsWeight +
-    finalExamCompletionPercentage * finalExamWeight
-  ).toFixed(2);
-
-  res.status(200).json({
-    status: 'success',
-    data: {
-      averageGradePercentage,
-      totalProgress,
-      finalExamCompletionPercentage,
-      examsCompletedPercentage,
-      examsNotAttemptedPercentage,
-      totalLessons,
-      completedLessonsCount,
-      completedLessonsPercentage,
-    },
-  });
-});
+};
 
 //get user progress in course
 //-------------
@@ -864,9 +394,8 @@ exports.getLessonPerformance = asyncHandler(async (req, res, next) => {
     return next(new ApiError('Lesson progress not found', 404));
   }
   // console.log(lessonExamResult);
-  const lessonQuestions = await this.checkLessonQuestionsStatus(
-    lessonExamResult,
-  );
+  const lessonQuestions =
+    await this.checkLessonQuestionsStatus(lessonExamResult);
 
   return res.status(200).json({ status: 'success', lessonQuestions });
 });
@@ -913,9 +442,8 @@ exports.getCoursePerformance = asyncHandler(async (req, res, next) => {
     return next(new ApiError("course's exam result not found", 404));
   }
   // console.log(lessonExamResult);
-  const lessonQuestions = await this.checkCourseQuestionsStatus(
-    courseExamResult,
-  );
+  const lessonQuestions =
+    await this.checkCourseQuestionsStatus(courseExamResult);
 
   return res.status(200).json({ status: 'success', lessonQuestions });
 });
@@ -945,3 +473,447 @@ exports.checkCourseQuestionsStatus = async (courseExamResult) => {
   return courseExamQuestions;
   // Continue with the rest of the code...
 };
+
+/////////////////////////////////////////////
+/////////////////////////////////////////////
+/////////////////////////////////////////////
+/////////////////////////////////////////////
+/////////////////////////////////////////////
+/******************************************************************** */
+// Utility functions
+/******************************************************************** */
+// Calculate the score for the exam
+const calculateScore = (questions, answers) => {
+  let score = 0;
+  const wrongAnswers = [];
+  questions.forEach((question) => {
+    const answerObj = answers.find(
+      (ans) => ans.questionId.toString() === question._id.toString(),
+    );
+    if (answerObj && answerObj.answer === question.correctOption) {
+      score += question.grade;
+    } else if (answerObj && answerObj.answer) {
+      wrongAnswers.push({
+        question: question._id,
+        answer: answerObj.answer,
+      });
+    }
+  });
+  return { score, wrongAnswers };
+};
+
+// Calculate the total possible score for the exam
+const getTotalPossibleScore = (questions) =>
+  questions.reduce((total, question) => total + question.grade, 0);
+
+// Check if the exam was passed based on the score percentage
+const hasPassed = (score, totalScore, passingScore) =>
+  (score / totalScore) * 100 >= passingScore;
+
+// Update the user's progress for a course or lesson
+const updateUserProgress = async (
+  userId,
+  courseId,
+  exam,
+  passed,
+  score,
+  wrongAnswers,
+) =>
+  await CourseProgress.findOneAndUpdate(
+    { user: userId, course: courseId },
+    {
+      $push: {
+        progress: {
+          lesson: exam.lesson,
+          modelExam: exam.model,
+          status: passed ? 'Completed' : 'failed',
+          examScore: score,
+          attemptDate: new Date(),
+          wrongAnswers,
+        },
+      },
+    },
+    { new: true, upsert: false },
+  );
+
+// Handle success or failure response
+const handleExamResponse = (res, passed, score, totalScore) =>
+  res.status(200).json({
+    status: `${passed ? 'Congrats' : 'unfortunately'} you got ${score} out of ${totalScore}, ${
+      passed ? 'You have passed the exam.' : 'You have not passed the exam.'
+    }`,
+  });
+
+/******************************************************************** */
+// Utility function to fetch an exam based on lesson or course and model
+/******************************************************************** */
+const fetchExam = async ({ id, type, model }) =>
+  await Exam.findOne({ [type]: id, model: model });
+
+// Utility function to exclude correct answers from the exam object
+const excludeCorrectOptions = (exam) => {
+  const modifiedExam = exam.toObject();
+  modifiedExam.questions.forEach((question) => {
+    delete question.correctOption;
+  });
+  return modifiedExam;
+};
+
+// Utility function to check user progress
+const checkUserProgress = async (user, courseId, lessonOrder) => {
+  const courseProgress = await CourseProgress.findOne({
+    user: user._id,
+    course: courseId,
+  });
+
+  // If no course progress is found, return an error
+  if (!courseProgress) {
+    throw new ApiError('You must start the course before taking the exam', 401);
+  }
+
+  const lastProgress = courseProgress.progress.length
+    ? courseProgress.progress[courseProgress.progress.length - 1]
+    : null;
+
+  // If there's no progress yet, allow the user to start the first lesson
+  if (!lastProgress && lessonOrder !== 1) {
+    throw new ApiError('Cannot take this lesson out of order', 401);
+  }
+
+  // If there's progress but the last lesson was completed, prevent the user from retaking the lesson
+  // if (
+  //   lastProgress &&
+  //   lastProgress.lesson._id.toString() === lessonId.toString() &&
+  //   lastProgress.status === 'Completed'
+  // ) {
+  //   throw new ApiError('You have already completed this lesson', 401);
+  // }
+
+  // If the lesson order is not correct, block the user from proceeding
+  if (lastProgress && lessonOrder > lastProgress.lesson.order + 1) {
+    throw new ApiError('Cannot take this lesson out of order', 401);
+  }
+};
+
+//Lesson Exam Logic
+const getLessonExam = async (lesson, courseProgress, user) => {
+  await checkUserProgress(user, lesson.course, lesson.order);
+
+  // Determine exam model based on user's previous progress
+  const lastProgress =
+    courseProgress.progress[courseProgress.progress.length - 1];
+  let examModelType = 'A';
+  if (lastProgress && lastProgress.status === 'failed') {
+    const modelBExists = await Exam.exists({
+      lesson: lesson._id,
+      model: 'B',
+    });
+    if (modelBExists) {
+      if (lastProgress.modelExam === 'A') {
+        examModelType = 'B';
+      } else {
+        examModelType = 'A';
+      }
+    } else {
+      examModelType = 'A';
+    }
+  }
+
+  const exam = await fetchExam({
+    id: lesson._id,
+    type: 'lesson',
+    model: examModelType,
+  });
+  if (!exam) throw new ApiError('No exam found for this lesson', 404);
+
+  return excludeCorrectOptions(exam);
+};
+
+//Course Exam Logic
+const getCourseExam = async (req, progressModel) => {
+  const { user, params } = req;
+  const examResult = await progressModel.findOne({
+    user: user._id,
+    course: params.id,
+  });
+
+  if (!examResult)
+    throw new ApiError('You must start the course before taking the exam', 401);
+  if (examResult.status === 'Completed')
+    throw new ApiError('You have already completed this course', 401);
+
+  let examModelType = 'A';
+  if (examResult.status === 'failed' && examResult.modelExam === 'B') {
+    examModelType = 'B';
+  }
+
+  const exam = await fetchExam({
+    id: params.id,
+    type: 'course',
+    model: examModelType,
+  });
+  if (!exam) throw new ApiError('No exam found for this course', 404);
+
+  return excludeCorrectOptions(exam);
+};
+
+//Placement Exam Logic
+const getPlacementExam = async (req, examModel) => {
+  const { user, params } = req;
+  const courseId = params.id;
+
+  const placementExam = await examModel.findOne({
+    course: courseId,
+    type: 'placement',
+  });
+  if (!placementExam)
+    throw new ApiError('No placement exam found for this course', 404);
+
+  let modelExamType = 'A';
+  if (user.placementExam && user.placementExam.status === 'failed') {
+    modelExamType = user.placementExam.modelExam === 'A' ? 'B' : 'A';
+  }
+
+  const exam = await fetchExam({
+    id: courseId,
+    type: 'placement',
+    model: modelExamType,
+  });
+  if (!exam) throw new ApiError('No exam found for this course', 404);
+
+  return excludeCorrectOptions(exam);
+};
+
+/******************************************************************** */
+// middlewares
+/******************************************************************** */
+
+///////////////////////////////////////////////////////////////////////////
+//start lesson exam logic
+exports.lessonExam = async (req, res, next) => {
+  try {
+    const { lesson, courseProgress, user } = req;
+    const exam = await getLessonExam(lesson, courseProgress, user);
+    res.status(200).json({ status: 'success', exam });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.submitLessonAnswers = async (req, res, next) => {
+  const { id } = req.params;
+  const { answers } = req.body;
+  const { user } = req;
+  // Fetch the exam and lesson
+  const exam = await Exam.findOne({ _id: id, type: 'lesson' });
+  if (!exam) {
+    return next(new ApiError('Exam not found', 404));
+  }
+  const lesson = await Lesson.findById(exam.lesson);
+  if (!lesson) {
+    return next(new ApiError('Lesson not found', 404));
+  }
+
+  // Check if the user has already completed the lesson
+  const existingProgress = await CourseProgress.findOne({
+    user: user._id,
+    course: lesson.course,
+  });
+  const lastProgress =
+    existingProgress.progress[existingProgress.progress.length - 1];
+
+  // If the lesson order is not correct, block the user from proceeding
+  if (lastProgress && lesson.order > lastProgress.lesson.order + 1) {
+    return next(new ApiError('Cannot take this lesson out of order', 401));
+  }
+
+  // Calculate the score and determine if passed
+  const examResult = calculateScore(exam.questions, answers);
+  const totalPossibleScore = getTotalPossibleScore(exam.questions);
+  const passed = hasPassed(
+    examResult.score,
+    totalPossibleScore,
+    exam.passingScore,
+  );
+
+  if (
+    !lastProgress || // If no previous progress, allow taking the first lesson
+    (lastProgress.status === 'Completed' &&
+      lesson.order - lastProgress.lesson.order === 1) // If the last lesson was completed, allow taking the next lesson
+  ) {
+    // Update user's lesson progress
+    await updateUserProgress(
+      user._id,
+      lesson.course,
+      exam,
+      passed,
+      examResult.score,
+      examResult.wrongAnswers,
+    );
+  }
+  // Respond with success or failure message
+  return handleExamResponse(res, passed, examResult.score, totalPossibleScore);
+};
+//end lesson exam logic
+///////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////
+//start course exam logic
+exports.courseExam = async (req, res, next) => {
+  try {
+    const exam = await getCourseExam(req, CourseProgress);
+    res.status(200).json({ status: 'success', exam });
+  } catch (error) {
+    next(error);
+  }
+};
+exports.submitCourseAnswers = async (req, res, next) => {
+  try {
+    const { id } = req.params; // exam ID
+    const { answers } = req.body;
+    const adminId = mongoose.Types.ObjectId('66447ad7a7957a07c0ae9e69');
+
+    const exam = await Exam.findById(id);
+    if (!exam) {
+      return next(new ApiError('Exam not found', 404));
+    }
+
+    const course = await Course.findById(exam.course);
+    if (!course) {
+      return next(new ApiError('Course not found', 404));
+    }
+
+    // Check if the user has already completed the course
+    let existingProgress = await CourseProgress.findOne({
+      user: req.user._id,
+      course: exam.course,
+    });
+    if (existingProgress && existingProgress.status === 'Completed') {
+      return next(new ApiError('You have already passed this exam.', 400));
+    }
+
+    // Calculate the score and determine if passed
+    const examResult = calculateScore(exam.questions, answers);
+    const totalPossibleScore = getTotalPossibleScore(exam.questions);
+    const passed = hasPassed(
+      examResult.score,
+      totalPossibleScore,
+      exam.passingScore,
+    );
+
+    // Update course progress
+    const updateData = {
+      modelExam: exam.model,
+      status: passed ? 'Completed' : 'failed',
+      score: examResult.score,
+      attemptDate: Date.now(),
+      wrongAnswers: examResult.wrongAnswers,
+    };
+    if (existingProgress) {
+      existingProgress = await CourseProgress.findOneAndUpdate(
+        { user: req.user._id, course: exam.course },
+        { $set: updateData },
+        { new: true, upsert: true },
+      );
+    } else {
+      updateData.user = req.user._id;
+      updateData.course = exam.course;
+      existingProgress = await CourseProgress.create(updateData);
+    }
+
+    // Check if the user deserves a certificate
+    const courseAvgScore =
+      (existingProgress.progress.reduce((total, p) => total + p.examScore, 0) /
+        (existingProgress.progress.length * 100)) *
+      100;
+    if (courseAvgScore >= 90 && passed) {
+      await CourseProgress.findOneAndUpdate(
+        { user: req.user._id, course: exam.course },
+        { $set: { 'certificate.isdeserve': true } },
+      );
+      await Notification.create({
+        user: req.user._id,
+        message: `You have earned a certificate for the course ${course.title}. Please wait for the admin to issue it.`,
+      });
+      await Notification.create({
+        user: adminId,
+        message: `User ${req.user.email} has earned a certificate for the course ${course.title}.`,
+      });
+    }
+
+    // Respond with success or failure message
+    return handleExamResponse(
+      res,
+      passed,
+      examResult.score,
+      totalPossibleScore,
+    );
+  } catch (err) {
+    return res.status(400).json({ status: 'error', message: err.message });
+  }
+};
+
+//end course exam logic
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+// start placement exam logic
+exports.placementExam = async (req, res, next) => {
+  try {
+    const exam = await getPlacementExam(req, Exam);
+    res.status(200).json({ status: 'success', exam });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.submitCoursePlacementAnswers = async (req, res, next) => {
+  const { id } = req.params;
+  const { answers } = req.body;
+  const { user } = req;
+
+  // Fetch the exam
+  const exam = await Exam.findById(id);
+  if (!exam) {
+    return next(new ApiError('Exam not found', 404));
+  }
+
+  // Check if user has already failed this exam
+  if (
+    user.placmentExam.status === 'failed' &&
+    exam.model === user.placmentExam.modelExam
+  ) {
+    return next(new ApiError('You have already failed this exam.', 400));
+  }
+
+  // Calculate the score and determine if passed
+  const examResult = calculateScore(exam.questions, answers);
+  const totalPossibleScore = getTotalPossibleScore(exam.questions);
+  const passed = hasPassed(
+    examResult.score,
+    totalPossibleScore,
+    exam.passingScore,
+  );
+
+  // Update user's placement exam progress
+  await User.findOneAndUpdate(
+    { _id: user._id },
+    {
+      $set: {
+        placmentExam: {
+          exam: exam._id,
+          score: examResult.score,
+          status: passed ? 'Completed' : 'failed',
+          course: exam.course,
+          attemptDate: Date.now(),
+          wrongAnswers: examResult.wrongAnswers,
+        },
+      },
+    },
+    { new: true },
+  );
+
+  // Respond with success or failure message
+  return handleExamResponse(res, passed, examResult.score, totalPossibleScore);
+};
+// end placement exam logic
+///////////////////////////////////////////////////////////////////
