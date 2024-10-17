@@ -42,14 +42,18 @@ exports.getOne = (Model, populationOpt) => async (req, res, next) => {
     if (!document) {
       return next(new ApiError(`No document For this id ${id}`, 404));
     }
-    res.status(200).json({ data: document });
+    const localizedResult = Model.schema.methods.toJSONLocalizedOnly(
+      document,
+      req.locale,
+    );
+
+    res.status(200).json({ data: localizedResult });
   } catch (error) {
     console.error('Error fetching document:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
-// eslint-disable-next-line default-param-last
 exports.getALl =
   (Model, modelName = '', populationOpt) =>
   async (req, res) => {
@@ -75,6 +79,11 @@ exports.getALl =
 
       const results = await apiFeatures.paginate();
 
+      const localizedResult = Model.schema.methods.toJSONLocalizedOnly(
+        results,
+        req.locale,
+      );
+
       const currentPage = parseInt(req.query.page, 10) || 1;
       const limit = parseInt(req.query.limit, 10) || 50;
       const numberOfPages = Math.ceil(documentsCount / limit);
@@ -93,7 +102,7 @@ exports.getALl =
           numberOfPages,
           nextPage,
         },
-        data: results,
+        data: localizedResult,
       });
     } catch (error) {
       console.error('Error fetching documents:', error);

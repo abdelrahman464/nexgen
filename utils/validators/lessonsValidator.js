@@ -1,97 +1,117 @@
-const asyncHandler = require("express-async-handler");
-const { check } = require("express-validator");
-const validatorMiddleware = require("../../middlewares/validatorMiddleware");
-const ApiError = require("../apiError");
-const Course = require("../../models/courseModel");
+const asyncHandler = require('express-async-handler');
+const { body, check } = require('express-validator');
+const validatorMiddleware = require('../../middlewares/validatorMiddleware');
+const ApiError = require('../apiError');
+const Course = require('../../models/courseModel');
 // const { checkCourseAccess } = require("./courseValidator");
-const Lesson = require("../../models/lessonModel");
-const CourseProgress = require("../../models/courseProgressModel");
-const Section = require("../../models/sectionModel");
+const Lesson = require('../../models/lessonModel');
+const CourseProgress = require('../../models/courseProgressModel');
+const Section = require('../../models/sectionModel');
 
 exports.createLessonValidator = [
-  check("section")
+  check('section')
     .notEmpty()
-    .withMessage("Section required")
+    .withMessage('Section required')
     .isMongoId()
-    .withMessage("Invalid ID format")
+    .withMessage('Invalid ID format')
     .custom((sectionId) =>
       Section.findById(sectionId).then((section) => {
         if (!section) {
           return Promise.reject(new ApiError(`Section Not Found`, 404));
         }
-      })
+      }),
     ),
-  check("title")
-    .isLength({ min: 2 })
-    .withMessage("must be at least 2 chars")
+  body('title').isObject().withMessage('Title must be an object.'),
+
+  body('title.en')
+    .isString()
+    .withMessage(`en title must be a string.`)
+    .isLength({ min: 3 })
+    .withMessage(`en title must be at least 3 chars`),
+
+  body('title.ar')
+    .isString()
+    .withMessage(`ar title must be a string.`)
+    .isLength({ min: 3 })
+    .withMessage(`ar title must be at least 3 chars`),
+
+  check('course')
     .notEmpty()
-    .withMessage("Lesson required"),
-  check("course")
-    .notEmpty()
-    .withMessage("Lesson must be belong to a Course")
+    .withMessage('Lesson must be belong to a Course')
     .isMongoId()
-    .withMessage("Invalid ID format")
+    .withMessage('Invalid ID format')
     .custom((courseId) =>
       Course.findById(courseId).then((course) => {
         if (!course) {
           return Promise.reject(new ApiError(`Course Not Found`, 404));
         }
-      })
+      }),
     ),
-  check("videoUrl").notEmpty().withMessage("Lesson videos Required"),
+  check('lessonDuration').notEmpty().withMessage('Lesson Duration Required'),
+
+  check('videoUrl').notEmpty().withMessage('Lesson videos Required'),
 
   validatorMiddleware,
 ];
 
 exports.updateLessonValidator = [
-  check("section")
+  check('section')
     .optional()
     .isMongoId()
-    .withMessage("Invalid ID format")
+    .withMessage('Invalid ID format')
     .custom((sectionId) =>
       Section.findById(sectionId).then((section) => {
         if (!section) {
           return Promise.reject(new ApiError(`Section Not Found`, 404));
         }
-      })
+      }),
     ),
 
-  check("title")
+  body('title').optional().isObject().withMessage('Title must be an object.'),
+
+  body('title.en')
     .optional()
     .isString()
-    .withMessage("string only allowed")
-    .trim()
-    .escape()
+    .withMessage(`en title must be a string.`)
     .isLength({ min: 3 })
-    .withMessage("too short title ")
-    .isLength({ max: 125 })
-    .withMessage("too long title for Lesson"),
+    .withMessage(`en title must be at least 3 chars`),
 
-  check("course")
+  body('title.ar')
+    .optional()
+    .isString()
+    .withMessage(`ar title must be a string.`)
+    .isLength({ min: 3 })
+    .withMessage(`ar title must be at least 3 chars`),
+
+  check('course')
     .optional()
     .isMongoId()
-    .withMessage("Invalid ID format")
+    .withMessage('Invalid ID format')
     .custom((courseId) =>
       Course.findById(courseId).then((course) => {
         if (!course) {
           return Promise.reject(new ApiError(`Course Not Found`, 404));
         }
-      })
+      }),
     ),
+  check('lessonDuration')
+    .optional()
+    .isNumeric()
+    .withMessage('Lesson Duration must be a number'),
 
-  check("videoUrl").notEmpty().withMessage("Lesson videos Required").optional(),
+  check('videoUrl').notEmpty().withMessage('Lesson videos Required').optional(),
   validatorMiddleware,
 ];
 
 exports.checkCourseAccess = asyncHandler(async (req, res, next) => {
   const { id } = req.params; // courseId
   const { user } = req;
-  if (req.user.role === "admin") {
+  if (req.user.role === 'admin') {
     return next();
   }
   const course = await Course.findById(id);
   if (!course) {
-    return next(new ApiError("Course Not Found", 403));
+    return next(new ApiError(res.__('errors.Not-Found'), 403));
   }
 
   // need to check if user have this course or not
@@ -101,7 +121,7 @@ exports.checkCourseAccess = asyncHandler(async (req, res, next) => {
   });
 
   if (!courseProgress) {
-    return next(new ApiError("You don't have access to this course", 403));
+    return next(new ApiError(res.__('errors.Not-Authorized'), 403));
   }
 
   //check if user can access this course even if he not bought it
@@ -113,12 +133,12 @@ exports.checkCourseAccess = asyncHandler(async (req, res, next) => {
 exports.checkLessonAccess = asyncHandler(async (req, res, next) => {
   const { id } = req.params; // lessonId
   const { user } = req;
-  if (req.user.role === "admin") {
+  if (req.user.role === 'admin') {
     return next();
   }
   const lesson = await Lesson.findById(id);
   if (!lesson) {
-    return next(new ApiError("Lesson Not Found", 403));
+    return next(new ApiError('Lesson Not Found', 403));
   }
 
   // need to check if user have this course or not
@@ -143,7 +163,7 @@ exports.checkLessonExamAccess = async (req, res, next) => {
 
   const lesson = await Lesson.findById(id);
   if (!lesson) {
-    return next(new ApiError("Lesson Not Found", 403));
+    return next(new ApiError('Lesson Not Found', 403));
   }
 
   const courseProgress = await CourseProgress.findOne({
@@ -158,7 +178,7 @@ exports.checkLessonExamAccess = async (req, res, next) => {
   // if user takes two exams in one day then prevent him to take more exams
   // if the last two exams were completed in one day, prevent taking another exam on the same day
   const progress = courseProgress.progress
-    .filter((p) => p.status === "passed") // Ensure this matches the actual status value in your data
+    .filter((p) => p.status === 'passed') // Ensure this matches the actual status value in your data
     .sort((a, b) => new Date(b.attemptDate) - new Date(a.attemptDate)); // Sort by attemptDate in descending order
 
   if (progress.length >= 2) {
@@ -184,9 +204,9 @@ exports.checkLessonExamAccess = async (req, res, next) => {
     ) {
       return next(
         new ApiError(
-          "You have reached the limit of 2 exams completed in one day",
-          403
-        )
+          'You have reached the limit of 2 exams completed in one day',
+          403,
+        ),
       );
     }
   }

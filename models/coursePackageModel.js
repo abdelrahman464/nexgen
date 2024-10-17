@@ -1,24 +1,26 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const coursePackageSchema = new mongoose.Schema(
   {
-    title: {
-      type: String,
-      required: [true, "Package name is required"],
-    },
-    description: { type: String, required: true },
-    highlights: [{ type: String }],
     courses: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Course",
+        ref: 'Course',
       },
     ],
+    title: {
+      type: String,
+      required: [true, 'Package title is required'],
+      i18n: true,
+    },
+    description: { type: String, required: true, i18n: true },
+    highlights: [{ type: Object, i18n: true }],
+
     price: {
       type: Number,
-      required: [true, "Package price is required"],
+      required: [true, 'Package price is required'],
       trim: true,
-      max: [200000, "Too long Package price"],
+      max: [200000, 'Too long Package price'],
     },
     priceAfterDiscount: {
       type: Number,
@@ -26,10 +28,10 @@ const coursePackageSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 coursePackageSchema.pre(/^find/, function (next) {
-  this.populate({ path: "courses", select: "title" })
+  this.populate({ path: 'courses', select: 'title' });
   next();
 });
-module.exports = mongoose.model("CoursePackage", coursePackageSchema);
+module.exports = mongoose.model('CoursePackage', coursePackageSchema);

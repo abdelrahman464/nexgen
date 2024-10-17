@@ -1,44 +1,41 @@
-const sharp = require("sharp");
-const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
-const { v4: uuidv4 } = require("uuid");
-const asyncHandler = require("express-async-handler");
-const ApiError = require("../utils/apiError");
-const factory = require("./handllerFactory");
-const User = require("../models/userModel");
-const Order = require("../models/orderModel");
-const generateToken = require("../utils/generateToken");
-const { uploadSingleFile } = require("../middlewares/uploadImageMiddleware");
-const CourseProgress = require("../models/courseProgressModel");
-const Message = require("../models/MessageModel");
-const Chat = require("../models/ChatModel");
-const Notification = require("../models/notificationModel");
-const React = require("../models/reactionModel");
-const Comment = require("../models/commentModel");
-const MarketLog = require("../models/MarketingModel");
-const Package = require("../models/packageModel");
-const CoursePackage = require("../models/coursePackageModel");
-const UserSubscription = require("../models/userSubscriptionModel");
-const sendEmail = require("../utils/sendEmail");
+const sharp = require('sharp');
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+const { v4: uuidv4 } = require('uuid');
+const asyncHandler = require('express-async-handler');
+const ApiError = require('../utils/apiError');
+const factory = require('./handllerFactory');
+const User = require('../models/userModel');
+const Order = require('../models/orderModel');
+const generateToken = require('../utils/generateToken');
+const { uploadSingleFile } = require('../middlewares/uploadImageMiddleware');
+const CourseProgress = require('../models/courseProgressModel');
+const Message = require('../models/MessageModel');
+const Chat = require('../models/ChatModel');
+const Notification = require('../models/notificationModel');
+const React = require('../models/reactionModel');
+const Comment = require('../models/commentModel');
+const MarketLog = require('../models/MarketingModel');
+const UserSubscription = require('../models/userSubscriptionModel');
 
 //upload Single image
-exports.uploadProfileImage = uploadSingleFile("profileImg");
+exports.uploadProfileImage = uploadSingleFile('profileImg');
 //image processing
 exports.resizeImage = asyncHandler(async (req, res, next) => {
   const { file } = req; // Access the uploaded file
   if (file) {
     const fileExtension = file.originalname.substring(
-      file.originalname.lastIndexOf(".")
+      file.originalname.lastIndexOf('.'),
     ); // Extract file extension
     const newFileName = `profileImg-${uuidv4()}-${Date.now()}${fileExtension}`; // Generate new file name
 
     // Check if the file is an image for the profile picture
-    if (file.mimetype.startsWith("image/")) {
+    if (file.mimetype.startsWith('image/')) {
       // Process and save the image file using sharp for resizing, conversion, etc.
       const filePath = `uploads/users/${newFileName}`;
 
       await sharp(file.buffer)
-        .toFormat("webp") // Convert to WebP
+        .toFormat('webp') // Convert to WebP
         .webp({ quality: 97 })
         .toFile(filePath);
 
@@ -47,9 +44,9 @@ exports.resizeImage = asyncHandler(async (req, res, next) => {
     } else {
       return next(
         new ApiError(
-          "Unsupported file type. Only images are allowed for Profile Image.",
-          400
-        )
+          'Unsupported file type. Only images are allowed for Profile Image.',
+          400,
+        ),
       );
     }
   }
@@ -57,135 +54,221 @@ exports.resizeImage = asyncHandler(async (req, res, next) => {
 });
 //filter to get all user (isInstructor:true or role:admin)
 exports.createFilterObjToGetInstructors = async (req, res, next) => {
-  const filterObject = { $or: [{ isInstructor: true }, { role: "admin" }] };
+  const filterObject = { $or: [{ isInstructor: true }, { role: 'admin' }] };
 
   req.filterObj = filterObject;
   next();
 };
 
-exports.getUsersWithoutCourse = asyncHandler(async (req, res, next) => {
+//get all users tha have not this course and filter them by users that have orders and users that have not orders
+exports.getUsersWithoutCourse = async (req, res, next) => {
+  try {
+    const { courseId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      throw new Error('Invalid course ID');
+    }
 
-  const { courseId } = req.params;
-  if (!mongoose.Types.ObjectId.isValid(courseId)) {
-    throw new Error("Invalid course ID");
-  }
-
-  const users = await User.aggregate([
-    // Lookup orders for this user
-    {
-      $lookup: {
-        from: "orders",
-        localField: "_id",
-        foreignField: "user",
-        as: "orders",
+    const usersByOrderStatus = await User.aggregate([
+      {
+        $match: {
+          role: { $nin: ['admin', 'campaign'] }, 
+        },
       },
-    },
-    // Lookup course progress for this user
-    {
-      $lookup: {
-        from: "courseprogresses",
-        localField: "_id",
-        foreignField: "user",
-        as: "courseProgresses",
+      {
+        $lookup: {
+          from: 'orders',
+          localField: '_id',
+          foreignField: 'user',
+          as: 'userOrders',
+        },
       },
-    },
-    // Match users who have orders
-    {
-      $match: {
-        orders: { $ne: [] },
-      },
-    },
-    // Match users who don't have the specified course in their progress
-    {
-      $match: {
-        $nor: [
-          {
-            courseProgresses: {
-              $elemMatch: {
-                course: new mongoose.Types.ObjectId(courseId),
+      {
+        $facet: {
+          // Type 1: Users who have orders but not the specific course
+          purchasers: [
+            { $match: { 'userOrders.0': { $exists: true } } }, // Match users with at least one order
+            {
+              $match: {
+                'userOrders.course': {
+                  $ne: new mongoose.Types.ObjectId(courseId),
+                },
+              },
+            }, // Match users who did not purchase the specific course
+            {
+              $project: {
+                _id: 1,
+                name: 1,
+                email: 1,
+                orderCount: { $size: '$userOrders' }, // Optional: to see number of orders
+                // Add other user fields as needed
               },
             },
-          },
-        ],
+          ],
+          // Type 2: Users who have no orders and did not buy the specific course
+          nonPurchasers: [
+            { $match: { 'userOrders.0': { $exists: false } } }, // Match users without orders
+            {
+              $project: {
+                _id: 1,
+                name: 1,
+                email: 1,
+                profileImg: 1,
+                // Add other user fields as needed
+              },
+            },
+          ],
+        },
       },
-    },
-    // Project only necessary fields
-    {
-      $project: {
-        _id: 1,
-        name: 1,
-        email: 1,
-        // Add other fields as needed
+    ]);
+
+    // Access the results for each type:
+    const { purchasers } = usersByOrderStatus[0]; // Type 1: Users who have orders but not the course
+    const { nonPurchasers } = usersByOrderStatus[0]; // Type 2: Users who have no orders
+
+    res.status(200).json({
+      success: true,
+      purchasers,
+      nonPurchasers,
+    });
+  } catch (err) {
+    return next(new ApiError(err.message, 400));
+  }
+};
+
+//get all users tha have not this course and filter them by users that have orders and users that have not orders
+exports.getUsersCourse = async (req, res, next) => {
+  try {
+    const { courseId } = req.params;
+    const usersWhoOrderedSpecificCourse = await User.aggregate([
+      {
+        $match: {
+          role: { $nin: ['admin', 'campaign'] },
+        },
       },
-    },
-  ]);
+      {
+        $lookup: {
+          from: 'orders',
+          localField: '_id',
+          foreignField: 'user',
+          as: 'userOrders',
+        },
+      },
+      {
+        $match: {
+          'userOrders.course': new mongoose.Types.ObjectId(courseId), // Match users who ordered the specific course
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          email: 1,
+          profileImg: 1,
+          // Add other user fields as needed
+        },
+      },
+    ]);
 
-  res.status(200).json({
-    success: true,
-    numberOfUsers: users.length,
-    users: users,
-  });
-});
-
-
+    res.status(200).json({
+      success: true,
+      data: usersWhoOrderedSpecificCourse,
+    });
+  } catch (err) {
+    return next(new ApiError(err.message, 400));
+  }
+};
 
 // get users without orders
 
-exports.getUsersWithOutOrders = asyncHandler(async (req, res, next) => {
-  const usersWithoutOrders = await User.aggregate([
-    {
-      $lookup: {
-        from: "orders",
-        localField: "_id",
-        foreignField: "user",
-        as: "orders",
-      },
-    },
-    { $match: { orders: { $size: 0 } } },
-    {
-      $project: {
-        _id: 1,
-        name: 1,
-        email: 1,
-        // Add other user fields as needed
-      },
-    },
-  ]);
-
-  // //send email to all users without orders
+exports.getPurchasersUsersAndNon = async (req, res, next) => {
   try {
-    const emailPromises = usersWithoutOrders.map(async (user) => {
-      const htmlEmail = `
-      <h1>Hi ${user.name},</h1>
-      <p>It seems you haven't placed any orders yet. Don't miss out on our amazing courses and packages. Visit our website to explore more.</p>
-      <p>Best regards,</p>
-      <p>NEXGEN Team</p>
-      `;
-      await sendEmail({
-        to: user.email,
-        subject: "Don't miss out on our amazing courses and packages!",
-        html: htmlEmail,
-      });
-    });
+    const usersWithAndWithoutOrders = await User.aggregate([
+      {
+        $match: {
+          role: { $nin: ['admin', 'campaign'] },
+        },
+      },
+      {
+        $lookup: {
+          from: 'orders',
+          localField: '_id',
+          foreignField: 'user',
+          as: 'userOrders',
+        },
+      },
+      {
+        $facet: {
+          // Users who have orders
+          purchasers: [
+            { $match: { 'userOrders.0': { $exists: true } } }, // Match users with at least one order
+            {
+              $project: {
+                _id: 1,
+                name: 1,
+                email: 1,
+                orderCount: { $size: '$userOrders' }, // Optional: to show the number of orders
+                // Add other user fields as needed
+              },
+            },
+          ],
+          // Users who have no orders
+          nonPurchasers: [
+            { $match: { 'userOrders.0': { $exists: false } } }, // Match users without orders
+            {
+              $project: {
+                _id: 1,
+                name: 1,
+                email: 1,
+                profileImg: 1,
+                // Add other user fields as needed
+              },
+            },
+          ],
+        },
+      },
+    ]);
 
-    await Promise.all(emailPromises); // Wait for all email sending operations to complete
+    // Access both categories of users
+    const { purchasers } = usersWithAndWithoutOrders[0]; // Users who have orders
+    const { nonPurchasers } = usersWithAndWithoutOrders[0]; // Users who have no orders
+
+    // // //send email to all users without orders
+    // try {
+    //   const emailPromises = usersWithoutOrders.map(async (user) => {
+    //     const htmlEmail = `
+    //     <h1>Hi ${user.name},</h1>
+    //     <p>It seems you haven't placed any orders yet. Don't miss out on our amazing courses and packages. Visit our website to explore more.</p>
+    //     <p>Best regards,</p>
+    //     <p>NEXGEN Team</p>
+    //     `;
+    //     await sendEmail({
+    //       to: user.email,
+    //       subject: "Don't miss out on our amazing courses and packages!",
+    //       html: htmlEmail,
+    //     });
+    //   });
+
+    //   await Promise.all(emailPromises); // Wait for all email sending operations to complete
 
     return res.status(200).json({
       success: true,
-      numberOfUsers: usersWithoutOrders.length,
-      message: `email has been sent to all followers of this live`,
+      purchasers,
+      nonPurchasers,
     });
+    // } catch (err) {
+    //   return next(
+    //     new ApiError(`There is a problem with sending emails ${err}`, 500)
+    //   );
+    // }
   } catch (err) {
-    return next(
-      new ApiError(`There is a problem with sending emails ${err}`, 500)
-    );
+    return next(new ApiError(err.message, 400));
   }
-});
+};
 
 //@desc get list of user
 //@route GET /api/v1/users
 //@access private
-exports.getUsers = factory.getALl(User, "User");
+exports.getUsers = factory.getALl(User, 'User');
 //@desc get specific User by id
 //@route GET /api/v1/User/:id
 //@access private
@@ -210,7 +293,7 @@ exports.updateUser = asyncHandler(async (req, res, next) => {
     },
     {
       new: true,
-    }
+    },
   );
   if (!user) {
     return next(new ApiError(`No document For this id ${req.params.id}`, 404));
@@ -228,7 +311,7 @@ exports.changeUserPassword = asyncHandler(async (req, res, next) => {
     },
     {
       new: true,
-    }
+    },
   );
   if (!user) {
     return next(new ApiError(`No document For this id ${req.params.id}`, 404));
@@ -247,7 +330,7 @@ exports.deleteUser = asyncHandler(async (req, res, next) => {
       // Check if user exists
       if (!user) {
         return next(
-          new ApiError(`User not found for this id ${req.params.id}`, 404)
+          new ApiError(`User not found for this id ${req.params.id}`, 404),
         );
       }
 
@@ -262,12 +345,12 @@ exports.deleteUser = asyncHandler(async (req, res, next) => {
         MarketLog.deleteOne({ marketer: user._id }).session(session),
         // Remove user from group chats
         Chat.updateMany(
-          { "participants.user": user._id, isGroupChat: true },
-          { $pull: { participants: { user: user._id } } }
+          { 'participants.user': user._id, isGroupChat: true },
+          { $pull: { participants: { user: user._id } } },
         ).session(session),
         // Delete direct chats
         Chat.deleteMany({
-          "participants.user": user._id,
+          'participants.user': user._id,
           isGroupChat: false,
         }).session(session),
       ]);
@@ -277,8 +360,8 @@ exports.deleteUser = asyncHandler(async (req, res, next) => {
     })
     .catch((error) => {
       // Handle any transaction-related errors
-      console.error("Transaction error:", error);
-      return next(new ApiError("Error during transaction", 500));
+      console.error('Transaction error:', error);
+      return next(new ApiError('Error during transaction', 500));
     });
 });
 
@@ -303,7 +386,7 @@ exports.updateLoggedUserPassword = asyncHandler(async (req, res, next) => {
     },
     {
       new: true,
-    }
+    },
   );
   //genrate token
   const token = generateToken(req.user._id);
@@ -324,7 +407,7 @@ exports.updateLoggedUserData = asyncHandler(async (req, res, next) => {
     },
     {
       new: true,
-    }
+    },
   );
   res.status(200).json({ data: user });
 });
@@ -340,7 +423,7 @@ exports.unActiveUser = asyncHandler(async (req, res, next) => {
 //@access protect
 exports.activeUser = asyncHandler(async (req, res, next) => {
   await User.findByIdAndUpdate(req.params.id, { active: true });
-  res.status(201).json({ data: "success" });
+  res.status(201).json({ data: 'success' });
 });
 //---------
 //@desc avail user to review
@@ -351,14 +434,14 @@ exports.availUserToReview = async (userId) => {
     { _id: userId, authToReview: false },
     {
       authToReview: true,
-    }
+    },
   );
   return true;
 };
 //@desc get specific User by filter and  select fields if exist and populate
 //@route null
 //@access internal
-exports.getUserAsDoc = async (filter, selectFields = "", populate = "") => {
+exports.getUserAsDoc = async (filter, selectFields = '', populate = '') => {
   //1-initialize the query
   let query = User.findOne(filter);
   //2- check if selectFields
@@ -373,7 +456,7 @@ exports.getUserAsDoc = async (filter, selectFields = "", populate = "") => {
   const user = await query;
   //5- check existance
   if (!user) {
-    throw new Error("No user found");
+    throw new Error('No user found');
   }
   return user;
 };
@@ -386,15 +469,15 @@ exports.getUserData = asyncHandler(async (req, res, next) => {
   const user = await User.findById(req.params.id);
   // check if user exist
   if (!user) {
-    return next(new ApiError("No user found", 404));
+    return next(new ApiError('No user found', 404));
   }
 
   // get user course progress
   const courseProgress = await CourseProgress.find({
     user: req.params.id,
   }).populate({
-    path: "course",
-    select: "title -category -accessibleCourses ",
+    path: 'course',
+    select: 'title -category -accessibleCourses ',
   });
 
   //get all courses from course progress
@@ -418,7 +501,11 @@ exports.getUserData = asyncHandler(async (req, res, next) => {
 
   //send response
   res.status(200).json({
-    status: "success",
+    status: 'success',
     data,
   });
 });
+
+//@desc get all user who does not have order
+//@route  users/withoutOrders
+//@access protected admin

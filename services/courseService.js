@@ -1,42 +1,43 @@
-const sharp = require("sharp");
-const fs = require("fs");
-const mongoose = require("mongoose");
-const { v4: uuidv4 } = require("uuid");
-const asyncHandler = require("express-async-handler");
+const sharp = require('sharp');
+const fs = require('fs');
+const mongoose = require('mongoose');
+const { v4: uuidv4 } = require('uuid');
+const asyncHandler = require('express-async-handler');
 
-const ApiError = require("../utils/apiError");
-const factory = require("./handllerFactory");
-const Chat = require("../models/ChatModel");
-const Post = require("../models/postModel");
-const Course = require("../models/courseModel");
-const Notification = require("../models/notificationModel");
-const Order = require("../models/orderModel");
-const Lesson = require("../models/lessonModel");
-const Review = require("../models/reviewModel");
-const CourseProgress = require("../models/courseProgressModel");
-const User = require("../models/userModel");
-const { uploadSingleFile } = require("../middlewares/uploadImageMiddleware");
-const { createOne, deleteOne } = require("./instructorProfitsService");
+const ApiError = require('../utils/apiError');
+const factory = require('./handllerFactory');
+const Chat = require('../models/ChatModel');
+const Post = require('../models/postModel');
+const Course = require('../models/courseModel');
+const Notification = require('../models/notificationModel');
+const Order = require('../models/orderModel');
+const Lesson = require('../models/lessonModel');
+const Review = require('../models/reviewModel');
+const CourseProgress = require('../models/courseProgressModel');
+const User = require('../models/userModel');
+const { uploadSingleFile } = require('../middlewares/uploadImageMiddleware');
+const { createOne, deleteOne } = require('./instructorProfitsService');
+
 //upload course image
-exports.uploadCourseImage = uploadSingleFile("image");
+exports.uploadCourseImage = uploadSingleFile('image');
 //upload certificate file
-exports.uploadCertificateFile = uploadSingleFile("file");
+exports.uploadCertificateFile = uploadSingleFile('file');
 //image processing
 exports.resizeImage = asyncHandler(async (req, res, next) => {
   const { file } = req; // Access the uploaded file
   if (file) {
     const fileExtension = file.originalname.substring(
-      file.originalname.lastIndexOf(".")
+      file.originalname.lastIndexOf('.'),
     ); // Extract file extension
     const newFileName = `course-${uuidv4()}-${Date.now()}${fileExtension}`; // Generate new file name
 
     // Check if the file is an image for the profile picture
-    if (file.mimetype.startsWith("image/")) {
+    if (file.mimetype.startsWith('image/')) {
       // Process and save the image file using sharp for resizing, conversion, etc.
       const filePath = `uploads/courses/${newFileName}`;
 
       await sharp(file.buffer)
-        .toFormat("webp") // Convert to WebP
+        .toFormat('webp') // Convert to WebP
         .webp({ quality: 95 })
         .toFile(filePath);
 
@@ -45,9 +46,9 @@ exports.resizeImage = asyncHandler(async (req, res, next) => {
     } else {
       return next(
         new ApiError(
-          "Unsupported file type. Only images are allowed for courses.",
-          400
-        )
+          'Unsupported file type. Only images are allowed for courses.',
+          400,
+        ),
       );
     }
   }
@@ -56,9 +57,9 @@ exports.resizeImage = asyncHandler(async (req, res, next) => {
 //store certificate file
 exports.storeCertificateFile = asyncHandler(async (req, res, next) => {
   const { file } = req; // Access the uploaded file
-  if (file && file.mimetype === "application/pdf") {
+  if (file && file.mimetype === 'application/pdf') {
     const fileExtension = file.originalname.substring(
-      file.originalname.lastIndexOf(".")
+      file.originalname.lastIndexOf('.'),
     ); // Extract file extension
     const newFileName = `certificate-${uuidv4()}${fileExtension}`; // Generate new file name
 
@@ -67,7 +68,7 @@ exports.storeCertificateFile = asyncHandler(async (req, res, next) => {
     // Use fs module to write the PDF file
     fs.writeFile(filePath, file.buffer, (err) => {
       if (err) {
-        return next(new ApiError("Error saving PDF file", 500));
+        return next(new ApiError('Error saving PDF file', 500));
       }
       // Update the req.body to include the path for the PDF file
       req.body.file = newFileName;
@@ -76,9 +77,9 @@ exports.storeCertificateFile = asyncHandler(async (req, res, next) => {
   } else {
     return next(
       new ApiError(
-        "Unsupported file type. Only PDFs are allowed for certificate.",
-        400
-      )
+        'Unsupported file type. Only PDFs are allowed for certificate.',
+        400,
+      ),
     );
   }
 });
@@ -106,13 +107,16 @@ exports.setCategoryIdToBody = (req, res, next) => {
 };
 
 exports.createCourse = asyncHandler(async (req, res) => {
+  // const requestBody = JSON.parse(JSON.stringify(req.body));
+  // console.log(requestBody);
+
   const course = await Course.create(req.body);
+  const { description, title, coursePercentage } = req.body;
   if (course) {
-    const { description, title, coursePercentage } = req.body;
     const groupCreatorId = req.user._id.toString();
 
-    const groupNameAsCourse = `Group For Course: ${title}`;
-    const groupDescriptionAsCourse = `This group is for the course: ${title} - ${description}`;
+    const groupNameAsCourse = `Group For Course: ${title.ar}`;
+    const groupDescriptionAsCourse = `This group is for the course: ${title.ar}} - ${description.ar}`;
 
     // Create the new group chat
     await Chat.create({
@@ -146,19 +150,24 @@ exports.getMyCourses = asyncHandler(async (req, res, next) => {
   // Calculate total progress for each course
   const coursesWithProgress = await Promise.all(
     coursesDetails.map(async (course) => {
+      const localizedCourse = Course.schema.methods.toJSONLocalizedOnly(
+        course,
+        req.locale,
+      );
+
       const courseId = course._id;
       const courseProgress = await CourseProgress.findOne({
         user: userId,
         course: courseId,
-      }).populate("progress.lesson", "title order");
+      }).populate('progress.lesson', 'title order');
 
       const allLessons = await Lesson.find(
         { course: courseId },
-        "_id"
-      ).populate("course", "title");
+        '_id',
+      ).populate('course', 'title');
 
       if (!courseProgress) {
-        return { ...course._doc, totalProgress: 0 };
+        return { ...localizedCourse, totalProgress: 0 };
       }
 
       const attemptedLessonIds = new Set();
@@ -167,7 +176,7 @@ exports.getMyCourses = asyncHandler(async (req, res, next) => {
 
       // Process completed exams
       courseProgress.progress.forEach((item) => {
-        if (item.status === "Completed") {
+        if (item.status === 'Completed') {
           completedLessonsCount += 1;
           totalExamScore += item.examScore;
           attemptedLessonIds.add(item.lesson._id.toString());
@@ -186,15 +195,15 @@ exports.getMyCourses = asyncHandler(async (req, res, next) => {
         (
           examsCompletedPercentage * lessonExamsWeight +
           finalExamCompletionPercentage * finalExamWeight
-        ).toFixed(2)
+        ).toFixed(2),
       );
 
-      return { ...course._doc, totalProgress };
-    })
+      return { ...localizedCourse, totalProgress };
+    }),
   );
 
   res.status(200).json({
-    status: "success",
+    status: 'success',
     data: coursesWithProgress,
   });
 });
@@ -207,16 +216,20 @@ exports.getAllCourses = factory.getALl(Course);
 // Get a specific course by ID
 exports.getCourseById = asyncHandler(async (req, res, next) => {
   const course = await Course.findById(req.params.id)
-    .populate("reviews")
-    .populate("instructor", "name email profileImg");
+    .populate('reviews')
+    .populate('instructor', 'name email profileImg');
   if (!course) {
     return next(
-      new ApiError(`No course found for this id ${req.params.id}`, 404)
+      new ApiError(`No course found for this id ${req.params.id}`, 404),
     );
   }
+  const localizedResult = Course.schema.methods.toJSONLocalizedOnly(
+    course,
+    req.locale,
+  );
   return res.status(200).json({
-    status: "success",
-    data: course,
+    status: 'success',
+    data: localizedResult,
   });
 });
 
@@ -229,13 +242,13 @@ exports.deleteCourse = asyncHandler(async (req, res, next) => {
     await mongoose.connection.transaction(async (session) => {
       // Find and delete the course
       const course = await Course.findByIdAndDelete(req.params.id).session(
-        session
+        session,
       );
 
       // Check if course exists
       if (!course) {
         return next(
-          new ApiError(`Course not found for this id ${req.params.id}`, 404)
+          new ApiError(`Course not found for this id ${req.params.id}`, 404),
         );
       }
 
@@ -252,13 +265,13 @@ exports.deleteCourse = asyncHandler(async (req, res, next) => {
     res.status(204).send();
   } catch (error) {
     // Handle any transaction-related errors
-    
+
     if (error instanceof ApiError) {
       // Forward specific ApiError instances
       return next(error);
     }
     // Handle other errors with a generic message
-    return next(new ApiError("Error during course deletion", 500));
+    return next(new ApiError('Error during course deletion', 500));
   }
 });
 
@@ -272,7 +285,7 @@ exports.addUserToCourse = asyncHandler(async (req, res, next) => {
   const order = await Order.findOne({ user: user._id, course: req.params.id });
   if (order) {
     return next(
-      new ApiError(`user ${user.name} already subscribed to this course`, 404)
+      new ApiError(`user ${user.name} already subscribed to this course`, 404),
     );
   }
 
@@ -281,7 +294,7 @@ exports.addUserToCourse = asyncHandler(async (req, res, next) => {
     user: user._id,
     course: req.params.id,
     totalOrderPrice: 0,
-    paymentMethodType: "free",
+    paymentMethodType: 'free',
     isPaid: true,
     paidAt: Date.now(),
   });
@@ -294,8 +307,8 @@ exports.addUserToCourse = asyncHandler(async (req, res, next) => {
 
   // User added to the course successfully
   res.status(200).json({
-    status: "success",
-    message: "User added to the course",
+    status: 'success',
+    message: 'User added to the course',
   });
 });
 
@@ -311,32 +324,36 @@ exports.getCourseDetails = asyncHandler(async (req, res, next) => {
   }
 
   // Fetch the course details
-  const course = await Course.findById(courseId).populate("category", "title");
+  const course = await Course.findById(courseId).populate('category', 'title');
   if (!course) {
     return next(new ApiError(`No course found for this id ${courseId}`, 404));
   }
+  const localizedCourse = Course.schema.methods.toJSONLocalizedOnly(
+    course,
+    req.locale,
+  );
 
   // Fetch all users and their progress in this course
   const users = await CourseProgress.find({ course: courseId })
     .populate({
-      path: "user",
-      select: "name email profileImg",
+      path: 'user',
+      select: 'name email profileImg',
     })
     .lean();
 
   // Calculate average exam scores and completion rates
   const courseProgressStats = await CourseProgress.aggregate([
     { $match: { course: new mongoose.Types.ObjectId(courseId) } },
-    { $unwind: "$progress" },
+    { $unwind: '$progress' },
     {
       $group: {
-        _id: "$course",
-        avgScore: { $avg: "$progress.examScore" },
+        _id: '$course',
+        avgScore: { $avg: '$progress.examScore' },
         totalCompletedLessons: {
-          $sum: { $cond: [{ $eq: ["$progress.status", "Completed"] }, 1, 0] },
+          $sum: { $cond: [{ $eq: ['$progress.status', 'Completed'] }, 1, 0] },
         },
         totalLessons: { $sum: 1 },
-        totalUsers: { $addToSet: "$user" },
+        totalUsers: { $addToSet: '$user' },
       },
     },
     {
@@ -344,12 +361,12 @@ exports.getCourseDetails = asyncHandler(async (req, res, next) => {
         avgScore: 1,
         avgCompletion: {
           $cond: [
-            { $eq: ["$totalLessons", 0] },
+            { $eq: ['$totalLessons', 0] },
             0,
-            { $divide: ["$totalCompletedLessons", "$totalLessons"] },
+            { $divide: ['$totalCompletedLessons', '$totalLessons'] },
           ],
         },
-        totalUsers: { $size: "$totalUsers" },
+        totalUsers: { $size: '$totalUsers' },
       },
     },
   ]);
@@ -367,25 +384,14 @@ exports.getCourseDetails = asyncHandler(async (req, res, next) => {
   };
 
   return res.status(200).json({
-    status: "success",
+    status: 'success',
     data: {
       totalUsers: stats.totalUsers,
       //This field represents the average score that users have achieved on the exams within the course.
-      averageExamScores: stats.avgScore.toFixed(2)+ "%",
+      averageExamScores: stats.avgScore.toFixed(2) + '%',
       //This field represents the average completion rate of lessons in the course. It is a percentage that shows how much of the course content, on average, has been completed by users.
-      averageCompletionRate: (stats.avgCompletion * 100).toFixed(2) + "%",
-      courseDetails: {
-        id: course._id,
-        title: course.title,
-        description: course.description,
-        category: course.category.title,
-        price: course.price,
-        priceAfterDiscount: course.priceAfterDiscount,
-        image: course.image,
-        ratingsAverage: course.ratingsAverage,
-        ratingsQuantity: course.ratingsQuantity,
-        highlights: course.highlights,
-      },
+      averageCompletionRate: (stats.avgCompletion * 100).toFixed(2) + '%',
+      courseDetails: localizedCourse,
 
       users: users.map((user) => ({
         id: user.user?._id,
@@ -408,17 +414,17 @@ exports.giveCertificate = asyncHandler(async (req, res, next) => {
     {
       course: courseId,
       user: userId,
-      "certificate.isdeserve": true,
+      'certificate.isdeserve': true,
     },
-    { $set: { "certificate.istake": true, "certificate.file": file } },
-    { new: true }
+    { $set: { 'certificate.istake': true, 'certificate.file': file } },
+    { new: true },
   );
   if (!courseProgress) {
     return next(
       new ApiError(
         `No course progress found for this user ${userId} and course ${courseId} or user does not deserve a certificate`,
-        404
-      )
+        404,
+      ),
     );
   }
   //send notification to user
@@ -428,8 +434,8 @@ exports.giveCertificate = asyncHandler(async (req, res, next) => {
   });
 
   return res.status(200).json({
-    status: "success",
-    msg: "Certificate given successfully",
+    status: 'success',
+    msg: 'Certificate given successfully',
   });
 });
 
@@ -455,8 +461,8 @@ exports.assignInstructorPercentage = asyncHandler(async (req, res, next) => {
     return next(
       new ApiError(
         `Instructor percentage already assigned for this course`,
-        404
-      )
+        404,
+      ),
     );
   }
   // Check if course has an instructor
@@ -470,7 +476,7 @@ exports.assignInstructorPercentage = asyncHandler(async (req, res, next) => {
   const result = await createOne(course.instructor);
   if (!result) {
     return next(
-      new ApiError(`Error while creating instructor profit object`, 500)
+      new ApiError(`Error while creating instructor profit object`, 500),
     );
   }
   await course.save();
@@ -478,8 +484,8 @@ exports.assignInstructorPercentage = asyncHandler(async (req, res, next) => {
 
   //---> <Response>-------------------
   return res.status(200).json({
-    status: "success",
-    msg: "Instructor percentage assigned successfully",
+    status: 'success',
+    msg: 'Instructor percentage assigned successfully',
   });
 });
 
@@ -495,7 +501,7 @@ exports.removeInstructorPercentage = asyncHandler(async (req, res, next) => {
   // Check if course has an instructor
   if (!course.instructorPercentage) {
     return next(
-      new ApiError(`No instructorPercentage found for this course`, 404)
+      new ApiError(`No instructorPercentage found for this course`, 404),
     );
   }
   // Remove the instructor percentage
@@ -506,7 +512,7 @@ exports.removeInstructorPercentage = asyncHandler(async (req, res, next) => {
   await course.save();
   // Return success response
   return res.status(200).json({
-    status: "success",
-    msg: "Instructor percentage removed successfully",
+    status: 'success',
+    msg: 'Instructor percentage removed successfully',
   });
 });

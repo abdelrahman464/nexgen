@@ -2,9 +2,9 @@ const express = require("express");
 
 const {
   getCategoryValidator,
-  createCategroyValidator,
-  updateCategroyValidator,
-  deleteCategroyValidator,
+  createCategoryValidator,
+  updateCategoryValidator,
+  deleteCategoryValidator,
 } = require("../utils/validators/categoryValidator");
 const {
   getCategories,
@@ -28,7 +28,7 @@ router
   .post(
     authServices.protect,
     authServices.allowedTo("admin"),
-    createCategroyValidator,
+    createCategoryValidator,
     createCategory
   );
 router
@@ -37,13 +37,13 @@ router
   .put(
     authServices.protect,
     authServices.allowedTo("admin"),
-    updateCategroyValidator,
+    updateCategoryValidator,
     updateCategory
   )
   .delete(
     authServices.protect,
     authServices.allowedTo("admin"),
-    deleteCategroyValidator,
+    deleteCategoryValidator,
     deleteCategory
   );
 

@@ -7,7 +7,6 @@ const ArticalSchema = new mongoose.Schema(
       required: [true, "Artical title required"],
       trim: true,
       minlength: 2,
-      maxlength: 100,
     },
     description: {
       type: String,

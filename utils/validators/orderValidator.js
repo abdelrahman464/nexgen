@@ -1,38 +1,38 @@
-const { check, query } = require("express-validator");
-const validatorMiddleware = require("../../middlewares/validatorMiddleware");
-const User = require("../../models/userModel");
+const { check, query } = require('express-validator');
+const validatorMiddleware = require('../../middlewares/validatorMiddleware');
+const User = require('../../models/userModel');
 
 exports.purchaseForUserValidator = [
-  check("id")
+  check('id')
     .notEmpty()
-    .withMessage("item id is required")
+    .withMessage('item id is required')
     .isMongoId()
-    .withMessage("invalid item id "),
-  check("type")
+    .withMessage('invalid item id '),
+  check('type')
     .notEmpty()
-    .withMessage("type is required")
-    .isIn(["course", "package", "coursePackage"])
+    .withMessage('type is required')
+    .isIn(['course', 'package', 'coursePackage'])
     .withMessage(
-      "invalid type , type should be course or package or coursePackage"
+      'invalid type , type should be course or package or coursePackage',
     ),
-  check("userId")
+  check('userId')
     .notEmpty()
-    .withMessage("userId is required")
+    .withMessage('userId is required')
     .isMongoId()
-    .withMessage("invalid userId "),
-  check("isPaid")
+    .withMessage('invalid userId '),
+  check('isPaid')
     .notEmpty()
-    .withMessage("isPaid key is required ")
+    .withMessage('isPaid key is required ')
     .isIn([true, false])
-    .withMessage("isPaid key should be either true or false"),
+    .withMessage('isPaid key should be either true or false'),
 
   validatorMiddleware,
 ];
 
 exports.queryParamsValidator = [
-  query("userId").optional().isMongoId().withMessage("invalid userId "),
-  query("startDate").optional(),
-  query("endDate").optional(),
+  query('userId').optional().isMongoId().withMessage('invalid userId '),
+  query('startDate').optional(),
+  query('endDate').optional(),
   validatorMiddleware,
 ];
 /*desc: check if the sender of request is authorized to view the orders of specific user
@@ -47,7 +47,7 @@ exports.queryParamsValidator = [
 exports.isAuthToView = async (req, res, next) => {
   try {
     if (req.query.userId) {
-      if (req.user.role !== "admin") {
+      if (req.user.role !== 'admin') {
         const isUserExist = await User.exists({
           _id: req.query.userId,
           invitor: req.user._id,

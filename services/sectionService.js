@@ -1,14 +1,20 @@
-const mongoose = require("mongoose");
-const asyncHandler = require("express-async-handler");
-const ApiError = require("../utils/apiError");
-const Lesson = require("../models/lessonModel");
-const Section = require("../models/sectionModel");
-const factory = require("./handllerFactory");
+const mongoose = require('mongoose');
+const asyncHandler = require('express-async-handler');
+const ApiError = require('../utils/apiError');
+const Lesson = require('../models/lessonModel');
+const Section = require('../models/sectionModel');
+const factory = require('./handllerFactory');
 
 //@desc get list of sections
 //@route GET /api/v1/sections
 //@access public
-exports.getSections = factory.getALl(Section, "Section");
+exports.filterSectionsByCourse = async (req, res, next) => {
+  const filterObject = { course: req.params.courseId };
+  req.filterObj = filterObject;
+  next();
+};
+
+exports.getSections = factory.getALl(Section, 'Section');
 
 //@desc get specific Section by id
 //@route GET /api/v1/sections/:id
@@ -33,13 +39,13 @@ exports.deleteSection = asyncHandler(async (req, res, next) => {
     .transaction(async (session) => {
       // Find and delete the Section
       const section = await Section.findByIdAndDelete(req.params.id).session(
-        session
+        session,
       );
 
       // Check if Section exists
       if (!section) {
         return next(
-          new ApiError(`Section not found for this id ${req.params.id}`, 404)
+          new ApiError(`Section not found for this id ${req.params.id}`, 404),
         );
       }
 
@@ -51,7 +57,7 @@ exports.deleteSection = asyncHandler(async (req, res, next) => {
     })
     .catch((error) => {
       // Handle any transaction-related errors
-      console.error("Transaction error:", error);
-      return next(new ApiError("Error during transaction", 500));
+      console.error('Transaction error:', error);
+      return next(new ApiError('Error during transaction', 500));
     });
 });

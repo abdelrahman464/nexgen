@@ -1,94 +1,187 @@
-const { check } = require("express-validator");
-const validatorMiddleware = require("../../middlewares/validatorMiddleware");
-const apiError = require("../apiError");
-const Subscription = require("../../models/userSubscriptionModel");
+const { body, check } = require('express-validator');
+const validatorMiddleware = require('../../middlewares/validatorMiddleware');
+const ApiError = require('../apiError');
+const Course = require('../../models/courseModel');
+const Package = require('../../models/packageModel');
 
-// exports.createArticalValidator = [
-//   check("title")
-//     .notEmpty()
-//     .withMessage("Artical title required")
-//     .isLength({ min: 2 })
-//     .withMessage("Artical title too short")
-//     .isLength({ max: 100 })
-//     .withMessage("Artical title too long"),
-//   check("description")
-//     .notEmpty()
-//     .withMessage("Artical description required")
-//     .isLength({ min: 10 })
-//     .withMessage("Artical description too short, should be at least 10 char"),
-//   check("content")
-//     .notEmpty()
-//     .withMessage("Artical content required")
-//     .isLength({ min: 10 })
-//     .withMessage("Artical content too short, should be at least 10 char"),
-//   check("videoUrl").isString().withMessage("videourl must be a string"),
-//   check("imageCover")
-//     .notEmpty()
-//     .withMessage("Blog image required")
-//     .isString()
-//     .withMessage("image must be a string"),
+exports.createPackageValidator = [
+  body('title').isObject().withMessage('Title must be an object.'),
 
-//   validatorMiddleware,
-// ];
+  body('title.en')
+    .isString()
+    .withMessage(`en title must be a string.`)
+    .isLength({ min: 3 })
+    .withMessage(`en title must be at least 3 chars`),
 
-// exports.getOneArticalValidator = [
-//   check("id").isMongoId().withMessage("invalid id formate"),
-//   validatorMiddleware,
-// ];
+  body('title.ar')
+    .isString()
+    .withMessage(`ar title must be a string.`)
+    .isLength({ min: 3 })
+    .withMessage(`ar title must be at least 3 chars`),
 
-// exports.updateArticalValidator = [
-//   check("id").isMongoId().withMessage("Invalid artical id format"),
-//   check("title")
-//     .notEmpty()
-//     .withMessage("artical title required")
-//     .isLength({ min: 2 })
-//     .withMessage("artical title too short")
-//     .isLength({ max: 100 })
-//     .withMessage("artical title too long")
-//     .optional(),
-//   check("description")
-//     .notEmpty()
-//     .withMessage("artical description required")
-//     .isLength({ min: 10 })
-//     .withMessage("artical description too short, should be at least 10 char")
-//     .optional(),
-//   check("content")
-//     .optional()
-//     .notEmpty()
-//     .withMessage("Artical content required")
-//     .isLength({ min: 10 })
-//     .withMessage("Artical content too short, should be at least 10 char"),
-//   check("videoUrl")
-//     .isString()
-//     .withMessage("videourl must be a string")
-//     .optional(),
-//   check("imageCover")
-//     .notEmpty()
-//     .withMessage("Blog image required")
-//     .isString()
-//     .withMessage("image must be a string")
-//     .optional(),
-//   validatorMiddleware,
-// ];
+  body('description').isObject().withMessage('description must be an object.'),
 
-// exports.deleteArticalValidator = [
-//   check("id").isMongoId().withMessage("invalid id formate"),
-//   validatorMiddleware,
-// ];
+  body('description.en')
+    .isString()
+    .withMessage(`en description must be a string.`)
+    .isLength({ min: 10 })
+    .withMessage(`en description must at least 10 chars`),
 
+  body('description.ar')
+    .isString()
+    .withMessage(`ar description must be a string.`)
+    .isLength({ min: 10 })
+    .withMessage(`ar description must at least 10 chars`),
 
+  body('highlights').isArray().withMessage('highlights must be an array'),
+  body('highlights.*').isObject().withMessage('highlight must be an object'),
+  body('highlights.*.en')
+    .isString()
+    .withMessage(`en highlight must be a string.`)
+    .isLength({ min: 3 })
+    .withMessage(`en highlight must be at least 3 chars`),
+  body('highlights.*.ar')
+    .isString()
+    .withMessage(`ar highlight must be a string.`)
+    .isLength({ min: 3 })
+    .withMessage(`ar highlight must be at least 3 chars`),
 
+  check('price')
+    .notEmpty()
+    .withMessage('Package price is required')
+    .isNumeric()
+    .withMessage('Package price must be a number')
+    .isLength({ max: 32 })
+    .withMessage('To long price'),
 
+  check('priceAfterDiscount')
+    .optional()
+    .isNumeric()
+    .withMessage('Package priceAfterDiscount must be a number')
+    .toFloat()
+    .custom((value, { req }) => {
+      if (req.body.price <= value) {
+        throw new ApiError('priceAfterDiscount must be lower than price', 400);
+      }
+      return true;
+    }),
 
+  check('course')
+    .notEmpty()
+    .withMessage('Course is required')
+    .isMongoId()
+    .withMessage('Invalid course id format')
+    .custom(async (value, { req }) => {
+      const { res } = req; // Accessing res from req
+      const course = await Course.findById(value);
+      if (!course) {
+        throw new ApiError(res.__('errors.Not-Found'), 403);
+      }
+      //check if the package with that course is already exist
+      const package = await Package.findOne({ course: value });
+      if (package) {
+        throw new ApiError(res.__('errors.Duplicate'), 400);
+      }
+      return true;
+    }),
 
+  validatorMiddleware,
+];
 
+exports.updatePackageValidator = [
+  check('id').isMongoId().withMessage('Invalid package id format'),
+  body('title').optional().isObject().withMessage('Title must be an object.'),
 
+  body('title.en')
+    .optional()
+    .isString()
+    .withMessage(`en title must be a string.`)
+    .isLength({ min: 3 })
+    .withMessage(`en title must be at least 3 chars`),
 
+  body('title.ar')
+    .optional()
+    .isString()
+    .withMessage(`ar title must be a string.`)
+    .isLength({ min: 3 })
+    .withMessage(`ar title must be at least 3 chars`),
 
+  body('description')
+    .optional()
+    .isObject()
+    .withMessage('description must be an object.'),
 
+  body('description.en')
+    .optional()
+    .isString()
+    .withMessage(`en description must be a string.`)
+    .isLength({ min: 10 })
+    .withMessage(`en description must at least 10 chars`),
 
+  body('description.ar')
+    .optional()
+    .isString()
+    .withMessage(`ar description must be a string.`)
+    .isLength({ min: 10 })
+    .withMessage(`ar description must at least 10 chars`),
 
+  body('highlights')
+    .optional()
+    .isArray()
+    .withMessage('highlights must be an array'),
+  body('highlights.*').isObject().withMessage('highlight must be an object'),
+  body('highlights.*.en')
+    .isString()
+    .withMessage(`en highlight must be a string.`)
+    .isLength({ min: 3 })
+    .withMessage(`en highlight must be at least 3 chars`),
+  body('highlights.*.ar')
+    .isString()
+    .withMessage(`ar highlight must be a string.`)
+    .isLength({ min: 3 })
+    .withMessage(`ar highlight must be at least 3 chars`),
 
+  check('price')
+    .optional()
+    .isNumeric()
+    .withMessage('package price must be a number')
+    .isLength({ max: 32 })
+    .withMessage('To long price'),
+
+  check('priceAfterDiscount')
+    .optional()
+    .isNumeric()
+    .withMessage('package priceAfterDiscount must be a number')
+    .toFloat()
+    .custom((value, { req }) => {
+      if (req.body.price <= value) {
+        throw new ApiError('priceAfterDiscount must be lower than price', 400);
+      }
+      return true;
+    }),
+  check('course')
+    .optional()
+    .isMongoId()
+    .withMessage('Invalid course id format')
+    .custom(async (value) => {
+      const course = await Course.findById(value);
+      if (!course) {
+        throw new ApiError('Course not found', 404);
+      }
+      //check if the package with that course is already exist
+      const package = await Package.findOne({ course: value });
+      if (package) {
+        throw new ApiError('Package with that course is already exist', 400);
+      }
+      return true;
+    }),
+  validatorMiddleware,
+];
+
+exports.packageIdValidator = [
+  check('id').isMongoId().withMessage('invalid id formate'),
+  validatorMiddleware,
+];
 
 // exports.checkPackageAuthority = async (req, res, next) => {
 //   const { packageId } = req.params;

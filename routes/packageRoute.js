@@ -1,31 +1,40 @@
-const express = require("express");
+const express = require('express');
 
-const packageService = require("../services/packageService");
-const authServices = require("../services/authServices");
+const {
+  createPackageValidator,
+  updatePackageValidator,
+  packageIdValidator,
+} = require('../utils/validators/packageValidator');
+const packageService = require('../services/packageService');
+const authServices = require('../services/authServices');
 
 const router = express.Router();
 router
-  .route("/")
+  .route('/')
   .get(packageService.getAll)
   .post(
     authServices.protect,
-    authServices.allowedTo("admin"),
+    authServices.allowedTo('admin'),
     packageService.convertToArray,
-    packageService.createOne
+    createPackageValidator,
+    packageService.createOne,
   );
 router
-  .route("/:id")
-  .get(packageService.getOne)
+  .route('/:id')
+  .get(packageIdValidator, packageService.getOne)
   .put(
     authServices.protect,
-    authServices.allowedTo("admin"),
+    authServices.allowedTo('admin'),
+    packageIdValidator,
     packageService.convertToArray,
-    packageService.updateOne
+    updatePackageValidator,
+    packageService.updateOne,
   )
   .delete(
     authServices.protect,
-    authServices.allowedTo("admin"),
-    packageService.deleteOne
+    packageIdValidator,
+    authServices.allowedTo('admin'),
+    packageService.deleteOne,
   );
 
 module.exports = router;

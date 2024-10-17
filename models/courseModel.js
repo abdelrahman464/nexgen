@@ -1,25 +1,35 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const courseSchema = new mongoose.Schema(
   {
     category: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Category",
+      ref: 'Category',
     },
     instructor: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
     },
+    finalExam: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam' },
+    placmentExam: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam' },
+    //i18n
     title: {
       type: String,
       required: true,
+      i18n: true,
     },
     description: {
       type: String,
       required: true,
+      i18n: true,
     },
-    finalExam: { type: mongoose.Schema.Types.ObjectId, ref: "Exam" },
-    placmentExam: { type: mongoose.Schema.Types.ObjectId, ref: "Exam" },
+    highlights: [
+      {
+        type: Object,
+        i18n: true,
+      },
+    ],
+    //
     image: {
       type: String,
       required: true,
@@ -30,20 +40,20 @@ const courseSchema = new mongoose.Schema(
       fontColor: String,
       fontDarkMode: String,
     },
-    highlights: [{ type: String }],
+
     price: {
       type: Number,
-      required: [true, "Course price is required"],
+      required: [true, 'Course price is required'],
       trim: true,
-      max: [200000, "Too long Course price"],
+      max: [200000, 'Too long Course price'],
     },
     priceAfterDiscount: {
       type: Number,
     },
     ratingsAverage: {
       type: Number,
-      min: [1, "rating must be between 1.0 and 5.0"],
-      max: [5, "rating must be between 1.0 and 5.0"],
+      min: [1, 'rating must be between 1.0 and 5.0'],
+      max: [5, 'rating must be between 1.0 and 5.0'],
       set: (v) => parseFloat(v.toFixed(1)), // Rounds to 2 decimal places
     },
     ratingsQuantity: {
@@ -57,7 +67,7 @@ const courseSchema = new mongoose.Schema(
     accessibleCourses: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Course",
+        ref: 'Course',
       },
     ],
     instructorPercentage: {
@@ -70,18 +80,18 @@ const courseSchema = new mongoose.Schema(
     // to enable vitual population
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-  }
+  },
 );
 // virtual field =>reviews
-courseSchema.virtual("reviews", {
-  ref: "Review",
-  foreignField: "course",
-  localField: "_id",
+courseSchema.virtual('reviews', {
+  ref: 'Review',
+  foreignField: 'course',
+  localField: '_id',
 });
 
 courseSchema.pre(/^find/, function (next) {
-  this.populate({ path: "category", select: "title" }).populate({
-    path: "accessibleCourses",
+  this.populate({ path: 'category', select: 'title' }).populate({
+    path: 'accessibleCourses',
   });
   next();
 });
@@ -95,18 +105,18 @@ const setCourseImageURL = (doc) => {
 //after initializ the doc in db
 // check if the document contains image
 // it work with findOne,findAll,update
-courseSchema.post("init", (doc) => {
+courseSchema.post('init', (doc) => {
   setCourseImageURL(doc);
 });
 // it work with create
-courseSchema.post("save", (doc) => {
+courseSchema.post('save', (doc) => {
   setCourseImageURL(doc);
 });
-courseSchema.pre("save", function (next) {
+courseSchema.pre('save', function (next) {
   setCourseImageURL(this);
   next();
 });
 
-const Course = mongoose.model("Course", courseSchema);
+const Course = mongoose.model('Course', courseSchema);
 
 module.exports = Course;

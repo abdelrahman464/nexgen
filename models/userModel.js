@@ -1,11 +1,11 @@
-const bcrypt = require("bcryptjs");
-const mongoose = require("mongoose");
+const bcrypt = require('bcryptjs');
+const mongoose = require('mongoose');
 
 const userShcema = new mongoose.Schema(
   {
     invitor: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
     },
     startMarketing: {
       type: Boolean,
@@ -14,11 +14,11 @@ const userShcema = new mongoose.Schema(
     name: {
       type: String,
       trim: true,
-      required: [true, "name required"],
+      required: [true, 'name required'],
     },
     email: {
       type: String,
-      required: [true, "email required"],
+      required: [true, 'email required'],
       unique: true,
       lowercase: true,
     },
@@ -34,9 +34,9 @@ const userShcema = new mongoose.Schema(
         function () {
           return !this.isOAuthUser;
         },
-        "password required",
+        'password required',
       ],
-      minlength: [8, "too short Password"],
+      minlength: [8, 'too short Password'],
     },
     isOAuthUser: {
       type: Boolean,
@@ -55,8 +55,8 @@ const userShcema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["user", "admin"],
-      default: "user",
+      enum: ['user', 'admin', 'campaign'],
+      default: 'user',
     },
     isInstructor: Boolean,
     country: String,
@@ -67,7 +67,7 @@ const userShcema = new mongoose.Schema(
 
     treeHead: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
     },
     isTreeHead: {
       type: Boolean,
@@ -76,15 +76,15 @@ const userShcema = new mongoose.Schema(
     placmentExam: {
       exam: {
         type: mongoose.Schema.ObjectId,
-        ref: "Exam",
+        ref: 'Exam',
       },
       course: {
         type: mongoose.Schema.ObjectId,
-        ref: "Course",
+        ref: 'Course',
       },
       status: {
         type: String,
-        enum: ["failed", "Completed"],
+        enum: ['failed', 'Completed'],
       },
       score: Number,
       attemptDate: Date,
@@ -94,10 +94,8 @@ const userShcema = new mongoose.Schema(
       default: false,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
-
-
 
 userShcema.methods.toJSON = function () {
   const obj = this.toObject();
@@ -109,12 +107,12 @@ userShcema.methods.toJSON = function () {
 
   // Define sensitive fields
   const sensitiveFields = [
-    "passwordChangedAt",
-    "passwordResetCode",
-    "passwordResetExpires",
-    "password",
-    "emailVerificationCode",
-    "emailVerificationExpires",
+    'passwordChangedAt',
+    'passwordResetCode',
+    'passwordResetExpires',
+    'password',
+    'emailVerificationCode',
+    'emailVerificationExpires',
   ];
 
   // Remove common sensitive fields
@@ -123,10 +121,9 @@ userShcema.methods.toJSON = function () {
   return obj;
 };
 
-
-userShcema.pre("save", async function (next) {
+userShcema.pre('save', async function (next) {
   //if password field is not modified go to next middleware
-  if (!this.isModified("password")) return next();
+  if (!this.isModified('password')) return next();
   // Hashing user password
   this.password = await bcrypt.hash(this.password, 12);
   next();
@@ -142,13 +139,13 @@ const setProfileImageURL = (doc) => {
 //after initializ the doc in db
 // check if the document contains image
 // it work with findOne,findAll,update
-userShcema.post("init", (doc) => {
+userShcema.post('init', (doc) => {
   setProfileImageURL(doc);
 });
 // it work with create
-userShcema.post("save", (doc) => {
+userShcema.post('save', (doc) => {
   setProfileImageURL(doc);
 });
 
-const User = mongoose.model("User", userShcema);
+const User = mongoose.model('User', userShcema);
 module.exports = User;

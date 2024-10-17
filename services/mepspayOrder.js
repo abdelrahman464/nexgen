@@ -25,7 +25,7 @@ const RandomUnique = function () {
 };
 
 async function createMpgsOrder(amount, orderId, description) {
-  const apiBaseURL = `https://na-gateway.mastercard.com/api/rest/version/72/merchant/${process.env.MPGS_MERCHANT_ID}/session`;
+  const apiBaseURL = `https://mepspay.gateway.mastercard.com/api/rest/version/72/merchant/${process.env.MPGS_MERCHANT_ID}/session`;
 
   // Prepare the authorization string by encoding it in Base64
   const authString = Buffer.from(
@@ -39,7 +39,7 @@ async function createMpgsOrder(amount, orderId, description) {
       {
         apiOperation: 'INITIATE_CHECKOUT',
         interaction: {
-          operation: 'AUTHORIZE',
+          operation: 'PURCHASE',
           merchant: {
             name: process.env.MPGS_MERCHANT_NAME || 'NEXGEN ACADEMY',
           },

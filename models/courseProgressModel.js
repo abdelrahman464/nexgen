@@ -52,13 +52,13 @@ const courseProgressSchema = new mongoose.Schema(
 );
 
 const setCertificateFileURL = (doc) => {
-  //return image base url + iamge name
+  //return image base url + image name
   if (doc.certificate.file) {
     const certificateFileUrl = `${process.env.BASE_URL}/certificate/${doc.certificate.file}`;
     doc.certificate.file = certificateFileUrl;
   }
 };
-//after initializ the doc in db
+//after initialize the doc in db
 // check if the document contains image
 // it work with findOne,findAll,update
 courseProgressSchema.post("init", (doc) => {

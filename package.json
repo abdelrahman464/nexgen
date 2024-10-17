@@ -22,10 +22,12 @@
     "express-async-handler": "^1.2.0",
     "express-rate-limit": "^7.4.1",
     "express-validator": "^7.2.0",
+    "i18n": "^0.15.1",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.7.1",
+    "mongoose": "^6.0.13",
+    "mongoose-i18n-localize": "^0.3.0",
     "morgan": "^1.10.0",
-   "multer": "^1.4.5-lts.1",
+    "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.15",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
@@ -37,7 +39,7 @@
     "uuid": "^10.0.0"
   },
   "devDependencies": {
-   "eslint": "^8.2.0",
+    "eslint": "^8.2.0",
     "eslint-config-airbnb": "^19.0.4",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-import": "^2.31.0",

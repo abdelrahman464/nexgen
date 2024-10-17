@@ -1,13 +1,13 @@
-const express = require("express");
-const authServices = require("../services/authServices");
+const express = require('express');
+const authServices = require('../services/authServices');
 const {
   createLessonValidator,
   updateLessonValidator,
   checkCourseAccess,
   checkLessonAccess,
-} = require("../utils/validators/lessonsValidator");
+} = require('../utils/validators/lessonsValidator');
 
-const { checkMongoId } = require("../utils/public/publicValidator");
+const { checkMongoId } = require('../utils/public/publicValidator');
 
 const {
   getLessons,
@@ -16,69 +16,78 @@ const {
   updateLesson,
   deleteLesson,
   getLessonById,
-  resizeMedia,
-  uploadlessonMedia,
+  uploadFiles,
+  resizeFiles,
   setCourseIdToBody,
-} = require("../services/lessonServices");
+  getSectionLessons,
+} = require('../services/lessonServices');
 
 const router = express.Router({ mergeParams: true });
 // Get Course Lessons
 router.get(
-  "/courseLessons/:id",
+  '/courseLessons/:id',
   authServices.protect,
-  authServices.allowedTo("user", "admin"),
+  authServices.allowedTo('user', 'admin'),
   checkMongoId,
   checkCourseAccess,
-  getCourseLessons
+  getCourseLessons,
+);
+router.get(
+  '/sectionLessons/:id/:sectionId',
+  authServices.protect,
+  authServices.allowedTo('user', 'admin'),
+  checkMongoId,
+  checkCourseAccess,
+  getSectionLessons,
 );
 // Get all lessons
 router.get(
-  "/",
+  '/',
   authServices.protect,
-  authServices.allowedTo("admin"),
-  getLessons
+  authServices.allowedTo('admin'),
+  getLessons,
 );
 // Get a specific lesson by ID
 //only admin can get lesson by id
 router.get(
-  "/:id",
+  '/:id',
   authServices.protect,
-  authServices.allowedTo("user", "admin"),
+  authServices.allowedTo('user', 'admin'),
   checkMongoId,
   checkLessonAccess,
-  getLessonById
+  getLessonById,
 );
 // Create a new lesson
 router.post(
-  "/",
+  '/',
   authServices.protect,
-  authServices.allowedTo("admin"),
-  uploadlessonMedia,
-  resizeMedia,
+  authServices.allowedTo('admin'),
+  uploadFiles,
+  resizeFiles,
   setCourseIdToBody,
   createLessonValidator,
-  createLesson
+  createLesson,
 );
 
 // Update a lesson by ID
 router.put(
-  "/:id",
+  '/:id',
   authServices.protect,
-  authServices.allowedTo("admin"),
-  uploadlessonMedia,
-  resizeMedia,
+  authServices.allowedTo('admin'),
+  uploadFiles,
+  resizeFiles,
   checkMongoId,
   updateLessonValidator,
-  updateLesson
+  updateLesson,
 );
 
 // Delete a lesson by ID
 router.delete(
-  "/:id",
+  '/:id',
   authServices.protect,
-  authServices.allowedTo("admin"),
+  authServices.allowedTo('admin'),
   checkMongoId,
-  deleteLesson
+  deleteLesson,
 );
 
 module.exports = router;

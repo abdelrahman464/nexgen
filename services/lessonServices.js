@@ -1,66 +1,99 @@
-const sharp = require("sharp");
-const fs = require("fs");
-const asyncHandler = require("express-async-handler");
-const { v4: uuidv4 } = require("uuid");
+const sharp = require('sharp');
+const fs = require('fs');
+const path = require('path');
+const asyncHandler = require('express-async-handler');
+const { v4: uuidv4 } = require('uuid');
 
-const ApiError = require("../utils/apiError");
-const factory = require("./handllerFactory");
-const Lesson = require("../models/lessonModel");
-const CourseProgress = require("../models/courseProgressModel");
-const { uploadMixOfFiles } = require("../middlewares/uploadImageMiddleware");
+const ApiError = require('../utils/apiError');
+const factory = require('./handllerFactory');
+const Lesson = require('../models/lessonModel');
+const CourseProgress = require('../models/courseProgressModel');
+const { uploadMixOfFiles } = require('../middlewares/uploadImageMiddleware');
+const ApiFeatures = require('../utils/apiFeatures');
 
-exports.uploadlessonMedia = uploadMixOfFiles([
+exports.uploadFiles = uploadMixOfFiles([
   {
-    name: "image",
+    name: 'image',
     maxCount: 1,
   },
   {
-    name: "attachment",
-    maxCount: 1,
+    name: 'attachments',
+    maxCount: 10,
   },
 ]);
 
-exports.resizeMedia = asyncHandler(async (req, res, next) => {
-  if (req.files.image && req.files.image[0].mimetype.startsWith("image/")) {
-    const imageFileName = `lesson-${uuidv4()}-${Date.now()}.webp`;
+const ensureDirectoryExistence = (filePath) => {
+  const dirname = path.dirname(filePath);
+  if (fs.existsSync(dirname)) {
+    return true;
+  }
+  fs.mkdirSync(dirname, { recursive: true });
+};
 
-    // Convert and save image using sharp
+exports.resizeFiles = asyncHandler(async (req, res, next) => {
+  if (req.files && req.files.attachments) {
+    const fileProcessingPromises = req.files.attachments.map(
+      async (file, index) => {
+        const mimeType = file.mimetype;
+
+        // Check if the file is an image or PDF
+        if (
+          !mimeType.startsWith('image/') &&
+          !mimeType.startsWith('application/pdf')
+        ) {
+          throw new ApiError(
+            `File ${index + 1} is not an image or PDF file.`,
+            400,
+          );
+        }
+
+        const extension = mimeType.split('/')[1];
+        const fileName = `lesson-attachment-${uuidv4()}-${Date.now()}-${index + 1}.${extension}`;
+        const filePath = path.join(
+          'uploads',
+          'lessons',
+          'attachments',
+          fileName,
+        );
+
+        ensureDirectoryExistence(filePath);
+
+        try {
+          if (mimeType.startsWith('image/')) {
+            // Process image files with sharp
+            await sharp(file.buffer).webp({ quality: 95 }).toFile(filePath);
+          } else if (mimeType.startsWith('application/pdf')) {
+            // Save PDF files as-is
+            fs.writeFileSync(filePath, file.buffer);
+          }
+
+          // Return the filename to store in req.body.attachments
+          return fileName;
+        } catch (error) {
+          console.error(`Error processing file ${index + 1}: ${error.message}`);
+          throw new ApiError(`Error processing file ${index + 1}.`, 500);
+        }
+      },
+    );
+
+    try {
+      const processedFiles = await Promise.all(fileProcessingPromises);
+      req.body.attachments = processedFiles; // Populate req.body.attachments with filenames
+    } catch (error) {
+      return next(error); // Properly pass error to error handler middleware
+    }
+  }
+  if (req.files && req.files.image) {
+    if (!req.files.image[0].mimetype.startsWith('image/')) {
+      return next(new ApiError('lesson image is not an image file', 400));
+    }
+
+    const imageFileName = `lesson-${uuidv4()}-${Date.now()}-image.webp`;
     await sharp(req.files.image[0].buffer)
-      .toFormat("webp")
       .webp({ quality: 95 })
       .toFile(`uploads/lessons/images/${imageFileName}`);
 
-    req.body.image = imageFileName; // Save imageCover file name in the request body for database saving
-  } else if (req.files.image) {
-    return next(new ApiError("Image is not an image file", 400));
-  }
-
-  // Handling attachment file upload
-  if (req.files.attachment) {
-    const file = req.files.attachment[0]; // Assuming there's only one attachment
-    const fileExtension = file.originalname.split(".").pop();
-    const newFileName = `lessonFile-${uuidv4()}-${Date.now()}.${fileExtension}`;
-
-    if (
-      [
-        "application/pdf",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      ].includes(file.mimetype)
-    ) {
-      await fs.writeFile(
-        `uploads/lessons/attachments/${newFileName}`,
-        file.buffer
-      );
-      req.body.attachment = newFileName;
-    } else {
-      return next(
-        new ApiError(
-          "Unsupported file type. Only PDF and Word documents are allowed.",
-          400
-        )
-      );
-    }
+    req.body.image = imageFileName;
   }
 
   next();
@@ -78,20 +111,42 @@ exports.createLesson = factory.createOne(Lesson);
 exports.getLessons = factory.getALl(Lesson);
 // Get all lessons of course for each user & hide the link of the lessons that the user didn't reach yet
 exports.getCourseLessons = async (req, res, next) => {
-  const lessons = await Lesson.find({ course: req.params.id }).sort({
+  const query = Lesson.find({ course: req.params.id }).sort({
     order: 1,
   });
+  const documentsCount = await Lesson.countDocuments({ course: req.params.id });
+
+  const apiFeatures = new ApiFeatures(query, req.query)
+    .filter()
+    .search('Lesson')
+    .sort()
+    .limitFields();
+
+  const results = await apiFeatures.paginate();
+  const lessons = Lesson.schema.methods.toJSONLocalizedOnly(
+    results,
+    req.locale,
+  );
+
+  const currentPage = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 50;
+  const numberOfPages = Math.ceil(documentsCount / limit);
+  let nextPage = null;
+
+  if (currentPage < numberOfPages) {
+    nextPage = currentPage + 1;
+  }
   if (lessons.length === 0)
-    return next(new ApiError("No lessons found for this course", 404));
+    return next(new ApiError('No lessons found for this course', 404));
 
   // Define a variable to hold the modified lessons with restricted access as needed
   let accessibleLessons = [...lessons];
 
-  if (req.user.role !== "admin") {
+  if (req.user.role !== 'admin') {
     const userCourseProgress = await CourseProgress.findOne({
       user: req.user._id,
       course: req.params.id,
-    }).populate("progress.lesson");
+    }).populate('progress.lesson');
 
     if (!userCourseProgress || userCourseProgress.progress.length === 0) {
       // If no progress, user should only access the first lesson
@@ -105,7 +160,7 @@ exports.getCourseLessons = async (req, res, next) => {
         userCourseProgress.progress[userCourseProgress.progress.length - 1];
       let currentLessonOrder;
 
-      if (lastLessonProgress.status === "Completed") {
+      if (lastLessonProgress.status === 'Completed') {
         // User can proceed to the next lesson
         currentLessonOrder = lastLessonProgress.lesson.order + 1;
       } else {
@@ -121,7 +176,101 @@ exports.getCourseLessons = async (req, res, next) => {
     }
   }
 
-  return res.status(200).json({ status: "success", data: accessibleLessons });
+  return res.status(200).json({
+    results: results.length,
+    paginationResult: {
+      totalCount: documentsCount,
+      currentPage,
+      limit,
+      numberOfPages,
+      nextPage,
+    },
+    data: accessibleLessons,
+  });
+};
+
+//@desc get lessons of a section
+//@route GET /api/v1/lessons/sectionLessons/:id/:sectionId
+//@access Private
+exports.getSectionLessons = async (req, res, next) => {
+  const query = Lesson.find({ section: req.params.sectionId }).sort({
+    order: 1,
+  });
+  const documentsCount = await Lesson.countDocuments({
+    section: req.params.sectionId,
+  });
+
+  const apiFeatures = new ApiFeatures(query, req.query)
+    .filter()
+    .search('Lesson')
+    .sort()
+    .limitFields();
+
+  const results = await apiFeatures.paginate();
+  const lessons = Lesson.schema.methods.toJSONLocalizedOnly(
+    results,
+    req.locale,
+  );
+
+  const currentPage = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 50;
+  const numberOfPages = Math.ceil(documentsCount / limit);
+  let nextPage = null;
+
+  if (currentPage < numberOfPages) {
+    nextPage = currentPage + 1;
+  }
+  if (lessons.length === 0)
+    return next(new ApiError('No lessons found for this course', 404));
+
+  // Define a variable to hold the modified lessons with restricted access as needed
+  let accessibleLessons = [...lessons];
+
+  if (req.user.role !== 'admin') {
+    const userCourseProgress = await CourseProgress.findOne({
+      user: req.user._id,
+      course: req.params.id,
+    }).populate('progress.lesson');
+
+    if (!userCourseProgress || userCourseProgress.progress.length === 0) {
+      // If no progress, user should only access the first lesson
+      accessibleLessons = lessons.map((lesson, index) => {
+        if (index > 0) lesson.videoUrl = undefined;
+        return lesson;
+      });
+    } else {
+      // Find the last lesson in progress
+      const lastLessonProgress =
+        userCourseProgress.progress[userCourseProgress.progress.length - 1];
+      let currentLessonOrder;
+
+      if (lastLessonProgress.status === 'Completed') {
+        // User can proceed to the next lesson
+        currentLessonOrder = lastLessonProgress.lesson.order + 1;
+      } else {
+        // User should retake the last lesson
+        currentLessonOrder = lastLessonProgress.lesson.order;
+      }
+
+      // Update accessibleLessons based on currentLessonOrder
+      accessibleLessons = lessons.map((lesson) => {
+        if (lesson.order > currentLessonOrder) lesson.videoUrl = undefined;
+        return lesson;
+      });
+    }
+  }
+
+  return res.status(200).json({
+    results: results.length,
+    paginationResult: {
+      totalCount: documentsCount,
+      currentPage,
+      limit,
+      numberOfPages,
+      nextPage,
+    },
+    data: accessibleLessons,
+  });
 };
 
 // exports.getCourseLessons = async (req, res,next) => {
@@ -171,7 +320,7 @@ exports.getLessonById = asyncHandler(async (req, res, next) => {
 
   if (!lesson) {
     // If no lesson is found with the given ID, send a 404 response
-    return next(new ApiError("No lesson found with that ID", 404));
+    return next(new ApiError('No lesson found with that ID', 404));
   }
 
   return res.status(200).json({ data: lesson });

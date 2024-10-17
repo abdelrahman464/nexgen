@@ -1,45 +1,50 @@
-const { check, body } = require("express-validator");
-const validatorMiddleware = require("../../middlewares/validatorMiddleware");
-const Category = require("../../models/categoryModel");
+const { check, body } = require('express-validator');
+const validatorMiddleware = require('../../middlewares/validatorMiddleware');
 
 exports.getCategoryValidator = [
   //rules
-  check("id").isMongoId().withMessage("Invalid category id format"),
+  check('id').isMongoId().withMessage('Invalid category id format'),
   //catch error
   validatorMiddleware,
 ];
-exports.createCategroyValidator = [
-  check("title")
-    .notEmpty()
-    .withMessage("category required")
+
+exports.createCategoryValidator = [
+  body('title').isObject().withMessage('Title must be an object.'),
+
+  body('title.en')
+    .isString()
+    .withMessage(`en title must be a string.`)
     .isLength({ min: 3 })
-    .withMessage("too short category titel")
-    .isLength({ max: 32 })
-    .withMessage("too long category titel")
-    .custom((val) =>
-      Category.findOne({ title: val }).then((category) => {
-        if (category) {
-          throw new Error(
-            `category title already exists and must it to be unique`
-          );
-        }
-      })
-    ),
+    .withMessage(`en title must be at least 3 chars`),
+
+  body('title.ar')
+    .isString()
+    .withMessage(`ar title must be a string.`)
+    .isLength({ min: 3 })
+    .withMessage(`ar title must be at least 3 chars`),
 
   validatorMiddleware,
 ];
-exports.updateCategroyValidator = [
-  check("id").isMongoId().withMessage("Invalid category id format"),
-  body("title")
+exports.updateCategoryValidator = [
+  check('id').isMongoId().withMessage('Invalid category id format'),
+  body('title').optional().isObject().withMessage('Title must be an object.'),
+
+  body('title.en')
     .optional()
+    .isString()
+    .withMessage(`en title must be a string.`)
     .isLength({ min: 3 })
-    .withMessage("too short category titel")
-    .isLength({ max: 32 })
-    .withMessage("too long category titel"),
+    .withMessage(`en title must be at least 3 chars`),
 
+  body('title.ar')
+    .optional()
+    .isString()
+    .withMessage(`ar title must be a string.`)
+    .isLength({ min: 3 })
+    .withMessage(`ar title must be at least 3 chars`),
   validatorMiddleware,
 ];
-exports.deleteCategroyValidator = [
-  check("id").isMongoId().withMessage("Invalid category id format"),
+exports.deleteCategoryValidator = [
+  check('id').isMongoId().withMessage('Invalid category id format'),
   validatorMiddleware,
 ];

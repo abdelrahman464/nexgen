@@ -1,4 +1,4 @@
-const express = require("express");
+const express = require('express');
 const {
   getUserValidator,
   createUserValidator,
@@ -7,8 +7,8 @@ const {
   changeUserPasswordValidator,
   updateLoggedUserValidator,
   changeLoggedUserPasswordValidator,
-} = require("../utils/validators/userValidator");
-const authServices = require("../services/authServices");
+} = require('../utils/validators/userValidator');
+const authServices = require('../services/authServices');
 const {
   getUsers,
   createUser,
@@ -25,99 +25,106 @@ const {
   resizeImage,
   createFilterObjToGetInstructors,
   getUserData,
+  getPurchasersUsersAndNon,
   getUsersWithoutCourse,
-  getUsersWithOutOrders,
-} = require("../services/userService");
+  getUsersCourse,
+} = require('../services/userService');
 
 const router = express.Router();
 
-router.get("/getMe", authServices.protect, getLoggedUserData, getUser);
+router.get('/getMe', authServices.protect, getLoggedUserData, getUser);
 router.get(
-  "/adminAndInstructor",
+  '/adminAndInstructor',
   authServices.protect,
   createFilterObjToGetInstructors,
-  getUsers
+  getUsers,
 );
 
 router
-  .route("/active/:id")
+  .route('/active/:id')
   .put(authServices.protect, activeUser)
   .delete(authServices.protect, unActiveUser);
 
 router.put(
-  "/changeMyPassword",
+  '/changeMyPassword',
   authServices.protect,
   changeLoggedUserPasswordValidator,
-  updateLoggedUserPassword
+  updateLoggedUserPassword,
 );
 router.put(
-  "/changeMyData",
+  '/changeMyData',
   authServices.protect,
   uploadProfileImage,
   resizeImage,
   updateLoggedUserValidator,
-  updateLoggedUserData
+  updateLoggedUserData,
 );
 router.put(
-  "/changePassword/:id",
+  '/changePassword/:id',
   authServices.protect,
-  authServices.allowedTo("admin"),
+  authServices.allowedTo('admin'),
   changeUserPasswordValidator,
-  changeUserPassword
+  changeUserPassword,
 );
 
 router
-  .route("/")
-  .get(authServices.protect, authServices.allowedTo("admin"), getUsers)
+  .route('/')
+  .get(authServices.protect, authServices.allowedTo('admin'), getUsers)
   .post(
     authServices.protect,
-    authServices.allowedTo("admin"),
+    authServices.allowedTo('admin'),
     uploadProfileImage,
     resizeImage,
     createUserValidator,
-    createUser
+    createUser,
   );
 router
-  .route("/:id")
+  .route('/:id')
   .get(
     authServices.protect,
-    authServices.allowedTo("admin"),
+    authServices.allowedTo('admin'),
     getUserValidator,
-    getUser
+    getUser,
   )
   .put(
     authServices.protect,
-    authServices.allowedTo("admin"),
+    authServices.allowedTo('admin'),
     uploadProfileImage,
     resizeImage,
     updateUserValidator,
-    updateUser
+    updateUser,
   )
   .delete(
     authServices.protect,
-    authServices.allowedTo("admin"),
+    authServices.allowedTo('admin'),
     deleteUserValidator,
-    deleteUser
+    deleteUser,
   );
 
 router.get(
-  "/:id/userData",
+  '/:id/userData',
   authServices.protect,
-  authServices.allowedTo("admin"),
-  getUserData
+  authServices.allowedTo('admin'),
+  getUserData,
 );
 
 router.get(
-  "/course/usersWithOutCourse/:courseId?",
+  '/course/usersWithOutCourse/:courseId',
   authServices.protect,
-  authServices.allowedTo("admin"),
-  getUsersWithoutCourse
+  authServices.allowedTo('admin'),
+  getUsersWithoutCourse,
 );
 router.get(
-  "/order/usersWithOutOrders",
+  '/course/usersCourse/:courseId',
   authServices.protect,
-  authServices.allowedTo("admin"),
-  getUsersWithOutOrders
+  authServices.allowedTo('admin'),
+  getUsersCourse,
+);
+router.get(
+  '/order/purchasersAndNon',
+  authServices.protect,
+  authServices.allowedTo('admin'),
+  getPurchasersUsersAndNon,
 );
 
 module.exports = router;
