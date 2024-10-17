@@ -1,0 +1,7 @@
+{
+  "errors": {
+    "Not-Authorized": "You are not authorized to perform this action",
+    "Duplicate": "already exists",
+    "Not-Found": "not found"
+  }
+}
