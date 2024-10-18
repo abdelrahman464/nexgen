@@ -255,7 +255,10 @@ exports.userScores = async (req, res, next) => {
     }).populate('progress.lesson', 'title order');
 
     if (!courseProgress) {
-      return next(new ApiError('No course progress found for this user.', 404));
+      // return next(new ApiError('No course progress found for this user.', 404));
+      return next(
+        new ApiError(res.__('errors.Not-Found', { document: 'course' }), 404),
+      );
     }
 
     // Fetch all lessons associated with the course
@@ -275,7 +278,16 @@ exports.userScores = async (req, res, next) => {
       (total, item) => total + item.examScore,
       0,
     );
-    const examsAttemptedCount = completedLessonsCount; // Since only completed lessons are attempted
+    //each lesson grade {lessonId,grade(percentage),order}
+    const lessonGrades = completedLessons.map((item) => ({
+      //get exam passingScore
+      lessonId: item.lesson._id,
+      grade: item.examScore,
+      attemptDate: item.attemptDate,
+      modelExam: item.modelExam,
+    }));
+
+    const lessonExamsAttemptedCount = completedLessonsCount; // Since only completed lessons are attempted
 
     // Track attempted lesson IDs
     const attemptedLessonIds = new Set(
@@ -290,15 +302,18 @@ exports.userScores = async (req, res, next) => {
     const totalLessons = allLessons.length;
 
     // Calculate the total possible course score (assuming each lesson's score is out of 100)
-    const totalPossibleCourseScore = totalLessons * 100;
+    // const totalPossibleCourseScore = totalLessons * 100;
 
-    // Calculate the average grade percentage for completed lessons
-    const averageLessonScore =
-      examsAttemptedCount > 0
-        ? (totalExamScore / examsAttemptedCount).toFixed(2)
+    // Calculate the average lesson grade for completed lessons
+    const averageLessonExamGrade =
+      lessonExamsAttemptedCount > 0
+        ? (totalExamScore / lessonExamsAttemptedCount).toFixed(2)
         : 0;
-    const averageGradePercentage =
-      ((totalExamScore / totalPossibleCourseScore) * 100).toFixed(2) || 0;
+    const averageGrade =
+      (
+        (totalExamScore + courseProgress.score) /
+        (lessonExamsAttemptedCount + 1)
+      ).toFixed(2) || 0;
 
     // Calculate the percentages of exams completed and not attempted
     const examsCompletedPercentage = (
@@ -312,6 +327,12 @@ exports.userScores = async (req, res, next) => {
 
     // Final exam score and percentage (adjust based on your data structure)
     const finalExamScore = courseProgress.score || 0;
+    const courseGrade = {
+      grade: finalExamScore,
+      attemptDate: courseProgress.attemptDate,
+      modelExam: courseProgress.modelExam,
+    };
+
     const finalExamCompletionPercentage = finalExamScore > 0 ? 100 : 0;
 
     // Calculate the total progress with weighted averages (lesson exams 80%, final exam 20%)
@@ -334,8 +355,8 @@ exports.userScores = async (req, res, next) => {
       status: 'success',
       data: {
         //These stats give insights into how well the user performed in the completed lessons.
-        averageGradePercentage,
-        averageLessonScore,
+        averageGrade,
+        averageLessonExamGrade,
         totalProgress,
         finalExamCompletionPercentage,
         //These percentages show how many exams the user has completed and how many are still pending.
@@ -345,9 +366,10 @@ exports.userScores = async (req, res, next) => {
         completedLessonsCount,
         notAttemptedLessonsCount,
         totalExamScore,
-        finalExamScore,
-        examsAttemptedCount,
-        completionStatus, //This is a simple string indicating whether the course is fully completed or still in progress
+        courseGrade,
+        lessonExamsAttemptedCount,
+        lessonGrades,
+        completionStatus,
       },
     });
   } catch (err) {
@@ -630,9 +652,9 @@ const getLessonExam = async (lesson, courseProgress, user) => {
 };
 
 //Course Exam Logic
-const getCourseExam = async (req, progressModel) => {
+const getCourseExam = async (req) => {
   const { user, params } = req;
-  const examResult = await progressModel.findOne({
+  const examResult = await CourseProgress.findOne({
     user: user._id,
     course: params.id,
   });
@@ -658,11 +680,11 @@ const getCourseExam = async (req, progressModel) => {
 };
 
 //Placement Exam Logic
-const getPlacementExam = async (req, examModel) => {
+const getPlacementExam = async (req) => {
   const { user, params } = req;
   const courseId = params.id;
 
-  const placementExam = await examModel.findOne({
+  const placementExam = await Exam.findOne({
     course: courseId,
     type: 'placement',
   });
@@ -761,7 +783,7 @@ exports.submitLessonAnswers = async (req, res, next) => {
 //start course exam logic
 exports.courseExam = async (req, res, next) => {
   try {
-    const exam = await getCourseExam(req, CourseProgress);
+    const exam = await getCourseExam(req);
     res.status(200).json({ status: 'success', exam });
   } catch (error) {
     next(error);
@@ -859,7 +881,7 @@ exports.submitCourseAnswers = async (req, res, next) => {
 // start placement exam logic
 exports.placementExam = async (req, res, next) => {
   try {
-    const exam = await getPlacementExam(req, Exam);
+    const exam = await getPlacementExam(req);
     res.status(200).json({ status: 'success', exam });
   } catch (error) {
     next(error);
