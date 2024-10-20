@@ -414,9 +414,9 @@ exports.giveCertificate = asyncHandler(async (req, res, next) => {
     {
       course: courseId,
       user: userId,
-      'certificate.isdeserve': true,
+      'certificate.isDeserve': true,
     },
-    { $set: { 'certificate.istake': true, 'certificate.file': file } },
+    { $set: { 'certificate.isTake': true, 'certificate.file': file } },
     { new: true },
   );
   if (!courseProgress) {

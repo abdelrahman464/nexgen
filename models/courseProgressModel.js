@@ -1,19 +1,19 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const courseProgressSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     course: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Course",
+      ref: 'Course',
       required: true,
     },
     modelExam: { type: String }, // will be set after taking exam and will be used to retake the other model
     score: { type: Number }, //will be set after finishing the course
     status: {
       type: String,
-      enum: ["notTaken", "failed", "Completed"],
-      default: "notTaken",
+      enum: ['notTaken', 'failed', 'Completed'],
+      default: 'notTaken',
     },
     wrongAnswers: [
       {
@@ -24,12 +24,12 @@ const courseProgressSchema = new mongoose.Schema(
 
     progress: [
       {
-        lesson: { type: mongoose.Schema.Types.ObjectId, ref: "Lesson" },
+        lesson: { type: mongoose.Schema.Types.ObjectId, ref: 'Lesson' },
         modelExam: { type: String },
         status: {
           type: String,
-          enum: ["failed", "Completed"],
-          default: "Completed",
+          enum: ['failed', 'Completed'],
+          default: 'Completed',
         },
         examScore: { type: Number, default: 0 },
         attemptDate: { type: Date, default: Date.now },
@@ -42,13 +42,13 @@ const courseProgressSchema = new mongoose.Schema(
       },
     ],
     certificate: {
-      isdeserve: { type: Boolean, default: false },
-      istake: { type: Boolean, default: false },
+      isDeserve: { type: Boolean, default: false },
+      isTake: { type: Boolean, default: false },
       file: { type: String },
     },
     attemptDate: { type: Date },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const setCertificateFileURL = (doc) => {
@@ -61,19 +61,19 @@ const setCertificateFileURL = (doc) => {
 //after initialize the doc in db
 // check if the document contains image
 // it work with findOne,findAll,update
-courseProgressSchema.post("init", (doc) => {
+courseProgressSchema.post('init', (doc) => {
   setCertificateFileURL(doc);
 });
 // it work with create
-courseProgressSchema.post("save", (doc) => {
+courseProgressSchema.post('save', (doc) => {
   setCertificateFileURL(doc);
 });
 
 // ^find => it mean if part of of teh word contains find
 courseProgressSchema.pre(/^find/, function (next) {
   // this => query
-  this.populate({ path: "progress.lesson", select: "title order" });
+  this.populate({ path: 'progress.lesson', select: 'title order' });
   next();
 });
 
-module.exports = mongoose.model("CourseProgress", courseProgressSchema);
+module.exports = mongoose.model('CourseProgress', courseProgressSchema);

@@ -237,146 +237,6 @@ exports.removeQuestionsFromExam = asyncHandler(async (req, res, next) => {
   });
 });
 
-//@desc Get user scores in a course
-//@route GET /api/v1/exams/userScore/:courseId/:userId
-// @access Private
-exports.userScores = async (req, res, next) => {
-  try {
-    const { courseId, userId } = req.params;
-
-    if (!userId) {
-      return next(new ApiError('User not found', 404));
-    }
-
-    // Fetch the user's course progress
-    const courseProgress = await CourseProgress.findOne({
-      user: userId,
-      course: courseId,
-    }).populate('progress.lesson', 'title order');
-
-    if (!courseProgress) {
-      // return next(new ApiError('No course progress found for this user.', 404));
-      return next(
-        new ApiError(res.__('errors.Not-Found', { document: 'course' }), 404),
-      );
-    }
-
-    // Fetch all lessons associated with the course
-    const allLessons = await Lesson.find(
-      { course: courseId },
-      '_id title order',
-    );
-
-    // Filter completed lessons and calculate total exam score
-    const completedLessons = courseProgress.progress.filter(
-      (item) => item.status === 'Completed',
-    );
-    const completedLessonsCount = completedLessons.length;
-
-    // Calculate total exam score and number of exams attempted
-    const totalExamScore = completedLessons.reduce(
-      (total, item) => total + item.examScore,
-      0,
-    );
-    //each lesson grade {lessonId,grade(percentage),order}
-    const lessonGrades = completedLessons.map((item) => ({
-      //get exam passingScore
-      lessonId: item.lesson._id,
-      grade: item.examScore,
-      attemptDate: item.attemptDate,
-      modelExam: item.modelExam,
-    }));
-
-    const lessonExamsAttemptedCount = completedLessonsCount; // Since only completed lessons are attempted
-
-    // Track attempted lesson IDs
-    const attemptedLessonIds = new Set(
-      completedLessons.map((item) => item.lesson._id.toString()),
-    );
-
-    // Calculate the number of lessons not attempted
-    const notAttemptedLessonsCount = allLessons.filter(
-      (lesson) => !attemptedLessonIds.has(lesson._id.toString()),
-    ).length;
-
-    const totalLessons = allLessons.length;
-
-    // Calculate the total possible course score (assuming each lesson's score is out of 100)
-    // const totalPossibleCourseScore = totalLessons * 100;
-
-    // Calculate the average lesson grade for completed lessons
-    const averageLessonExamGrade =
-      lessonExamsAttemptedCount > 0
-        ? (totalExamScore / lessonExamsAttemptedCount).toFixed(2)
-        : 0;
-    const averageGrade =
-      (
-        (totalExamScore + courseProgress.score) /
-        (lessonExamsAttemptedCount + 1)
-      ).toFixed(2) || 0;
-
-    // Calculate the percentages of exams completed and not attempted
-    const examsCompletedPercentage = (
-      (completedLessonsCount / totalLessons) *
-      100
-    ).toFixed(2);
-    const examsNotAttemptedPercentage = (
-      (notAttemptedLessonsCount / totalLessons) *
-      100
-    ).toFixed(2);
-
-    // Final exam score and percentage (adjust based on your data structure)
-    const finalExamScore = courseProgress.score || 0;
-    const courseGrade = {
-      grade: finalExamScore,
-      attemptDate: courseProgress.attemptDate,
-      modelExam: courseProgress.modelExam,
-    };
-
-    const finalExamCompletionPercentage = finalExamScore > 0 ? 100 : 0;
-
-    // Calculate the total progress with weighted averages (lesson exams 80%, final exam 20%)
-    const lessonExamsWeight = 0.8;
-    const finalExamWeight = 0.2;
-    const totalProgress = (
-      examsCompletedPercentage * lessonExamsWeight +
-      finalExamCompletionPercentage * finalExamWeight
-    ).toFixed(2);
-
-    // Determine the completion status of the course
-    const completionStatus =
-      completedLessonsCount === totalLessons &&
-      finalExamCompletionPercentage === 100
-        ? 'Course completed'
-        : 'Course in progress';
-
-    // Return the calculated statistics
-    res.status(200).json({
-      status: 'success',
-      data: {
-        //These stats give insights into how well the user performed in the completed lessons.
-        averageGrade,
-        averageLessonExamGrade,
-        totalProgress,
-        finalExamCompletionPercentage,
-        //These percentages show how many exams the user has completed and how many are still pending.
-        examsCompletedPercentage,
-        examsNotAttemptedPercentage,
-        totalLessons,
-        completedLessonsCount,
-        notAttemptedLessonsCount,
-        totalExamScore,
-        courseGrade,
-        lessonExamsAttemptedCount,
-        lessonGrades,
-        completionStatus,
-      },
-    });
-  } catch (err) {
-    return next(new ApiError(err.message, 400));
-  }
-};
-
 //get user progress in course
 //-------------
 exports.getCourseProgress = asyncHandler(async (req, res, next) => {
@@ -524,8 +384,38 @@ const calculateScore = (questions, answers) => {
   return { score, wrongAnswers };
 };
 
+const getTotalGrades = async (progress) => {
+  // Fetch grades for completed lessons using Promise.all for parallel fetching
+  const grades = await Promise.all(
+    progress.map(async (lesson) => {
+      const exam = await Exam.findOne({
+        lesson: lesson.lesson._id,
+        model: lesson.modelExam,
+      });
+
+      if (exam && exam.questions) {
+        // Reduce over the 'questions' array to get the total score
+        const totalGrade = exam.questions.reduce(
+          (total, q) => total + (q.grade || 0),
+          0,
+        );
+        return {
+          lessonId: lesson.lesson._id,
+          grade: totalGrade,
+        };
+      }
+      return {
+        lessonId: lesson.lesson._id,
+        grade: 0, // Return 0 if no exam or no questions are found
+      };
+    }),
+  );
+
+  return grades; // Array of objects { lessonId, grade }
+};
+
 // Calculate the total possible score for the exam
-const getTotalPossibleScore = (questions) =>
+const getTotalPossibleGrade = (questions) =>
   questions.reduce((total, question) => total + question.grade, 0);
 
 // Check if the exam was passed based on the score percentage
@@ -751,10 +641,10 @@ exports.submitLessonAnswers = async (req, res, next) => {
 
   // Calculate the score and determine if passed
   const examResult = calculateScore(exam.questions, answers);
-  const totalPossibleScore = getTotalPossibleScore(exam.questions);
+  const totalPossibleGrade = getTotalPossibleGrade(exam.questions);
   const passed = hasPassed(
     examResult.score,
-    totalPossibleScore,
+    totalPossibleGrade,
     exam.passingScore,
   );
 
@@ -774,7 +664,7 @@ exports.submitLessonAnswers = async (req, res, next) => {
     );
   }
   // Respond with success or failure message
-  return handleExamResponse(res, passed, examResult.score, totalPossibleScore);
+  return handleExamResponse(res, passed, examResult.score, totalPossibleGrade);
 };
 //end lesson exam logic
 ///////////////////////////////////////////////////////////////////////
@@ -805,6 +695,11 @@ exports.submitCourseAnswers = async (req, res, next) => {
       return next(new ApiError('Course not found', 404));
     }
 
+    const localizedCourse = Course.schema.methods.toJSONLocalizedOnly(
+      course,
+      req.locale,
+    );
+
     // Check if the user has already completed the course
     let existingProgress = await CourseProgress.findOne({
       user: req.user._id,
@@ -816,10 +711,11 @@ exports.submitCourseAnswers = async (req, res, next) => {
 
     // Calculate the score and determine if passed
     const examResult = calculateScore(exam.questions, answers);
-    const totalPossibleScore = getTotalPossibleScore(exam.questions);
+    const totalPossibleGrade = getTotalPossibleGrade(exam.questions);
+
     const passed = hasPassed(
       examResult.score,
-      totalPossibleScore,
+      totalPossibleGrade,
       exam.passingScore,
     );
 
@@ -842,24 +738,48 @@ exports.submitCourseAnswers = async (req, res, next) => {
       updateData.course = exam.course;
       existingProgress = await CourseProgress.create(updateData);
     }
+    // Fetch user's completed lessons
+    const completedLessons = existingProgress.progress.filter(
+      (item) => item.status === 'Completed',
+    );
+
+    // Fetch Possible grades for completed lessons
+    const possibleLessonExamsGrade = await getTotalGrades(completedLessons); // Make sure getTotalGrades works and returns { lessonId, grade }
+
+    // Calculate total exam score user has achieved
+    const totalExamScore =
+      completedLessons.reduce((total, item) => total + item.examScore, 0) || 0;
+
+    // Calculate total possible lessons exams score
+    const totalPossibleLessonExamsGrade = possibleLessonExamsGrade.reduce(
+      (total, item) => total + item.grade,
+      0,
+    );
+
+    // Calculate totalCourseExamsPercentage
+    const totalCourseExamsPercentage = (
+      ((totalExamScore + examResult.score) /
+        (totalPossibleLessonExamsGrade + totalPossibleGrade)) *
+      100
+    ).toFixed(2);
 
     // Check if the user deserves a certificate
-    const courseAvgScore =
-      (existingProgress.progress.reduce((total, p) => total + p.examScore, 0) /
-        (existingProgress.progress.length * 100)) *
-      100;
-    if (courseAvgScore >= 90 && passed) {
+    if (totalCourseExamsPercentage >= 90 && passed) {
       await CourseProgress.findOneAndUpdate(
         { user: req.user._id, course: exam.course },
-        { $set: { 'certificate.isdeserve': true } },
+        { $set: { 'certificate.isDeserve': true } },
       );
       await Notification.create({
         user: req.user._id,
-        message: `You have earned a certificate for the course ${course.title}. Please wait for the admin to issue it.`,
+        course: course._id,
+        type: 'certificate',
+        message: `You have earned a certificate for the course ${localizedCourse.title}. Please wait for the admin to issue it.`,
       });
       await Notification.create({
         user: adminId,
-        message: `User ${req.user.email} has earned a certificate for the course ${course.title}.`,
+        course: course._id,
+        type: 'certificate',
+        message: `User - ${req.user.email} - has earned a certificate for the course ${localizedCourse.title}.`,
       });
     }
 
@@ -868,7 +788,7 @@ exports.submitCourseAnswers = async (req, res, next) => {
       res,
       passed,
       examResult.score,
-      totalPossibleScore,
+      totalPossibleGrade,
     );
   } catch (err) {
     return res.status(400).json({ status: 'error', message: err.message });
@@ -909,7 +829,7 @@ exports.submitCoursePlacementAnswers = async (req, res, next) => {
 
   // Calculate the score and determine if passed
   const examResult = calculateScore(exam.questions, answers);
-  const totalPossibleScore = getTotalPossibleScore(exam.questions);
+  const totalPossibleScore = getTotalPossibleGrade(exam.questions);
   const passed = hasPassed(
     examResult.score,
     totalPossibleScore,
@@ -939,3 +859,189 @@ exports.submitCoursePlacementAnswers = async (req, res, next) => {
 };
 // end placement exam logic
 ///////////////////////////////////////////////////////////////////
+
+//@desc Get user scores in a course
+//@route GET /api/v1/exams/userScore/:courseId/:userId
+// @access Private
+exports.userScores = async (req, res, next) => {
+  try {
+    // const locales = req.locale;
+    // console.log('locales', locales);
+
+    const { courseId, userId } = req.params;
+
+    if (!userId) {
+      return next(new ApiError('User not found', 404));
+    }
+
+    // Fetch the user's course progress
+    const courseProgress = await CourseProgress.findOne({
+      user: userId,
+      course: courseId,
+    }).populate('progress.lesson', 'title order');
+
+    if (!courseProgress) {
+      // return next(new ApiError('No course progress found for this user.', 404));
+      return next(
+        new ApiError(res.__('errors.Not-Found', { document: 'course' }), 404),
+      );
+    }
+
+    // Fetch all lessons associated with the course
+    const allLessons = await Lesson.find(
+      { course: courseId },
+      '_id title order',
+    );
+
+    // Filter completed lessons and calculate total exam score
+    const completedLessons = courseProgress.progress.filter(
+      (item) => item.status === 'Completed',
+    );
+    const completedLessonsCount = completedLessons.length;
+
+    // Fetch Possible grades for completed lessons
+    const possibleLessonExamsGrade = await getTotalGrades(completedLessons); // Make sure getTotalGrades works and returns { lessonId, grade }
+    // Calculate total exam score user has got
+    const totalExamScore =
+      completedLessons.reduce((total, item) => total + item.examScore, 0) || 0;
+    // Calculate total possible lessons exams score
+    const totalPossibleLessonExamsGrade = possibleLessonExamsGrade.reduce(
+      (total, item) => total + item.grade,
+      0,
+    );
+
+    //calculate the percentage of completed lessons exams
+    const totalLessonsExamsPercentage =
+      ((totalExamScore / totalPossibleLessonExamsGrade) * 100).toFixed(2) || 0;
+
+    // Calculate the percentage for each lesson
+    const lessonsScores = completedLessons.map((item) => {
+      // Find the corresponding total possible score for the lesson
+      const possibleExam = possibleLessonExamsGrade.find(
+        (exam) => exam.lessonId.toString() === item.lesson._id.toString(),
+      );
+
+      // Calculate the percentage: (obtained score / possible score) * 100
+      const percentage =
+        possibleExam && possibleExam.grade
+          ? ((item.examScore / possibleExam.grade) * 100).toFixed(2)
+          : 0;
+
+      return {
+        lessonId: item.lesson._id,
+        percentage: percentage,
+        attemptDate: item.attemptDate,
+        modelExam: item.modelExam,
+      };
+    });
+
+    const lessonExamsAttemptedCount = completedLessonsCount; // Since only completed lessons are attempted
+
+    // Track attempted lesson IDs
+    const attemptedLessonIds = new Set(
+      completedLessons.map((item) => item.lesson._id.toString()),
+    );
+
+    // Calculate the number of lessons not attempted
+    const notAttemptedLessonsCount = allLessons.filter(
+      (lesson) => !attemptedLessonIds.has(lesson._id.toString()),
+    ).length;
+
+    const totalLessons = allLessons.length;
+
+    // Calculate the total possible course score (assuming each lesson's score is out of 100)
+    // const totalPossibleCourseScore = totalLessons * 100;
+
+    // Calculate the average lesson grade for completed lessons
+    // const averageLessonExamGrade =
+    //   lessonExamsAttemptedCount > 0
+    //     ? (totalExamScore / lessonExamsAttemptedCount).toFixed(2)
+    //     : 0;
+    // const averageGrade =
+    //   (
+    //     (totalExamScore + courseProgress.score) /
+    //     (lessonExamsAttemptedCount + 1)
+    //   ).toFixed(2) || 0;
+
+    // Calculate the percentages of exams completed and not attempted
+    const examsCompletedPercentage = (
+      (completedLessonsCount / totalLessons) *
+      100
+    ).toFixed(2);
+    const examsNotAttemptedPercentage = (
+      (notAttemptedLessonsCount / totalLessons) *
+      100
+    ).toFixed(2);
+
+    // Final exam score and percentage (adjust based on your data structure)
+    const finalExamScore = courseProgress.score || 0;
+
+    //get the course finale exam
+    const finalExam = await Exam.findOne({
+      course: courseProgress.course,
+      model: courseProgress.modelExam,
+    });
+    const finalExamGrade = getTotalPossibleGrade(finalExam.questions);
+
+    // Calculate the finale exam grade percentage
+    const finalExamPercentage =
+      ((finalExamScore / finalExamGrade) * 100).toFixed(2) || 0;
+
+    const courseScore = {
+      finalExamPercentage,
+      attemptDate: courseProgress.attemptDate,
+      modelExam: courseProgress.modelExam,
+    };
+
+    const finalExamCompletionPercentage =
+      courseProgress.status === 'Completed' ? 100 : 0;
+
+    //calculate the total percentage of the total course exams
+
+    const totalCourseExamsPercentage = (
+      ((totalExamScore + finalExamScore) /
+        (totalPossibleLessonExamsGrade + finalExamGrade)) *
+      100
+    ).toFixed(2);
+
+    // Calculate the total progress with weighted averages (lesson exams 80%, final exam 20%)
+    const lessonExamsWeight = 0.8;
+    const finalExamWeight = 0.2;
+    const totalProgress = (
+      examsCompletedPercentage * lessonExamsWeight +
+      finalExamCompletionPercentage * finalExamWeight
+    ).toFixed(2);
+
+    // Determine the completion status of the course
+    const completionStatus =
+      completedLessonsCount === totalLessons &&
+      finalExamCompletionPercentage === 100
+        ? 'Course completed'
+        : 'Course in progress';
+
+    // Return the calculated statistics
+    res.status(200).json({
+      status: 'success',
+      data: {
+        //These stats give insights into how well the user performed in the completed lessons.
+        // averageGrade,
+        // averageLessonExamGrade,
+        totalProgress,
+        //These percentages show how many exams the user has completed and how many are still pending.
+        examsCompletedPercentage,
+        examsNotAttemptedPercentage,
+        totalLessons,
+        completedLessonsCount,
+        notAttemptedLessonsCount,
+        totalLessonsExamsPercentage,
+        courseScore,
+        lessonExamsAttemptedCount,
+        lessonsScores,
+        totalCourseExamsPercentage,
+        completionStatus,
+      },
+    });
+  } catch (err) {
+    return next(new ApiError(err.message, 400));
+  }
+};
