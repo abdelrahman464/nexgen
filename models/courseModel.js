@@ -56,6 +56,7 @@ const courseSchema = new mongoose.Schema(
       max: [5, 'rating must be between 1.0 and 5.0'],
       set: (v) => parseFloat(v.toFixed(1)), // Rounds to 2 decimal places
     },
+    coursePercentage: Number,
     ratingsQuantity: {
       type: Number,
       default: 0,
@@ -111,10 +112,6 @@ courseSchema.post('init', (doc) => {
 // it work with create
 courseSchema.post('save', (doc) => {
   setCourseImageURL(doc);
-});
-courseSchema.pre('save', function (next) {
-  setCourseImageURL(this);
-  next();
 });
 
 const Course = mongoose.model('Course', courseSchema);

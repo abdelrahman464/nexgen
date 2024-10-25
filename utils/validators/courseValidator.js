@@ -55,6 +55,12 @@ exports.createCourseValidator = [
     .isLength({ max: 32 })
     .withMessage('To long price'),
 
+  check('coursePercentage')
+    .notEmpty()
+    .withMessage('Course percentage is required')
+    .isNumeric()
+    .withMessage('Course percentage must be a number'),
+
   check('needAccessibleCourse')
     .isBoolean()
     .withMessage('needAccessibleCourse must be a boolean'),
@@ -172,17 +178,27 @@ exports.updateCourseValidator = [
     .optional()
     .isArray()
     .withMessage('highlights must be an array'),
-  body('highlights.*').isObject().withMessage('highlight must be an object'),
+  body('highlights.*')
+    .optional()
+    .isObject()
+    .withMessage('highlight must be an object'),
   body('highlights.*.en')
+    .optional()
     .isString()
     .withMessage(`en highlight must be a string.`)
     .isLength({ min: 3 })
     .withMessage(`en highlight must be at least 3 chars`),
   body('highlights.*.ar')
+    .optional()
     .isString()
     .withMessage(`ar highlight must be a string.`)
     .isLength({ min: 3 })
     .withMessage(`ar highlight must be at least 3 chars`),
+
+  check('coursePercentage')
+    .optional()
+    .isNumeric()
+    .withMessage('Course percentage must be a number'),
 
   check('price')
     .optional()

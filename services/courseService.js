@@ -111,7 +111,7 @@ exports.createCourse = asyncHandler(async (req, res) => {
   // console.log(requestBody);
 
   const course = await Course.create(req.body);
-  const { description, title, coursePercentage } = req.body;
+  const { description, title } = req.body;
   if (course) {
     const groupCreatorId = req.user._id.toString();
 
@@ -126,7 +126,6 @@ exports.createCourse = asyncHandler(async (req, res) => {
       creator: req.user._id,
       groupName: groupNameAsCourse,
       description: groupDescriptionAsCourse,
-      coursePercentage,
     });
   }
   res.status(201).json({ data: course });

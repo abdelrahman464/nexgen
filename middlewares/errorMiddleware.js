@@ -1,4 +1,3 @@
-const slugify = require("slugify");
 const ApiError = require("../utils/apiError");
 
 const sendErrorForDev = (err, res) => {
@@ -11,12 +10,10 @@ const sendErrorForDev = (err, res) => {
 };
 
 const sendErrorForProd = (err, res) => {
-  // Slugify the message in production
-  const slugifiedMessage = slugify(err.message, { lower: true, strict: true });
 
   res.status(err.statusCode).json({
     status: err.status,
-    message: slugifiedMessage,
+    message: err.message,
   });
 };
 
