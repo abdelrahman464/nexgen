@@ -1,49 +1,51 @@
-const express = require("express");
-const liveService = require("../services/liveService");
+const express = require('express');
+const { createLiveValidator } = require('../utils/validators/liveValidator');
+const liveService = require('../services/liveService');
 
-const authServices = require("../services/authServices");
+const authServices = require('../services/authServices');
 
-const courseRoute = require("./courseRoute");
+const courseRoute = require('./courseRoute');
 
 const router = express.Router();
 
-router.use("/:categoryId/courses", courseRoute);
+router.use('/:categoryId/courses', courseRoute);
 router.put(
-  "/sendEmails/:id",
+  '/sendEmails/:id',
   authServices.protect,
-  authServices.allowedTo("admin"),
-  liveService.SendEmailsToLiveFollowers
+  authServices.allowedTo('admin'),
+  liveService.SendEmailsToLiveFollowers,
 );
 
 router
-  .route("/")
+  .route('/')
   .get(
     authServices.protect,
-    authServices.allowedTo("admin", "user"),
+    authServices.allowedTo('admin', 'user'),
     liveService.createFilterObj,
-    liveService.getLives
+    liveService.getLives,
   )
   .post(
     authServices.protect,
-    authServices.allowedTo("admin"),
-    liveService.createLive
+    authServices.allowedTo('admin'),
+    createLiveValidator,
+    liveService.createLive,
   );
 router
-  .route("/:id")
+  .route('/:id')
   .get(
     authServices.protect,
-    authServices.allowedTo("admin"),
-    liveService.getLive
+    authServices.allowedTo('admin'),
+    liveService.getLive,
   )
   .put(
     authServices.protect,
-    authServices.allowedTo("admin"),
-    liveService.updateLive
+    authServices.allowedTo('admin'),
+    liveService.updateLive,
   )
   .delete(
     authServices.protect,
-    authServices.allowedTo("admin"),
-    liveService.deleteLive
+    authServices.allowedTo('admin'),
+    liveService.deleteLive,
   );
 // router
 //   .route("/mylives")
