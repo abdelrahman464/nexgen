@@ -7,16 +7,19 @@ const ArticalSchema = new mongoose.Schema(
       required: [true, 'Article title required'],
       trim: true,
       minlength: 2,
+      i18n: true,
     },
     description: {
       type: String,
       required: [true, 'Article description required'],
       trim: true,
       minlength: 10,
+      i18n: true,
     },
     content: {
       type: String,
       required: [true, 'Article content required'],
+      i18n: true,
     },
     date: {
       type: Date,

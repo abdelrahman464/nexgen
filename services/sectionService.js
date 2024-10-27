@@ -14,7 +14,10 @@ exports.filterSectionsByCourse = async (req, res, next) => {
   next();
 };
 
-exports.getSections = factory.getALl(Section, 'Section');
+exports.getSections = factory.getALl(Section, 'Section', {
+  path: 'course',
+  select: 'title -accessibleCourses -category',
+});
 
 //@desc get specific Section by id
 //@route GET /api/v1/sections/:id
