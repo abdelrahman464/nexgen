@@ -2,15 +2,16 @@ const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
 const sharp = require('sharp');
 const { v4: uuidv4 } = require('uuid');
-const ApiError = require('../utils/apiError');
-const Exam = require('../models/examModel');
-const CourseProgress = require('../models/courseProgressModel');
-const Lesson = require('../models/lessonModel');
-const Course = require('../models/courseModel');
-const User = require('../models/userModel');
-const Notification = require('../models/notificationModel');
-const factory = require('./handllerFactory');
-const { uploadMixOfFiles } = require('../middlewares/uploadImageMiddleware');
+const ApiError = require('../../utils/apiError');
+const Exam = require('../../models/examModel');
+const CourseProgress = require('../../models/courseProgressModel');
+const Lesson = require('../../models/lessonModel');
+const Course = require('../../models/courseModel');
+const User = require('../../models/userModel');
+const Notification = require('../../models/notificationModel');
+const factory = require('../handllerFactory');
+const { uploadMixOfFiles } = require('../../middlewares/uploadImageMiddleware');
+const { checkUserProgress, fetchExam, excludeCorrectOptions, calculateScore, getTotalPossibleGrade, hasPassed, updateUserProgress, handleExamResponse, getTotalGrades } = require('./examUtils');
 
 // Middleware to upload question image and options images-------------
 exports.uploadQuestionAndOptions = uploadMixOfFiles([
@@ -362,150 +363,7 @@ exports.checkCourseQuestionsStatus = async (courseExamResult) => {
 /////////////////////////////////////////////
 /////////////////////////////////////////////
 /******************************************************************** */
-// Utility functions
-/******************************************************************** */
-// Calculate the score for the exam
-const calculateScore = (questions, answers) => {
-  let score = 0;
-  const wrongAnswers = [];
-  questions.forEach((question) => {
-    const answerObj = answers.find(
-      (ans) => ans.questionId.toString() === question._id.toString(),
-    );
-    if (answerObj && answerObj.answer === question.correctOption) {
-      score += question.grade;
-    } else if (answerObj && answerObj.answer) {
-      wrongAnswers.push({
-        question: question._id,
-        answer: answerObj.answer,
-      });
-    }
-  });
-  return { score, wrongAnswers };
-};
 
-const getTotalGrades = async (progress) => {
-  // Fetch grades for completed lessons using Promise.all for parallel fetching
-  const grades = await Promise.all(
-    progress.map(async (lesson) => {
-      const exam = await Exam.findOne({
-        lesson: lesson.lesson._id,
-        model: lesson.modelExam,
-      });
-
-      if (exam && exam.questions) {
-        // Reduce over the 'questions' array to get the total score
-        const totalGrade = exam.questions.reduce(
-          (total, q) => total + (q.grade || 0),
-          0,
-        );
-        return {
-          lessonId: lesson.lesson._id,
-          grade: totalGrade,
-        };
-      }
-      return {
-        lessonId: lesson.lesson._id,
-        grade: 0, // Return 0 if no exam or no questions are found
-      };
-    }),
-  );
-
-  return grades; // Array of objects { lessonId, grade }
-};
-
-// Calculate the total possible score for the exam
-const getTotalPossibleGrade = (questions) =>
-  questions.reduce((total, question) => total + question.grade, 0);
-
-// Check if the exam was passed based on the score percentage
-const hasPassed = (score, totalScore, passingScore) =>
-  (score / totalScore) * 100 >= passingScore;
-
-// Update the user's progress for a course or lesson
-const updateUserProgress = async (
-  userId,
-  courseId,
-  exam,
-  passed,
-  score,
-  wrongAnswers,
-) =>
-  await CourseProgress.findOneAndUpdate(
-    { user: userId, course: courseId },
-    {
-      $push: {
-        progress: {
-          lesson: exam.lesson,
-          modelExam: exam.model,
-          status: passed ? 'Completed' : 'failed',
-          examScore: score,
-          attemptDate: new Date(),
-          wrongAnswers,
-        },
-      },
-    },
-    { new: true, upsert: false },
-  );
-
-// Handle success or failure response
-const handleExamResponse = (res, passed, score, totalScore) =>
-  res.status(200).json({
-    status: `${passed ? 'Congrats' : 'unfortunately'} you got ${score} out of ${totalScore}, ${
-      passed ? 'You have passed the exam.' : 'You have not passed the exam.'
-    }`,
-  });
-
-/******************************************************************** */
-// Utility function to fetch an exam based on lesson or course and model
-/******************************************************************** */
-const fetchExam = async ({ id, type, model }) =>
-  await Exam.findOne({ [type]: id, model: model });
-
-// Utility function to exclude correct answers from the exam object
-const excludeCorrectOptions = (exam) => {
-  const modifiedExam = exam.toObject();
-  modifiedExam.questions.forEach((question) => {
-    delete question.correctOption;
-  });
-  return modifiedExam;
-};
-
-// Utility function to check user progress
-const checkUserProgress = async (user, courseId, lessonOrder) => {
-  const courseProgress = await CourseProgress.findOne({
-    user: user._id,
-    course: courseId,
-  });
-
-  // If no course progress is found, return an error
-  if (!courseProgress) {
-    throw new ApiError('You must start the course before taking the exam', 401);
-  }
-
-  const lastProgress = courseProgress.progress.length
-    ? courseProgress.progress[courseProgress.progress.length - 1]
-    : null;
-
-  // If there's no progress yet, allow the user to start the first lesson
-  if (!lastProgress && lessonOrder !== 1) {
-    throw new ApiError('Cannot take this lesson out of order', 401);
-  }
-
-  // If there's progress but the last lesson was completed, prevent the user from retaking the lesson
-  // if (
-  //   lastProgress &&
-  //   lastProgress.lesson._id.toString() === lessonId.toString() &&
-  //   lastProgress.status === 'Completed'
-  // ) {
-  //   throw new ApiError('You have already completed this lesson', 401);
-  // }
-
-  // If the lesson order is not correct, block the user from proceeding
-  if (lastProgress && lessonOrder > lastProgress.lesson.order + 1) {
-    throw new ApiError('Cannot take this lesson out of order', 401);
-  }
-};
 
 //Lesson Exam Logic
 const getLessonExam = async (lesson, courseProgress, user) => {

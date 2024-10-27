@@ -8,6 +8,7 @@ const { uploadMixOfFiles } = require("../middlewares/uploadImageMiddleware");
 
 const Artical = require("../models/articalModel");
 
+
 exports.uploadImages = uploadMixOfFiles([
   {
     name: "imageCover",
@@ -15,7 +16,7 @@ exports.uploadImages = uploadMixOfFiles([
   },
   {
     name: "images",
-    maxCount: 10,
+    maxCount: 20,
   },
 ]);
 

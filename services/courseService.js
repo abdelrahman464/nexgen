@@ -15,8 +15,10 @@ const Lesson = require('../models/lessonModel');
 const Review = require('../models/reviewModel');
 const CourseProgress = require('../models/courseProgressModel');
 const User = require('../models/userModel');
+const Exam = require('../models/examModel');
 const { uploadSingleFile } = require('../middlewares/uploadImageMiddleware');
 const { createOne, deleteOne } = require('./instructorProfitsService');
+const { getTotalGrades, getTotalPossibleGrade } = require('./exams/examUtils');
 
 //upload course image
 exports.uploadCourseImage = uploadSingleFile('image');
@@ -333,48 +335,12 @@ exports.getCourseDetails = asyncHandler(async (req, res, next) => {
   );
 
   // Fetch all users and their progress in this course
-  const users = await CourseProgress.find({ course: courseId })
+  const usersProgress = await CourseProgress.find({ course: courseId })
     .populate({
       path: 'user',
       select: 'name email profileImg',
     })
     .lean();
-
-  // Calculate average exam scores and completion rates
-  const courseProgressStats = await CourseProgress.aggregate([
-    { $match: { course: new mongoose.Types.ObjectId(courseId) } },
-    { $unwind: '$progress' },
-    {
-      $group: {
-        _id: '$course',
-        avgScore: { $avg: '$progress.examScore' },
-        totalCompletedLessons: {
-          $sum: { $cond: [{ $eq: ['$progress.status', 'Completed'] }, 1, 0] },
-        },
-        totalLessons: { $sum: 1 },
-        totalUsers: { $addToSet: '$user' },
-      },
-    },
-    {
-      $project: {
-        avgScore: 1,
-        avgCompletion: {
-          $cond: [
-            { $eq: ['$totalLessons', 0] },
-            0,
-            { $divide: ['$totalCompletedLessons', '$totalLessons'] },
-          ],
-        },
-        totalUsers: { $size: '$totalUsers' },
-      },
-    },
-  ]);
-
-  const stats = courseProgressStats[0] || {
-    avgScore: 0,
-    avgCompletion: 0,
-    totalUsers: 0,
-  };
 
   // Helper function to construct the full URL for profileImg
   const getProfileImgUrl = (profileImg) => {
@@ -382,26 +348,88 @@ exports.getCourseDetails = asyncHandler(async (req, res, next) => {
     return `${process.env.BASE_URL}/users/${profileImg}`;
   };
 
+  // Aggregate stats across all users
+  let usersCompletedCourse = 0;
+  let usersFailedCourse = 0;
+  let usersNotTakenCourse = 0;
+  let totalCertificatesDeserved = 0;
+  let totalCertificatesTaken = 0;
+
+  // Process each user's progress for the course
+  const users = await Promise.all(
+    usersProgress.map(async (progress) => {
+      // Track status and certificates
+      // eslint-disable-next-line no-plusplus
+      if (progress.status === 'Completed') usersCompletedCourse++; // eslint-disable-next-line no-plusplus
+      if (progress.status === 'failed') usersFailedCourse++; // eslint-disable-next-line no-plusplus
+      if (progress.status === 'notTaken') usersNotTakenCourse++; // eslint-disable-next-line no-plusplus
+      if (progress.certificate.isDeserve) totalCertificatesDeserved++; // eslint-disable-next-line no-plusplus
+      if (progress.certificate.isTake) totalCertificatesTaken++;
+
+      // Track exam stats
+      const userTotalExamScore = progress.progress.reduce(
+        (total, item) => total + (item.examScore || 0),
+        0,
+      );
+
+      // Fetch final exam score and grade if applicable
+      let finalExamGrade = 0;
+      let finalExamScore = 0;
+      if (progress.status === 'Completed' || progress.status === 'failed') {
+        const finalExam = await Exam.findOne({
+          course: courseId,
+          type: 'course',
+          model: progress.modelExam,
+        });
+        finalExamGrade = getTotalPossibleGrade(finalExam.questions) || 0;
+        finalExamScore = progress.score || 0;
+      }
+
+      const possibleLessonExamsGrades = await getTotalGrades(progress.progress);
+      const totalPossibleLessonExamsGrade =
+        possibleLessonExamsGrades.reduce(
+          (total, item) => total + item.grade,
+          0,
+        ) || 0;
+
+      const totalCourseExamsPercentage = (
+        ((userTotalExamScore + finalExamScore) /
+          (totalPossibleLessonExamsGrade + finalExamGrade)) *
+        100
+      ).toFixed(2);
+
+      return {
+        id: progress.user._id,
+        name: progress.user.name,
+        email: progress.user.email,
+        profileImg: getProfileImgUrl(progress.user.profileImg) || undefined,
+        totalCourseExamsPercentage: parseFloat(totalCourseExamsPercentage), // Convert to float for sorting
+        status: progress.status,
+        score: progress.score,
+        attemptDate: progress.attemptDate,
+        certificate: progress.certificate,
+      };
+    }),
+  );
+
+  // Sort users by totalCourseExamsPercentage in descending order
+  users.sort(
+    (a, b) => b.totalCourseExamsPercentage - a.totalCourseExamsPercentage,
+  );
+
   return res.status(200).json({
     status: 'success',
     data: {
-      totalUsers: stats.totalUsers,
-      //This field represents the average score that users have achieved on the exams within the course.
-      averageExamScores: stats.avgScore.toFixed(2) + '%',
-      //This field represents the average completion rate of lessons in the course. It is a percentage that shows how much of the course content, on average, has been completed by users.
-      averageCompletionRate: (stats.avgCompletion * 100).toFixed(2) + '%',
       courseDetails: localizedCourse,
-
-      users: users.map((user) => ({
-        id: user.user?._id,
-        name: user.user?.name,
-        email: user.user?.email,
-        profileImg: getProfileImgUrl(user.user?.profileImg),
-        status: user.status,
-        score: user.score,
-        attemptDate: user.attemptDate,
-        certificate: user.certificate,
-      })),
+      users,
+      stats: {
+        totalUsers: users.length,
+        usersCompletedCourse,
+        usersFailedCourse,
+        usersNotTakenCourse,
+        totalCertificatesDeserved,
+        totalCertificatesTaken,
+      },
     },
   });
 });

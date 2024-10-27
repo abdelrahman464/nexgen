@@ -26,7 +26,7 @@ const {
   courseExam,
   submitCourseAnswers,
   //end exams
-} = require('../services/examService');
+} = require('../services/exams/examService');
 
 const {
   checkLessonExamAccess,
