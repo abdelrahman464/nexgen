@@ -24,6 +24,7 @@ const userShcema = new mongoose.Schema(
     },
     phone: String,
     profileImg: String,
+    coverImg: String,
     google: {
       id: String,
       email: String,
@@ -93,6 +94,18 @@ const userShcema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    following: [
+      {
+        type: mongoose.Schema.ObjectId,
+        ref: 'User',
+      },
+    ],
+    followers: [
+      {
+        type: mongoose.Schema.ObjectId,
+        ref: 'User',
+      },
+    ],
   },
   { timestamps: true },
 );
@@ -134,6 +147,10 @@ const setProfileImageURL = (doc) => {
   if (doc.profileImg) {
     const profileImageUrl = `${process.env.BASE_URL}/users/${doc.profileImg}`;
     doc.profileImg = profileImageUrl;
+  }
+  if (doc.coverImg) {
+    const coverImgUrl = `${process.env.BASE_URL}/users/${doc.coverImg}`;
+    doc.coverImg = coverImgUrl;
   }
 };
 //after initializ the doc in db

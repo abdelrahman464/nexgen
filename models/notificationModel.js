@@ -20,6 +20,10 @@ const NotificationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Course',
     },
+    followedUser: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
     message: {
       type: String,
       required: [true, 'Message required'],
@@ -30,7 +34,7 @@ const NotificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['system', 'post', 'chat', 'certificate'],
+      enum: ['system', 'post', 'chat', 'certificate', 'follow'],
       default: 'system',
     },
   },
@@ -40,7 +44,13 @@ const NotificationSchema = new mongoose.Schema(
 NotificationSchema.pre(/^find/, function (next) {
   // this => query
   //this.populate({ path: "chat", select: "participants" });
-  this.populate({ path: 'post', select: 'content -user -package -course' });
+  this.populate({
+    path: 'post',
+    select: 'content -user -package -course',
+  }).populate({
+    path: 'followedUser',
+    select: 'name email profileImg',
+  });
   next();
 });
 

@@ -8,7 +8,7 @@ const factory = require('./handllerFactory');
 const User = require('../models/userModel');
 const Order = require('../models/orderModel');
 const generateToken = require('../utils/generateToken');
-const { uploadSingleFile } = require('../middlewares/uploadImageMiddleware');
+const { uploadMixOfFiles } = require('../middlewares/uploadImageMiddleware');
 const CourseProgress = require('../models/courseProgressModel');
 const Message = require('../models/MessageModel');
 const Chat = require('../models/ChatModel');
@@ -18,38 +18,53 @@ const Comment = require('../models/commentModel');
 const MarketLog = require('../models/MarketingModel');
 const UserSubscription = require('../models/userSubscriptionModel');
 
-//upload Single image
-exports.uploadProfileImage = uploadSingleFile('profileImg');
+//upload user images
+exports.uploadImages = uploadMixOfFiles([
+  {
+    name: 'profileImg',
+    maxCount: 1,
+  },
+  {
+    name: 'coverImg',
+    maxCount: 1,
+  },
+]);
 //image processing
 exports.resizeImage = asyncHandler(async (req, res, next) => {
-  const { file } = req; // Access the uploaded file
-  if (file) {
-    const fileExtension = file.originalname.substring(
-      file.originalname.lastIndexOf('.'),
-    ); // Extract file extension
-    const newFileName = `profileImg-${uuidv4()}-${Date.now()}${fileExtension}`; // Generate new file name
+  if (
+    req.files.profileImg &&
+    req.files.profileImg[0].mimetype.startsWith('image/')
+  ) {
+    const newFileName = `profileImg-${uuidv4()}-${Date.now()}.webp`; // Generate new file name
 
-    // Check if the file is an image for the profile picture
-    if (file.mimetype.startsWith('image/')) {
-      // Process and save the image file using sharp for resizing, conversion, etc.
-      const filePath = `uploads/users/${newFileName}`;
+    await sharp(req.files.profileImg[0].buffer)
+      .toFormat('webp') // Convert to WebP
+      .webp({ quality: 95 })
+      .toFile(`uploads/users/${newFileName}`);
 
-      await sharp(file.buffer)
-        .toFormat('webp') // Convert to WebP
-        .webp({ quality: 97 })
-        .toFile(filePath);
-
-      // Update the req.body to include the path for the new profile image
-      req.body.profileImg = newFileName;
-    } else {
-      return next(
-        new ApiError(
-          'Unsupported file type. Only images are allowed for Profile Image.',
-          400,
-        ),
-      );
-    }
+    // Save coverImg file name in the request body for database saving
+    req.body.profileImg = newFileName;
+  } else if (req.files.profileImg) {
+    return next(new ApiError('profile Imag is not an image file', 400));
   }
+
+  if (
+    req.files.coverImg &&
+    req.files.coverImg[0].mimetype.startsWith('image/')
+  ) {
+    const newFileName = `coverImg-${uuidv4()}-${Date.now()}.webp`; // Generate new file name
+
+    await sharp(req.files.coverImg[0].buffer)
+      .toFormat('webp') // Convert to WebP
+      .webp({ quality: 95 })
+      .toFile(`uploads/users/${newFileName}`);
+
+    // Save coverImg file name in the request body for database saving
+    req.body.coverImg = newFileName;
+  } else if (req.files.coverImg) {
+    return next(new ApiError('Image cover is not an image file', 400));
+  }
+
   next();
 });
 //filter to get all user (isInstructor:true or role:admin)
@@ -71,7 +86,7 @@ exports.getUsersWithoutCourse = async (req, res, next) => {
     const usersByOrderStatus = await User.aggregate([
       {
         $match: {
-          role: { $nin: ['admin', 'campaign'] }, 
+          role: { $nin: ['admin', 'campaign'] },
         },
       },
       {
@@ -288,6 +303,7 @@ exports.updateUser = asyncHandler(async (req, res, next) => {
       email: req.body.email,
       phone: req.body.phone,
       profileImg: req.body.profileImg,
+      coverImg: req.body.coverImg,
       role: req.body.role,
       isInstructor: req.body.isInstructor,
     },
@@ -404,6 +420,7 @@ exports.updateLoggedUserData = asyncHandler(async (req, res, next) => {
       email: req.body.email,
       phone: req.body.phone,
       profileImg: req.body.profileImg,
+      coverImg: req.body.coverImg,
     },
     {
       new: true,
@@ -506,6 +523,94 @@ exports.getUserData = asyncHandler(async (req, res, next) => {
   });
 });
 
-//@desc get all user who does not have order
-//@route  users/withoutOrders
-//@access protected admin
+//@desc follow user
+//@route  users/follow/:id
+//@access protected
+exports.followUser = async (req, res, next) => {
+  try {
+    const userIdToFollow = req.params.id;
+    // check if user try to follow himself
+    if (req.user._id === userIdToFollow) {
+      return next(new ApiError('You can not follow yourself', 400));
+    }
+    // get user
+    const user = await User.findById(userIdToFollow);
+    // check if user exist
+    if (!user) {
+      return next(new ApiError('No user found', 404));
+    }
+    // update logged user following list
+    await User.findByIdAndUpdate(req.user._id, {
+      $addToSet: { following: userIdToFollow },
+    });
+    // update the followed user followers list
+    await User.findByIdAndUpdate(userIdToFollow, {
+      $addToSet: { followers: req.user._id },
+    });
+
+    //send notification to following user
+    await Notification.create({
+      user: userIdToFollow,
+      message: `${req.user.name} started following you`,
+      type: 'follow',
+      followedUser: userIdToFollow,
+    });
+
+    // send response
+    res.status(200).json({
+      status: 'success',
+      message: 'You followed this user',
+    });
+  } catch (err) {
+    return next(new ApiError(err.message, 400));
+  }
+};
+//@desc unfollow user
+//@route  users/unfollow/:id
+//@access protected
+exports.unfollowUser = async (req, res, next) => {
+  try {
+    const userIdToUnfollow = req.params.id;
+    // check if user try to unfollow himself
+    if (req.user._id === userIdToUnfollow) {
+      return next(new ApiError('You can not unfollow yourself', 400));
+    }
+    // get user
+    const user = await User.findById(userIdToUnfollow);
+    // check if user exist
+    if (!user) {
+      return next(new ApiError('No user found', 404));
+    }
+    // update logged user following list
+    await User.findByIdAndUpdate(req.user._id, {
+      $pull: { following: userIdToUnfollow },
+    });
+    // update the followed user followers list
+    await User.findByIdAndUpdate(userIdToUnfollow, {
+      $pull: { followers: req.user._id },
+    });
+
+    // send response
+    res.status(200).json({
+      status: 'success',
+      message: 'You unfollowed this user',
+    });
+  } catch (err) {
+    return next(new ApiError(err.message, 400));
+  }
+};
+//@desc get my followers and following
+//@route  users/follow
+//@access protected
+exports.getMyFollowersAndFollowing = async (req, res, next) => {
+  const user = await User.findById(req.user._id)
+    .populate('followers', 'name email profileImg')
+    .populate('following', 'name email profileImg');
+  res.status(200).json({
+    status: 'success',
+    data: {
+      followers: user.followers,
+      following: user.following,
+    },
+  });
+};

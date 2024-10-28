@@ -21,13 +21,16 @@ const {
   updateLoggedUserData,
   unActiveUser,
   activeUser,
-  uploadProfileImage,
+  uploadImages,
   resizeImage,
   createFilterObjToGetInstructors,
   getUserData,
   getPurchasersUsersAndNon,
   getUsersWithoutCourse,
   getUsersCourse,
+  followUser,
+  unfollowUser,
+  getMyFollowersAndFollowing,
 } = require('../services/userService');
 
 const router = express.Router();
@@ -54,7 +57,7 @@ router.put(
 router.put(
   '/changeMyData',
   authServices.protect,
-  uploadProfileImage,
+  uploadImages,
   resizeImage,
   updateLoggedUserValidator,
   updateLoggedUserData,
@@ -73,7 +76,7 @@ router
   .post(
     authServices.protect,
     authServices.allowedTo('admin'),
-    uploadProfileImage,
+    uploadImages,
     resizeImage,
     createUserValidator,
     createUser,
@@ -89,7 +92,7 @@ router
   .put(
     authServices.protect,
     authServices.allowedTo('admin'),
-    uploadProfileImage,
+    uploadImages,
     resizeImage,
     updateUserValidator,
     updateUser,
@@ -125,6 +128,17 @@ router.get(
   authServices.protect,
   authServices.allowedTo('admin'),
   getPurchasersUsersAndNon,
+);
+
+router
+  .route('/follow/:id')
+  .post(authServices.protect, followUser)
+  .delete(authServices.protect, unfollowUser);
+
+router.get(
+  '/follow/followersAndFollowing',
+  authServices.protect,
+  getMyFollowersAndFollowing,
 );
 
 module.exports = router;
