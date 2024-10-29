@@ -27,6 +27,7 @@ const NotificationSchema = new mongoose.Schema(
     message: {
       type: String,
       required: [true, 'Message required'],
+      i18n: true,
     },
     read: {
       type: Boolean,
@@ -43,7 +44,7 @@ const NotificationSchema = new mongoose.Schema(
 // ^find => it mean if part of of teh word contains find
 NotificationSchema.pre(/^find/, function (next) {
   // this => query
-  //this.populate({ path: "chat", select: "participants" });
+ 
   this.populate({
     path: 'post',
     select: 'content -user -package -course',

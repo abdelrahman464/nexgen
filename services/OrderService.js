@@ -1,21 +1,21 @@
-const paypal = require("@paypal/checkout-server-sdk");
-const axios = require("axios");
-const crypto = require("crypto");
-const asyncHandler = require("express-async-handler");
-const ApiError = require("../utils/apiError");
-const factory = require("./handllerFactory");
-const Order = require("../models/orderModel");
-const Course = require("../models/courseModel");
-const Package = require("../models/packageModel");
-const CoursePackage = require("../models/coursePackageModel");
-const UserSubscription = require("../models/userSubscriptionModel");
-const User = require("../models/userModel");
-const Chat = require("../models/ChatModel");
-const Notification = require("../models/notificationModel");
-const CourseProgress = require("../models/courseProgressModel");
-const { checkCourseAccess } = require("../utils/validators/courseValidator");
-const { calculateProfits } = require("./marketingService");
-const { availUserToReview } = require("./userService");
+const paypal = require('@paypal/checkout-server-sdk');
+const axios = require('axios');
+const crypto = require('crypto');
+const asyncHandler = require('express-async-handler');
+const ApiError = require('../utils/apiError');
+const factory = require('./handllerFactory');
+const Order = require('../models/orderModel');
+const Course = require('../models/courseModel');
+const Package = require('../models/packageModel');
+const CoursePackage = require('../models/coursePackageModel');
+const UserSubscription = require('../models/userSubscriptionModel');
+const User = require('../models/userModel');
+const Chat = require('../models/ChatModel');
+const Notification = require('../models/notificationModel');
+const CourseProgress = require('../models/courseProgressModel');
+const { checkCourseAccess } = require('../utils/validators/courseValidator');
+const { calculateProfits } = require('./marketingService');
+const { availUserToReview } = require('./userService');
 
 exports.filterOrders = asyncHandler(async (req, res, next) => {
   const filterObject = {};
@@ -27,7 +27,7 @@ exports.filterOrders = asyncHandler(async (req, res, next) => {
     delete newQuery.userId;
   }
   //2- if the user is trying to get their own orders
-  else if (req.user.role === "user") {
+  else if (req.user.role === 'user') {
     filterObject.user = req.user._id;
   }
 
@@ -94,7 +94,7 @@ exports.courseCheckoutSession = asyncHandler(async (req, res, next) => {
     course: course._id,
   });
   if (existOrder) {
-    return next(new ApiError("You already bought this course", 400));
+    return next(new ApiError('You already bought this course', 400));
   }
 
   const coursePrice = course.priceAfterDiscount
@@ -106,19 +106,19 @@ exports.courseCheckoutSession = asyncHandler(async (req, res, next) => {
   await checkCourseAccess(user, courseId);
 
   const request = new paypal.orders.OrdersCreateRequest();
-  request.prefer("return=representation");
+  request.prefer('return=representation');
   request.requestBody({
-    intent: "CAPTURE",
+    intent: 'CAPTURE',
     purchase_units: [
       {
         reference_id: `${courseId.toString()}|${user.email}|course`, // This can serve a similar purpose as custom_id
         custom_id: courseId.toString(), // Here is where you place the custom_id
         amount: {
-          currency_code: "USD",
+          currency_code: 'USD',
           value: totalOrderPrice.toString(),
           breakdown: {
             item_total: {
-              currency_code: "USD",
+              currency_code: 'USD',
               value: totalOrderPrice.toString(),
             },
           },
@@ -128,10 +128,10 @@ exports.courseCheckoutSession = asyncHandler(async (req, res, next) => {
           {
             name: course.title,
             unit_amount: {
-              currency_code: "USD",
+              currency_code: 'USD',
               value: totalOrderPrice.toString(),
             },
-            quantity: "1",
+            quantity: '1',
           },
         ],
       },
@@ -139,23 +139,23 @@ exports.courseCheckoutSession = asyncHandler(async (req, res, next) => {
     application_context: {
       return_url: `https://api.nexgen-academy.com/api/v1/orders/capture-payment`, // Success URL
       cancel_url: `http://your-domain.com/checkout-cancel`, // Cancel URL
-      user_action: "PAY_NOW", // This encourages payers to pay immediately with their card
-      landing_page: "BILLING", // Directs users to the billing page, not the login page
-      shipping_preference: "NO_SHIPPING", // Set to 'GET_FROM_FILE' if you require shipping
+      user_action: 'PAY_NOW', // This encourages payers to pay immediately with their card
+      landing_page: 'BILLING', // Directs users to the billing page, not the login page
+      shipping_preference: 'NO_SHIPPING', // Set to 'GET_FROM_FILE' if you require shipping
     },
   });
 
   try {
     const order = await paypalClient().execute(request);
     res.status(200).json({
-      status: "success",
+      status: 'success',
       orderId: order.result.id,
-      redirectUrl: order.result.links.find((link) => link.rel === "approve")
+      redirectUrl: order.result.links.find((link) => link.rel === 'approve')
         .href,
     });
   } catch (err) {
     return next(
-      new ApiError(`PayPal order creation failed: ${err.message}`, 500)
+      new ApiError(`PayPal order creation failed: ${err.message}`, 500),
     );
   }
 });
@@ -174,16 +174,16 @@ exports.coursePackageCheckoutSession = asyncHandler(async (req, res, next) => {
   const totalOrderPrice = Math.ceil(coursePackagePrice);
 
   const request = new paypal.orders.OrdersCreateRequest();
-  request.prefer("return=representation");
+  request.prefer('return=representation');
   request.requestBody({
-    intent: "CAPTURE",
+    intent: 'CAPTURE',
     purchase_units: [
       {
         reference_id: `${coursePackageId.toString()}|${
           user.email
         }|coursePackage`,
         amount: {
-          currency_code: "USD",
+          currency_code: 'USD',
           value: totalOrderPrice.toString(),
         },
         description: `Purchase of Course Package: ${coursePackage.title}`,
@@ -193,23 +193,23 @@ exports.coursePackageCheckoutSession = asyncHandler(async (req, res, next) => {
     application_context: {
       return_url: `https://api.nexgen-academy.com/api/v1/orders/capture-payment`,
       cancel_url: `http://nexgen-academy.com/cancel`,
-      user_action: "PAY_NOW", // This encourages payers to pay immediately with their card
-      landing_page: "BILLING", // Directs users to the billing page, not the login page
-      shipping_preference: "NO_SHIPPING", // Set to 'GET_FROM_FILE' if you require shipping
+      user_action: 'PAY_NOW', // This encourages payers to pay immediately with their card
+      landing_page: 'BILLING', // Directs users to the billing page, not the login page
+      shipping_preference: 'NO_SHIPPING', // Set to 'GET_FROM_FILE' if you require shipping
     },
   });
 
   try {
     const order = await paypalClient().execute(request);
     res.status(200).json({
-      status: "success",
+      status: 'success',
       orderId: order.result.id,
-      redirectUrl: order.result.links.find((link) => link.rel === "approve")
+      redirectUrl: order.result.links.find((link) => link.rel === 'approve')
         .href,
     });
   } catch (err) {
     return next(
-      new ApiError(`PayPal order creation failed: ${err.message}`, 500)
+      new ApiError(`PayPal order creation failed: ${err.message}`, 500),
     );
   }
 });
@@ -217,10 +217,10 @@ exports.coursePackageCheckoutSession = asyncHandler(async (req, res, next) => {
 exports.createCoursePackageOrder = asyncHandler(async (req, res, next) => {
   const { coursePackageId, price, email, method } = req.params;
   const coursePackage = await CoursePackage.findById(coursePackageId);
-  if (!coursePackage) throw new Error("CoursePackage not found");
+  if (!coursePackage) throw new Error('CoursePackage not found');
 
   const user = await User.findOne({ email });
-  if (!user) throw new Error("User not found");
+  if (!user) throw new Error('User not found');
 
   const order = await Order.create({
     user: user._id,
@@ -255,14 +255,14 @@ exports.createCoursePackageOrder = asyncHandler(async (req, res, next) => {
       const chat = await Chat.findOneAndUpdate(
         { course: courseId, isGroupChat: true },
         { $addToSet: { participants: { user: user._id, isAdmin: false } } },
-        { new: true }
+        { new: true },
       );
       if (chat) {
         await Notification.create({
           user: user._id,
           message: `${user.name} has been added to the group ${chat.groupName}`,
           chat: chat._id,
-          type: "chat",
+          type: 'chat',
         });
       }
 
@@ -280,7 +280,7 @@ exports.createCoursePackageOrder = asyncHandler(async (req, res, next) => {
           endDate,
         });
       }
-    })
+    }),
   );
 
   //4-avail user to review
@@ -310,14 +310,14 @@ exports.packageCheckoutSession = asyncHandler(async (req, res, next) => {
   const totalOrderPrice = Math.ceil(packagePrice);
 
   const request = new paypal.orders.OrdersCreateRequest();
-  request.prefer("return=representation");
+  request.prefer('return=representation');
   request.requestBody({
-    intent: "CAPTURE",
+    intent: 'CAPTURE',
     purchase_units: [
       {
         reference_id: `${packageId.toString()}|${user.email}|package`,
         amount: {
-          currency_code: "USD",
+          currency_code: 'USD',
           value: totalOrderPrice.toString(),
         },
         description: package.title,
@@ -327,23 +327,23 @@ exports.packageCheckoutSession = asyncHandler(async (req, res, next) => {
     application_context: {
       return_url: `https://api.nexgen-academy.com/api/v1/orders/capture-payment`,
       cancel_url: `http://nexgen-academy.com/cancel`,
-      user_action: "PAY_NOW", // This encourages payers to pay immediately with their card
-      landing_page: "BILLING", // Directs users to the billing page, not the login page
-      shipping_preference: "NO_SHIPPING", // Set to 'GET_FROM_FILE' if you require shipping
+      user_action: 'PAY_NOW', // This encourages payers to pay immediately with their card
+      landing_page: 'BILLING', // Directs users to the billing page, not the login page
+      shipping_preference: 'NO_SHIPPING', // Set to 'GET_FROM_FILE' if you require shipping
     },
   });
 
   try {
     const order = await paypalClient().execute(request);
     res.status(200).json({
-      status: "success",
+      status: 'success',
       orderId: order.result.id,
-      redirectUrl: order.result.links.find((link) => link.rel === "approve")
+      redirectUrl: order.result.links.find((link) => link.rel === 'approve')
         .href,
     });
   } catch (err) {
     return next(
-      new ApiError(`PayPal order creation failed: ${err.message}`, 500)
+      new ApiError(`PayPal order creation failed: ${err.message}`, 500),
     );
   }
 });
@@ -351,10 +351,10 @@ exports.packageCheckoutSession = asyncHandler(async (req, res, next) => {
 exports.createPackageOrder = asyncHandler(async (req, res, next) => {
   const { packageId, price, email, method } = req.params;
   const package = await Package.findById(packageId);
-  if (!package) throw new Error("Package not found");
+  if (!package) throw new Error('Package not found');
 
   const user = await User.findOne({ email });
-  if (!user) throw new Error("User not found");
+  if (!user) throw new Error('User not found');
 
   const order = await Order.create({
     user: user._id,
@@ -414,33 +414,33 @@ exports.capturePayment = asyncHandler(async (req, res, next) => {
     const capture = await paypalClient().execute(request);
 
     // You might want to check capture.result.status to confirm the payment status
-    if (capture.result.status === "COMPLETED") {
+    if (capture.result.status === 'COMPLETED') {
       const [referenceId, userEmail, type] =
-        capture.result.purchase_units[0].reference_id.split("|");
+        capture.result.purchase_units[0].reference_id.split('|');
       const price =
         capture.result.purchase_units[0].payments.captures[0].amount.value; // Total amount from the capture object
 
-      if (type === "course") {
+      if (type === 'course') {
         res.redirect(
-          `https://api.nexgen-academy.com/api/v1/orders/courseOrder/${referenceId}/${price}/${userEmail}/paypal`
+          `https://api.nexgen-academy.com/api/v1/orders/courseOrder/${referenceId}/${price}/${userEmail}/paypal`,
         ); // Redirect the user to a success page
-      } else if (type === "package") {
+      } else if (type === 'package') {
         res.redirect(
-          `https://api.nexgen-academy.com/api/v1/orders/packageOrder/${referenceId}/${price}/${userEmail}/paypal`
+          `https://api.nexgen-academy.com/api/v1/orders/packageOrder/${referenceId}/${price}/${userEmail}/paypal`,
         ); // Redirect the user to a success page
-      } else if (type === "coursePackage") {
+      } else if (type === 'coursePackage') {
         res.redirect(
-          `https://api.nexgen-academy.com/api/v1/orders/coursePackageOrder/${referenceId}/${price}/${userEmail}/paypal`
+          `https://api.nexgen-academy.com/api/v1/orders/coursePackageOrder/${referenceId}/${price}/${userEmail}/paypal`,
         ); // Redirect the user to a success page
       }
     } else {
       // Handle failures, such as logging and user notifications
-      console.error("Payment capture failed", capture.result);
-      res.redirect("/error-page"); // Redirect the user to an error page
+      console.error('Payment capture failed', capture.result);
+      res.redirect('/error-page'); // Redirect the user to an error page
     }
   } catch (err) {
     // Log and handle errors
-    console.error("Payment capture error", err);
+    console.error('Payment capture error', err);
     return next(new ApiError(`Payment capture failed: ${err.message}`, 500));
   }
 });
@@ -482,28 +482,34 @@ async function addUserToGroupChat(user, course) {
     {
       $addToSet: { participants: { user: user._id, isAdmin: false } },
     },
-    { new: true }
+    { new: true },
   );
   //send notification
   await Notification.create({
     user: user._id,
-    message: `you has been added to the group ${chat.groupName}`,
+    message: {
+      en: `you has been added to the group ${chat.groupName}`,
+      ar: `تمت اضافتك الى المجموعة ${chat.groupName}`,
+    },
     chat: chat._id,
-    type: "chat",
+    type: 'chat',
   });
 }
 async function kickUserFromGroupChat(user, course) {
   const chat = await Chat.findOneAndUpdate(
     { course: course._id, isGroupChat: true },
     { $pull: { participants: { user: user._id } } },
-    { new: true }
+    { new: true },
   );
   //send notification
   await Notification.create({
     user: user._id,
-    message: `you has been kicked from the group ${chat.groupName}`,
+    message: {
+      en: `you has been kicked from the group ${chat.groupName}`,
+      ar: `تمت طردك من المجموعة ${chat.groupName}`,
+    },
     chat: chat._id,
-    type: "chat",
+    type: 'chat',
   });
 }
 //------------
@@ -817,27 +823,27 @@ const createCryptomusOrder = async (amount, currency, additionalData) => {
     order_id: await RandomUnique(),
     additional_data: additionalData,
     url_callback:
-      "https://api.nexgen-academy.com/api/v1/orders/webhook/cryptomus",
+      'https://api.nexgen-academy.com/api/v1/orders/webhook/cryptomus',
   };
 
   console.log(data);
   const jsonData = JSON.stringify(data);
   const sign = crypto
-    .createHash("md5")
-    .update(Buffer.from(jsonData).toString("base64") + apiKey)
-    .digest("hex");
+    .createHash('md5')
+    .update(Buffer.from(jsonData).toString('base64') + apiKey)
+    .digest('hex');
 
   try {
     const response = await axios.post(
-      "https://api.cryptomus.com/v1/payment",
+      'https://api.cryptomus.com/v1/payment',
       jsonData, // already replaced
       {
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           merchant: merchantId,
           sign: sign,
         },
-      }
+      },
     );
 
     return response.data;
@@ -847,10 +853,10 @@ const createCryptomusOrder = async (amount, currency, additionalData) => {
       console.error(`Cryptomus API error: ${error.response}`);
     } else if (error.request) {
       // The request was made but no response was received
-      console.error("Cryptomus API request error:", error.request);
+      console.error('Cryptomus API request error:', error.request);
     } else {
       // Something happened in setting up the request that triggered an error
-      console.error("Cryptomus API setup error:", error.message);
+      console.error('Cryptomus API setup error:', error.message);
     }
     throw new Error(`Cryptomus order creation failed: ${error.message}`);
   }
@@ -872,7 +878,7 @@ exports.courseCheckoutSessionCryptomus = asyncHandler(
       course: course._id,
     });
     if (existOrder) {
-      return next(new ApiError("You already bought this course", 400));
+      return next(new ApiError('You already bought this course', 400));
     }
 
     const coursePrice = course.priceAfterDiscount || course.price;
@@ -882,25 +888,25 @@ exports.courseCheckoutSessionCryptomus = asyncHandler(
     await checkCourseAccess(user, courseId);
 
     const additionalData = `${courseId}|${user.email}|course`;
-    const currency = "USD";
+    const currency = 'USD';
 
     try {
       const cryptomusOrder = await createCryptomusOrder(
         totalOrderPrice.toString(),
         currency,
-        additionalData
+        additionalData,
       );
-      console.log("cryptomusOrder", cryptomusOrder);
+      console.log('cryptomusOrder', cryptomusOrder);
       res.status(200).json({
-        status: "success",
+        status: 'success',
         redirectUrl: cryptomusOrder.result.url, // URL for Cryptomus payment
       });
     } catch (err) {
       return next(
-        new ApiError(`Cryptomus order creation failed: ${err.message}`, 500)
+        new ApiError(`Cryptomus order creation failed: ${err.message}`, 500),
       );
     }
-  }
+  },
 );
 
 // Course Package Checkout Session using Cryptomus
@@ -918,24 +924,24 @@ exports.coursePackageCheckoutSessionCryptomus = asyncHandler(
     const totalOrderPrice = Math.ceil(coursePackagePrice);
 
     const additionalData = `${coursePackageId}|${user.email}|coursePackage`;
-    const currency = "USD";
+    const currency = 'USD';
 
     try {
       const cryptomusOrder = await createCryptomusOrder(
         totalOrderPrice.toString(),
         currency,
-        additionalData
+        additionalData,
       );
       res.status(200).json({
-        status: "success",
+        status: 'success',
         redirectUrl: cryptomusOrder.result.url, // URL for Cryptomus payment
       });
     } catch (err) {
       return next(
-        new ApiError(`Cryptomus order creation failed: ${err.message}`, 500)
+        new ApiError(`Cryptomus order creation failed: ${err.message}`, 500),
       );
     }
-  }
+  },
 );
 
 // Package Checkout Session using Cryptomus
@@ -952,24 +958,24 @@ exports.packageCheckoutSessionCryptomus = asyncHandler(
     const totalOrderPrice = Math.ceil(packagePrice);
 
     const additionalData = `${packageId}|${user.email}|package`;
-    const currency = "USD";
+    const currency = 'USD';
 
     try {
       const cryptomusOrder = await createCryptomusOrder(
         totalOrderPrice.toString(),
         currency,
-        additionalData
+        additionalData,
       );
       res.status(200).json({
-        status: "success",
+        status: 'success',
         redirectUrl: cryptomusOrder.result.url, // URL for Cryptomus payment
       });
     } catch (err) {
       return next(
-        new ApiError(`Cryptomus order creation failed: ${err.message}`, 500)
+        new ApiError(`Cryptomus order creation failed: ${err.message}`, 500),
       );
     }
-  }
+  },
 );
 // Webhook handler for Cryptomus payment notifications
 
@@ -995,41 +1001,41 @@ exports.cryptomusWebhook = asyncHandler(async (req, res, next) => {
   //   return res.status(400).json({ message: "Invalid Sign" });
   // }
 
-  if (status === "confirm_check") {
-    const [referenceId, userEmail, type] = additionalData.split("|");
+  if (status === 'confirm_check') {
+    const [referenceId, userEmail, type] = additionalData.split('|');
     const price = amount;
 
     console.log(
-      ` Payment details: referenceId=${referenceId}, userEmail=${userEmail}, type=${type}, price=${price}`
+      ` Payment details: referenceId=${referenceId}, userEmail=${userEmail}, type=${type}, price=${price}`,
     );
 
-    const baseRedirectUrl = "https://api.nexgen-academy.com/api/v1/orders/";
-    let redirectUrl = "";
+    const baseRedirectUrl = 'https://api.nexgen-academy.com/api/v1/orders/';
+    let redirectUrl = '';
     switch (type) {
-      case "course":
+      case 'course':
         redirectUrl = `${baseRedirectUrl}courseOrder/${referenceId}/${price}/${userEmail}/crypto`;
         break;
-      case "package":
+      case 'package':
         redirectUrl = `${baseRedirectUrl}packageOrder/${referenceId}/${price}/${userEmail}/crypto`;
         break;
-      case "coursePackage":
+      case 'coursePackage':
         redirectUrl = `${baseRedirectUrl}coursePackageOrder/${referenceId}/${price}/${userEmail}/crypto`;
         break;
       default:
         console.error(`Unknown type: ${type}`);
-        return res.redirect("/error-page");
+        return res.redirect('/error-page');
     }
     console.log(`Redirecting to: ${redirectUrl}`);
     res.redirect(redirectUrl);
 
-    console.log("Order updated successfully:", status);
-  } else if (status === "wrong_amount") {
+    console.log('Order updated successfully:', status);
+  } else if (status === 'wrong_amount') {
     //TODO:handle the wrong amount case
-    console.error("Payment amount is incorrect. Status:", status);
+    console.error('Payment amount is incorrect. Status:', status);
   } else {
-    console.error("Payment was not successful. Status:", status);
+    console.error('Payment was not successful. Status:', status);
   }
 
   // Acknowledge the webhook receipt
-  res.status(200).send("Webhook received successfully");
+  res.status(200).send('Webhook received successfully');
 });

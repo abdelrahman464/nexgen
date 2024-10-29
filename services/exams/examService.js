@@ -11,7 +11,17 @@ const User = require('../../models/userModel');
 const Notification = require('../../models/notificationModel');
 const factory = require('../handllerFactory');
 const { uploadMixOfFiles } = require('../../middlewares/uploadImageMiddleware');
-const { checkUserProgress, fetchExam, excludeCorrectOptions, calculateScore, getTotalPossibleGrade, hasPassed, updateUserProgress, handleExamResponse, getTotalGrades } = require('./examUtils');
+const {
+  checkUserProgress,
+  fetchExam,
+  excludeCorrectOptions,
+  calculateScore,
+  getTotalPossibleGrade,
+  hasPassed,
+  updateUserProgress,
+  handleExamResponse,
+  getTotalGrades,
+} = require('./examUtils');
 
 // Middleware to upload question image and options images-------------
 exports.uploadQuestionAndOptions = uploadMixOfFiles([
@@ -364,7 +374,6 @@ exports.checkCourseQuestionsStatus = async (courseExamResult) => {
 /////////////////////////////////////////////
 /******************************************************************** */
 
-
 //Lesson Exam Logic
 const getLessonExam = async (lesson, courseProgress, user) => {
   await checkUserProgress(user, lesson.course, lesson.order);
@@ -553,10 +562,10 @@ exports.submitCourseAnswers = async (req, res, next) => {
       return next(new ApiError('Course not found', 404));
     }
 
-    const localizedCourse = Course.schema.methods.toJSONLocalizedOnly(
-      course,
-      req.locale,
-    );
+    // const localizedCourse = Course.schema.methods.toJSONLocalizedOnly(
+    //   course,
+    //   req.locale,
+    // );
 
     // Check if the user has already completed the course
     let existingProgress = await CourseProgress.findOne({
@@ -631,13 +640,19 @@ exports.submitCourseAnswers = async (req, res, next) => {
         user: req.user._id,
         course: course._id,
         type: 'certificate',
-        message: `You have earned a certificate for the course ${localizedCourse.title}. Please wait for the admin to issue it.`,
+        message: {
+          en: `You have earned a certificate for the course ${course.title.en}. Please wait for the admin to issue it.`,
+          ar: ` انتظر حتي تصدرها اداره الموقع.${course.title.ar} لقد حصلت علي شهاده للدروه `,
+        },
       });
       await Notification.create({
         user: adminId,
         course: course._id,
         type: 'certificate',
-        message: `User - ${req.user.email} - has earned a certificate for the course ${localizedCourse.title}.`,
+        message: {
+          en: `User ${req.user.name} has earned a certificate for the course ${course.title.en}. Please issue it.`,
+          ar: `يرجي اصدارها في اقرب وقت ${course.title.en} حصل علي شهاده للدروه  ${req.user.name} المستخدم`,
+        },
       });
     }
 

@@ -96,8 +96,11 @@ const userShcema = new mongoose.Schema(
     },
     following: [
       {
-        type: mongoose.Schema.ObjectId,
-        ref: 'User',
+        user: { type: mongoose.Schema.ObjectId, ref: 'User' },
+        notificationBell: {
+          type: Boolean,
+          default: false,
+        },
       },
     ],
     followers: [
@@ -153,7 +156,7 @@ const setProfileImageURL = (doc) => {
     doc.coverImg = coverImgUrl;
   }
 };
-//after initializ the doc in db
+//after initialize the doc in db
 // check if the document contains image
 // it work with findOne,findAll,update
 userShcema.post('init', (doc) => {

@@ -29,8 +29,10 @@ const {
   getUsersWithoutCourse,
   getUsersCourse,
   followUser,
-  unfollowUser,
+  unFollowUser,
   getMyFollowersAndFollowing,
+  deActiveNotificationBell,
+  activeNotificationBell,
 } = require('../services/userService');
 
 const router = express.Router();
@@ -133,7 +135,12 @@ router.get(
 router
   .route('/follow/:id')
   .post(authServices.protect, followUser)
-  .delete(authServices.protect, unfollowUser);
+  .delete(authServices.protect, unFollowUser);
+
+router
+  .route('/notificationBell/:id')
+  .post(authServices.protect, activeNotificationBell)
+  .delete(authServices.protect, deActiveNotificationBell);
 
 router.get(
   '/follow/followersAndFollowing',

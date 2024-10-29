@@ -385,7 +385,7 @@ exports.deleteUser = asyncHandler(async (req, res, next) => {
 //@route GET /api/v1/user/getMe
 //@access private/protect
 exports.getLoggedUserData = asyncHandler(async (req, res, next) => {
-  // i will set the req,pararms.id because i will go to the next middleware =>>> (getUser)
+  // i will set the req,params.id because i will go to the next middleware =>>> (getUser)
   req.params.id = req.user._id;
   next();
 });
@@ -404,7 +404,7 @@ exports.updateLoggedUserPassword = asyncHandler(async (req, res, next) => {
       new: true,
     },
   );
-  //genrate token
+  //generate token
   const token = generateToken(req.user._id);
 
   res.status(200).json({ data: user, token });
@@ -471,7 +471,7 @@ exports.getUserAsDoc = async (filter, selectFields = '', populate = '') => {
   }
   //4- execute the query
   const user = await query;
-  //5- check existance
+  //5- check existence
   if (!user) {
     throw new Error('No user found');
   }
@@ -529,76 +529,169 @@ exports.getUserData = asyncHandler(async (req, res, next) => {
 exports.followUser = async (req, res, next) => {
   try {
     const userIdToFollow = req.params.id;
-    // check if user try to follow himself
-    if (req.user._id === userIdToFollow) {
-      return next(new ApiError('You can not follow yourself', 400));
+
+    // Check if the user is trying to follow themselves
+    if (req.user._id.toString() === userIdToFollow.toString()) {
+      return next(new ApiError('You cannot follow yourself', 400));
     }
-    // get user
-    const user = await User.findById(userIdToFollow);
-    // check if user exist
-    if (!user) {
-      return next(new ApiError('No user found', 404));
+
+    // Check if the user to follow exists
+    const userToFollow = await User.findById(userIdToFollow);
+    if (!userToFollow) {
+      return next(new ApiError('User not found', 404));
     }
-    // update logged user following list
-    await User.findByIdAndUpdate(req.user._id, {
-      $addToSet: { following: userIdToFollow },
+
+    // Check if already following
+    const alreadyFollowing = await User.findOne({
+      _id: req.user._id,
+      following: { $elemMatch: { user: userIdToFollow } },
     });
-    // update the followed user followers list
+    if (alreadyFollowing) {
+      return next(new ApiError('You are already following this user', 400));
+    }
+
+    // Update the following list of the logged-in user
+    await User.findByIdAndUpdate(req.user._id, {
+      $addToSet: {
+        following: {
+          user: userIdToFollow,
+          notificationBell: false, // Default to false when following
+        },
+      },
+    });
+
+    // Update the followers list of the user being followed
     await User.findByIdAndUpdate(userIdToFollow, {
       $addToSet: { followers: req.user._id },
     });
 
-    //send notification to following user
+    // Send a notification to the followed user
     await Notification.create({
       user: userIdToFollow,
-      message: `${req.user.name} started following you`,
+      message: {
+        ar: ` ${req.user.name} قام بمتابعتك`,
+        en: `${req.user.name} followed you`,
+      },
       type: 'follow',
-      followedUser: userIdToFollow,
+      followedUser: req.user._id,
     });
 
-    // send response
+    // Send response
     res.status(200).json({
       status: 'success',
       message: 'You followed this user',
     });
   } catch (err) {
+    next(new ApiError(err.message, 400));
+  }
+};
+//@desc  Activate notification bell for a followed user
+//@route POST users/notificationBell/:id
+//@access protected
+exports.activeNotificationBell = async (req, res, next) => {
+  try {
+    const followedUserId = req.params.id;
+
+    // Check if the current user is following the target user
+    const user = await User.findOne({
+      _id: req.user._id,
+      following: { $elemMatch: { user: followedUserId } },
+    });
+
+    if (!user) {
+      return next(new ApiError('You are not following this user', 400));
+    }
+
+    // Update the notification bell status to active (true)
+    await User.updateOne(
+      { _id: req.user._id, 'following.user': followedUserId },
+      { $set: { 'following.$.notificationBell': true } },
+    );
+
+    res
+      .status(200)
+      .json({ success: true, message: 'Notification bell activated' });
+  } catch (err) {
     return next(new ApiError(err.message, 400));
   }
 };
-//@desc unfollow user
-//@route  users/unfollow/:id
+//@desc Deactivate notification bell for a followed user
+//@route DELETE users/notificationBell/:id
 //@access protected
-exports.unfollowUser = async (req, res, next) => {
+exports.deActiveNotificationBell = async (req, res, next) => {
+  try {
+    const followedUserId = req.params.id;
+
+    // Check if the current user is following the target user
+    const user = await User.findOne({
+      _id: req.user._id,
+      following: { $elemMatch: { user: followedUserId } },
+    });
+
+    if (!user) {
+      return next(new ApiError('You are not following this user', 400));
+    }
+
+    // Update the notification bell status to inactive (false)
+    await User.updateOne(
+      { _id: req.user._id, 'following.user': followedUserId },
+      { $set: { 'following.$.notificationBell': false } },
+    );
+
+    res
+      .status(200)
+      .json({ success: true, message: 'Notification bell deactivated' });
+  } catch (err) {
+    return next(new ApiError(err.message, 400));
+  }
+};
+//@desc unFollowUser user
+//@route  DELETE users/follow/:id
+//@access protected
+exports.unFollowUser = async (req, res, next) => {
   try {
     const userIdToUnfollow = req.params.id;
-    // check if user try to unfollow himself
-    if (req.user._id === userIdToUnfollow) {
-      return next(new ApiError('You can not unfollow yourself', 400));
+
+    // Check if the user is trying to unfollow themselves
+    if (req.user._id.toString() === userIdToUnfollow.toString()) {
+      return next(new ApiError('You cannot unfollow yourself', 400));
     }
-    // get user
-    const user = await User.findById(userIdToUnfollow);
-    // check if user exist
-    if (!user) {
-      return next(new ApiError('No user found', 404));
+
+    // Check if the user to unfollow exists
+    const userToUnfollow = await User.findById(userIdToUnfollow);
+    if (!userToUnfollow) {
+      return next(new ApiError('User not found', 404));
     }
-    // update logged user following list
-    await User.findByIdAndUpdate(req.user._id, {
-      $pull: { following: userIdToUnfollow },
+
+    // Check if already not following
+    const isFollowing = await User.findOne({
+      _id: req.user._id,
+      following: { $elemMatch: { user: userIdToUnfollow } },
     });
-    // update the followed user followers list
+    if (!isFollowing) {
+      return next(new ApiError('You are not following this user', 400));
+    }
+
+    // Update the following list of the logged-in user
+    await User.findByIdAndUpdate(req.user._id, {
+      $pull: { following: { user: userIdToUnfollow } },
+    });
+
+    // Update the followers list of the user being unfollowed
     await User.findByIdAndUpdate(userIdToUnfollow, {
       $pull: { followers: req.user._id },
     });
 
-    // send response
+    // Send response
     res.status(200).json({
       status: 'success',
       message: 'You unfollowed this user',
     });
   } catch (err) {
-    return next(new ApiError(err.message, 400));
+    next(new ApiError(err.message, 400));
   }
 };
+
 //@desc get my followers and following
 //@route  users/follow
 //@access protected

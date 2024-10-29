@@ -1,20 +1,20 @@
-const asyncHandler = require("express-async-handler");
-const fs = require("fs/promises");
-const path = require("path");
-const { v4: uuidv4 } = require("uuid");
-const Message = require("../models/MessageModel");
-const Chat = require("../models/ChatModel");
-const Notification = require("../models/notificationModel");
+const asyncHandler = require('express-async-handler');
+const fs = require('fs/promises');
+const path = require('path');
+const { v4: uuidv4 } = require('uuid');
+const Message = require('../models/MessageModel');
+const Chat = require('../models/ChatModel');
+const Notification = require('../models/notificationModel');
 // const User = require("../models/userModel");
-const factory = require("./handllerFactory");
-const ApiError = require("../utils/apiError");
+const factory = require('./handllerFactory');
+const ApiError = require('../utils/apiError');
 // const sendEmail = require("../utils/sendEmail");
-const { uploadMixOfFiles } = require("../middlewares/uploadImageMiddleware");
-const sendEmail = require("../utils/sendEmail");
+const { uploadMixOfFiles } = require('../middlewares/uploadImageMiddleware');
+const sendEmail = require('../utils/sendEmail');
 
 exports.uploadMedia = uploadMixOfFiles([
   {
-    name: "media",
+    name: 'media',
     maxCount: 15,
   },
 ]);
@@ -33,19 +33,19 @@ exports.resiz = asyncHandler(async (req, res, next) => {
       // Check if the file type is allowed
       if (
         [
-          "image/jpeg",
-          "image/png",
-          "image/gif",
-          "application/pdf",
-          "application/msword",
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          'image/jpeg',
+          'image/png',
+          'image/gif',
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         ].includes(file.mimetype)
       ) {
         // Save each file to the uploads directory
         // eslint-disable-next-line no-await-in-loop
         await fs.writeFile(
-          path.join("uploads", "messages", newFileName),
-          file.buffer
+          path.join('uploads', 'messages', newFileName),
+          file.buffer,
         );
         req.body.media.push(newFileName); // Append the new file name to the media array
       } else {
@@ -59,9 +59,9 @@ exports.resiz = asyncHandler(async (req, res, next) => {
     if (!req.body.media.length) {
       return next(
         new ApiError(
-          "Unsupported file types provided. Only images, PDF, and Word documents are allowed.",
-          400
-        )
+          'Unsupported file types provided. Only images, PDF, and Word documents are allowed.',
+          400,
+        ),
       );
     }
   }
@@ -81,20 +81,20 @@ exports.addMessage = asyncHandler(async (req, res, next) => {
   const chat = await Chat.findById(chatId);
 
   if (!chat) {
-    return res.status(404).json({ error: "Chat not found" });
+    return res.status(404).json({ error: 'Chat not found' });
   }
 
   // Check if the logged-in user is a participant of the chat
   const participantIds = chat.participants.map(
-    (participant) => String(participant.user ? participant.user._id : null) // Handle case where participant.user might be null
+    (participant) => String(participant.user ? participant.user._id : null), // Handle case where participant.user might be null
   );
 
   if (!participantIds.includes(String(sender))) {
     return next(
       new ApiError(
-        "Unauthorized access: You are not a participant of this chat",
-        403
-      )
+        'Unauthorized access: You are not a participant of this chat',
+        403,
+      ),
     );
   }
 
@@ -112,11 +112,9 @@ exports.addMessage = asyncHandler(async (req, res, next) => {
   ) {
     // Find the receiver(s) in the chat (excluding the sender)
 
-  
     const receivers = chat.participants
       .filter((participant) => String(participant.user) !== String(sender))
       .map((participant) => participant.user);
-
 
     // Send email to each receiver
     // receivers.forEach(async (receiver) => {
@@ -155,7 +153,7 @@ exports.createFilterObj = (req, res, next) => {
 //@desc get all messages in chat
 //@route GET /api/v1/message/chatId
 //@access protected
-exports.getMessage = factory.getALl(Message, "Message", "reactions.user");
+exports.getMessage = factory.getALl(Message, 'Message', 'reactions.user');
 //@desc Update a message by ID
 //@route PUT /api/v1/message/:messageId
 //@access protected
@@ -167,7 +165,7 @@ exports.updateMessage = asyncHandler(async (req, res, next) => {
   const message = await Message.findById(messageId);
 
   if (!message) {
-    return next(new ApiError("Message not found", 404));
+    return next(new ApiError('Message not found', 404));
   }
 
   const sixHoursInMills = 6 * 60 * 60 * 1000;
@@ -176,17 +174,17 @@ exports.updateMessage = asyncHandler(async (req, res, next) => {
   // Check if the logged-in user is the sender of the message
   if (String(message.sender._id) !== String(userId)) {
     return next(
-      new ApiError("Unauthorized access: You cannot update this message", 403)
+      new ApiError('Unauthorized access: You cannot update this message', 403),
     );
   }
   // user cannot update the message after 6h from he sent it unless he is an admin
   if (now - message.createdAt > sixHoursInMills) {
-    if (req.user.role !== "admin") {
+    if (req.user.role !== 'admin') {
       return next(
         new ApiError(
-          "Unauthorized access: You cannot update this message after 6 hours",
-          403
-        )
+          'Unauthorized access: You cannot update this message after 6 hours',
+          403,
+        ),
       );
     }
   }
@@ -205,7 +203,7 @@ exports.updateMessage = asyncHandler(async (req, res, next) => {
     const updatedMessage = await Message.findByIdAndUpdate(
       messageId,
       updateData,
-      { new: true }
+      { new: true },
     );
 
     res.status(200).json(updatedMessage);
@@ -225,7 +223,7 @@ exports.deleteMessage = asyncHandler(async (req, res, next) => {
   const message = await Message.findById(messageId);
 
   if (!message) {
-    return next(new ApiError("Message not found", 404));
+    return next(new ApiError('Message not found', 404));
   }
 
   const sixHoursInMills = 6 * 60 * 60 * 1000;
@@ -233,27 +231,30 @@ exports.deleteMessage = asyncHandler(async (req, res, next) => {
 
   // Check if the logged-in user is the sender of the message or an admin
   if (String(message.sender._id) !== String(userId)) {
-    if (req.user.role !== "admin") {
+    if (req.user.role !== 'admin') {
       return next(
-        new ApiError("Unauthorized access: You cannot delete this message", 403)
+        new ApiError(
+          'Unauthorized access: You cannot delete this message',
+          403,
+        ),
       );
     }
     // If the user is an admin, allow deletion of any message regardless of the time it was sent
     // user cannot delete the message after 6h from he sent it unless he is an admin
   } else if (now - message.createdAt > sixHoursInMills) {
-    if (req.user.role !== "admin") {
+    if (req.user.role !== 'admin') {
       return next(
         new ApiError(
-          "Unauthorized access: You cannot delete this message after 6 hours",
-          403
-        )
+          'Unauthorized access: You cannot delete this message after 6 hours',
+          403,
+        ),
       );
     }
   }
 
   await Message.findByIdAndDelete(messageId);
 
-  res.status(200).json({ message: "Message deleted successfully" });
+  res.status(200).json({ message: 'Message deleted successfully' });
 });
 
 //@desc Add a reaction to a message
@@ -267,12 +268,12 @@ exports.toggleReactionToMessage = asyncHandler(async (req, res, next) => {
   const message = await Message.findById(messageId);
 
   if (!message) {
-    return next(new ApiError("Message not found", 404));
+    return next(new ApiError('Message not found', 404));
   }
 
   // Check if the user has already reacted to this message
   const existingReactionIndex = message.reactions.findIndex(
-    (reaction) => String(reaction.user) === String(userId)
+    (reaction) => String(reaction.user) === String(userId),
   );
 
   if (existingReactionIndex !== -1) {
@@ -282,14 +283,14 @@ exports.toggleReactionToMessage = asyncHandler(async (req, res, next) => {
       await Message.findByIdAndUpdate(
         messageId,
         { $pull: { reactions: { user: userId } } },
-        { new: true }
+        { new: true },
       );
     } else {
       // If the new reaction is different, update the existing reaction
       await Message.updateOne(
-        { _id: messageId, "reactions.user": userId },
-        { $set: { "reactions.$.emoji": emoji } },
-        { new: true }
+        { _id: messageId, 'reactions.user': userId },
+        { $set: { 'reactions.$.emoji': emoji } },
+        { new: true },
       );
     }
   } else {
@@ -297,7 +298,7 @@ exports.toggleReactionToMessage = asyncHandler(async (req, res, next) => {
     await Message.findByIdAndUpdate(
       messageId,
       { $push: { reactions: { user: userId, emoji: emoji } } },
-      { new: true }
+      { new: true },
     );
   }
 
@@ -318,7 +319,7 @@ exports.replyToMessage = asyncHandler(async (req, res, next) => {
   const repliedMessage = await Message.findById(messageId);
 
   if (!repliedMessage) {
-    return next(new ApiError("Message not found", 404));
+    return next(new ApiError('Message not found', 404));
   }
 
   // Prepare reply message data
@@ -339,15 +340,22 @@ exports.replyToMessage = asyncHandler(async (req, res, next) => {
 
   // Check if the sender of the replied message is not the same as the sender of the reply
   if (repliedMessage.sender._id.toString() !== sender.toString()) {
-    const notificationMessage = `
+    
+    const englishNotificationMessage = `
     \n You have a new reply to your message.
     \n\n Message: ${text}`;
+    const arabicNotificationMessage = `
+    \n لديك رد جديد على رسالتك.
+    \n\n الرسالة: ${text}`;
 
     await Notification.create({
       user: repliedMessage.sender._id,
-      message: notificationMessage,
+      message: {
+        en: englishNotificationMessage,
+        ar: arabicNotificationMessage,
+      },
       chat: repliedMessage.chat,
-      type: "chat",
+      type: 'chat',
     });
 
     //send email to the sender of the replied message

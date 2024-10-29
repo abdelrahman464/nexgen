@@ -457,7 +457,12 @@ exports.giveCertificate = asyncHandler(async (req, res, next) => {
   //send notification to user
   await Notification.create({
     user: userId,
-    message: `You have received a certificate`,
+    message: {
+      en: 'You have received a certificate',
+      ar: 'لقد تلقيت شهادة',
+    },
+    type: 'certificate',  
+    course: courseId,
   });
 
   return res.status(200).json({

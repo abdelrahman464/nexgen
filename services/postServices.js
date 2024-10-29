@@ -1,26 +1,26 @@
-const asyncHandler = require("express-async-handler");
-const mongoose = require("mongoose");
-const sharp = require("sharp");
-const { v4: uuidv4 } = require("uuid");
-const ApiError = require("../utils/apiError");
-const Post = require("../models/postModel");
-const Comment = require("../models/commentModel");
-const Reaction = require("../models/reactionModel");
-const Course = require("../models/courseModel");
-const Package = require("../models/packageModel");
-const UserSubscription = require("../models/userSubscriptionModel");
-const CourseProgress = require("../models/courseProgressModel");
-const Notification = require("../models/notificationModel");
-const factory = require("./handllerFactory");
-const { uploadMixOfFiles } = require("../middlewares/uploadImageMiddleware");
+const asyncHandler = require('express-async-handler');
+const mongoose = require('mongoose');
+const sharp = require('sharp');
+const { v4: uuidv4 } = require('uuid');
+const ApiError = require('../utils/apiError');
+const Post = require('../models/postModel');
+const Comment = require('../models/commentModel');
+const Reaction = require('../models/reactionModel');
+const Course = require('../models/courseModel');
+const Package = require('../models/packageModel');
+const UserSubscription = require('../models/userSubscriptionModel');
+const CourseProgress = require('../models/courseProgressModel');
+const Notification = require('../models/notificationModel');
+const factory = require('./handllerFactory');
+const { uploadMixOfFiles } = require('../middlewares/uploadImageMiddleware');
 
 exports.uploadImages = uploadMixOfFiles([
   {
-    name: "imageCover",
+    name: 'imageCover',
     maxCount: 1,
   },
   {
-    name: "images",
+    name: 'images',
     maxCount: 30,
   },
 ]);
@@ -29,34 +29,34 @@ exports.resizeImages = asyncHandler(async (req, res, next) => {
   // Image processing for imageCover
   if (
     req.files.imageCover &&
-    req.files.imageCover[0].mimetype.startsWith("image/")
+    req.files.imageCover[0].mimetype.startsWith('image/')
   ) {
     const imageCoverFileName = `post-${uuidv4()}-${Date.now()}-cover.webp`;
 
     await sharp(req.files.imageCover[0].buffer)
-      .toFormat("webp") // Convert to WebP
+      .toFormat('webp') // Convert to WebP
       .webp({ quality: 95 })
       .toFile(`uploads/posts/${imageCoverFileName}`);
 
     // Save imageCover file name in the request body for database saving
     req.body.imageCover = imageCoverFileName;
   } else if (req.files.imageCover) {
-    return next(new ApiError("Image cover is not an image file", 400));
+    return next(new ApiError('Image cover is not an image file', 400));
   }
 
   // Image processing for images
   if (req.files.images) {
     const imageProcessingPromises = req.files.images.map(async (img, index) => {
-      if (!img.mimetype.startsWith("image/")) {
+      if (!img.mimetype.startsWith('image/')) {
         return next(
-          new ApiError(`File ${index + 1} is not an image file.`, 400)
+          new ApiError(`File ${index + 1} is not an image file.`, 400),
         );
       }
 
       const imageName = `post-${uuidv4()}-${Date.now()}-${index + 1}.webp`;
 
       await sharp(img.buffer)
-        .toFormat("webp") // Convert to WebP
+        .toFormat('webp') // Convert to WebP
         .webp({ quality: 95 })
         .toFile(`uploads/posts/${imageName}`);
 
@@ -79,7 +79,7 @@ exports.createFilterObjAllowedCoursePosts = asyncHandler(
   async (req, res, next) => {
     let filterObject = {};
 
-    if (req.user.role === "user") {
+    if (req.user.role === 'user') {
       // all courses that the logged user is subscripe in
 
       //get all courses that user is subscribed in by getting all course progress that user have and extract the coursesIds from there
@@ -89,23 +89,23 @@ exports.createFilterObjAllowedCoursePosts = asyncHandler(
       const coursesIds = userCoursesProgress.map((course) => course.course);
 
       filterObject = {
-        sharedTo: "course",
+        sharedTo: 'course',
         course: { $in: coursesIds },
       };
     }
-    if (req.user.role === "admin") {
+    if (req.user.role === 'admin') {
       filterObject = {
-        sharedTo: "course",
+        sharedTo: 'course',
       };
     }
     req.filterObj = filterObject;
     next();
-  }
+  },
 );
 //-------------------------------------------------------------------------------------------------
 //filter to get public posts only
 exports.createFilterObjHomePosts = async (req, res, next) => {
-  const filterObject = { sharedTo: "home" };
+  const filterObject = { sharedTo: 'home' };
   req.filterObj = filterObject;
   next();
 };
@@ -113,7 +113,7 @@ exports.createFilterObjHomePosts = async (req, res, next) => {
 exports.createFilterObjPackagesPosts = asyncHandler(async (req, res, next) => {
   let filterObject = {};
 
-  if (req.user.role === "user") {
+  if (req.user.role === 'user') {
     // all packages that suscripe in
     const userSubscriptions = await UserSubscription.find({
       user: req.user._id,
@@ -121,13 +121,13 @@ exports.createFilterObjPackagesPosts = asyncHandler(async (req, res, next) => {
     const packageIds = userSubscriptions.map((pack) => pack.package);
 
     filterObject = {
-      sharedTo: "package",
+      sharedTo: 'package',
       package: { $in: packageIds },
     };
   }
-  if (req.user.role === "admin") {
+  if (req.user.role === 'admin') {
     filterObject = {
-      sharedTo: "package",
+      sharedTo: 'package',
     };
   }
   req.filterObj = filterObject;
@@ -155,8 +155,8 @@ exports.createPost = asyncHandler(async (req, res, next) => {
   const { content, package, course, imageCover, images, sharedTo } = req.body;
 
   // Validate sharedTo value
-  if (!["package", "course", "home"].includes(sharedTo)) {
-    return next(new ApiError("Invalid value for sharedTo", 400));
+  if (!['package', 'course', 'home'].includes(sharedTo)) {
+    return next(new ApiError('Invalid value for sharedTo', 400));
   }
 
   // Function to fetch users from package or course
@@ -166,13 +166,13 @@ exports.createPost = asyncHandler(async (req, res, next) => {
         let targetModel;
         let usersInTarget;
 
-        if (target === "package") {
+        if (target === 'package') {
           targetModel = Package;
           usersInTarget = await UserSubscription.find({
             package: id,
             endDate: { $gte: new Date() },
           });
-        } else if (target === "course") {
+        } else if (target === 'course') {
           targetModel = Course;
           usersInTarget = await CourseProgress.find({ course: id });
         }
@@ -183,33 +183,33 @@ exports.createPost = asyncHandler(async (req, res, next) => {
         }
 
         return usersInTarget.map((user) => user.user);
-      })
+      }),
     );
 
     return users.flat();
   }
 
   let users = [];
-  if (sharedTo === "package") {
+  if (sharedTo === 'package') {
     if (!package || !Array.isArray(package) || package.length === 0) {
       return next(
-        new ApiError("Package IDs must be provided as an array", 400)
+        new ApiError('Package IDs must be provided as an array', 400),
       );
     }
-    users = await fetchUsersFromTarget("package", package);
-  } else if (sharedTo === "course") {
+    users = await fetchUsersFromTarget('package', package);
+  } else if (sharedTo === 'course') {
     if (!course || !Array.isArray(course) || course.length === 0) {
-      return next(new ApiError("Course IDs must be provided as an array", 400));
+      return next(new ApiError('Course IDs must be provided as an array', 400));
     }
-    users = await fetchUsersFromTarget("course", course);
+    users = await fetchUsersFromTarget('course', course);
   }
 
   // Create a new post
   const post = await Post.create({
     user: req.user._id,
     content,
-    package: sharedTo === "package" ? package : [],
-    course: sharedTo === "course" ? course : [],
+    package: sharedTo === 'package' ? package : [],
+    course: sharedTo === 'course' ? course : [],
     imageCover,
     images,
     sharedTo,
@@ -220,11 +220,14 @@ exports.createPost = asyncHandler(async (req, res, next) => {
     users.map(async (user) => {
       await Notification.create({
         user,
-        message: "New post created",
+        message: {
+          en: `${req.user.name} has shared a new post with you`,
+          ar: `${req.user.name} قام بمشاركة منشور جديد معك`,
+        },
         post: post._id,
-        type: "post",
+        type: 'post',
       });
-    })
+    }),
   );
 
   res.status(201).json({ success: true, data: post });
@@ -255,35 +258,35 @@ exports.getPosts = asyncHandler(async (req, res) => {
     { $match: filter },
     {
       $lookup: {
-        from: "reactions",
-        localField: "_id",
-        foreignField: "post",
-        as: "reactions",
+        from: 'reactions',
+        localField: '_id',
+        foreignField: 'post',
+        as: 'reactions',
       },
     },
     {
       $lookup: {
-        from: "comments",
-        localField: "_id",
-        foreignField: "post",
-        as: "comments",
+        from: 'comments',
+        localField: '_id',
+        foreignField: 'post',
+        as: 'comments',
       },
     },
     {
       $lookup: {
-        from: "users",
-        localField: "user",
-        foreignField: "_id",
-        as: "user",
+        from: 'users',
+        localField: 'user',
+        foreignField: '_id',
+        as: 'user',
       },
     },
     {
-      $unwind: "$user",
+      $unwind: '$user',
     },
     {
       $addFields: {
-        reactionsCount: { $size: "$reactions" },
-        commentsCount: { $size: "$comments" },
+        reactionsCount: { $size: '$reactions' },
+        commentsCount: { $size: '$comments' },
       },
     },
     {
@@ -372,7 +375,7 @@ exports.deletePost = asyncHandler(async (req, res, next) => {
       // Find and delete the course
       const post = await Post.findByIdAndDelete(id).session(session);
       // Check if post exists
-      if (!post) return next(new ApiError("post not found ", 404));
+      if (!post) return next(new ApiError('post not found ', 404));
 
       // Delete associated lessons and reviews
       await Promise.all([
@@ -385,12 +388,12 @@ exports.deletePost = asyncHandler(async (req, res, next) => {
     res.status(204).send();
   } catch (error) {
     // Handle any transaction-related errors
-    console.error("Transaction error:", error);
+    console.error('Transaction error:', error);
     if (error instanceof ApiError) {
       // Forward specific ApiError instances
       return next(error);
     }
     // Handle other errors with a generic message
-    return next(new ApiError("Error during post deletion", 500));
+    return next(new ApiError('Error during post deletion', 500));
   }
 });
