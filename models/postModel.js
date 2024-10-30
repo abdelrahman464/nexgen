@@ -13,7 +13,7 @@ const PostSchema = new mongoose.Schema(
     },
     sharedTo: {
       type: String,
-      enum: ["home", "course", "package"],
+      enum: ["home", "course", "package", "profile"],
       default: "home",
     },
     course: [
@@ -41,7 +41,10 @@ const PostSchema = new mongoose.Schema(
 PostSchema.pre(/^find/, function (next) {
   // this => query
   this.populate({ path: "user", select: "name profileImg" });
-  this.populate({ path: "course", select: "title -accessibleCourses -category" });
+  this.populate({
+    path: "course",
+    select: "title -accessibleCourses -category",
+  });
   this.populate({ path: "package", select: "title course" });
   next();
 });

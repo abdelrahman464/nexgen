@@ -10,6 +10,11 @@ exports.processPostValidator = [
 
 exports.createPostValidator = [
   check("content").notEmpty().withMessage("content is required"),
+  check("sharedTo")
+    .notEmpty()
+    .withMessage("sharedTo is required")
+    .isIn(["package", "course", "home", "profile"])
+    .withMessage("invalid value"),
   check("images")
     .optional()
     .isArray()
@@ -27,17 +32,19 @@ exports.getPostValidator = [
 ];
 
 exports.checkCourseAuthority = async (req, res, next) => {
-  if (req.user.role !== "admin") {
-    const order = await Order.find({
-      user: req.user._id,
-      course: { $in: req.body.course },
-    });
-  
-    if (order.length !== req.body.course.length) {
-      return next(
-        new ApiError("you are not member of all of these courses", 403)
-      );
-    }
+  if (req.user.role === "admin" || req.body.sharedTo === "profile")
+    return next();
+
+  const order = await Order.find({
+    user: req.user._id,
+    course: { $in: req.body.course },
+  });
+
+  if (order.length !== req.body.course.length) {
+    return next(
+      new ApiError("you are not member of all of these courses", 403)
+    );
   }
+
   return next();
 };
