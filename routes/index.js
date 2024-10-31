@@ -25,6 +25,7 @@ const contactRoute = require("./contactRoute");
 const systemReviewRoute = require("./systemReviewRoute");
 const analyticsRoute = require("./analyticRoute");
 const marketingInvoicesRoute = require("./invoicesReqsRoute");
+const couponRoute = require("./couponRoute");
 
 const mountRoutes = (app) => {
   // Mount Routes
@@ -65,5 +66,6 @@ const mountRoutes = (app) => {
   app.use("/api/v1/analytics", analyticsRoute);
 
   app.use("/api/v1/systemReviews", systemReviewRoute);
+  app.use("/api/v1/coupons", couponRoute);
 };
 module.exports = mountRoutes;
