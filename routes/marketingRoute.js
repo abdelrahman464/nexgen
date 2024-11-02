@@ -48,8 +48,8 @@ router.put(
   "/createInvoice/:id", //user id
   authServices.protect,
   authServices.allowedTo("user", "admin"),
-  checkAuthority,
-  createInvoiceValidator,
+  // checkAuthority,
+  // createInvoiceValidator,
   createInvoice
 );
 

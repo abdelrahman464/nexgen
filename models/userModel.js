@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 
-const userShcema = new mongoose.Schema(
+const userSchema = new mongoose.Schema(
   {
     invitor: {
       type: mongoose.Schema.Types.ObjectId,
@@ -113,7 +113,7 @@ const userShcema = new mongoose.Schema(
   { timestamps: true },
 );
 
-userShcema.methods.toJSON = function () {
+userSchema.methods.toJSON = function () {
   const obj = this.toObject();
 
   // Function to remove sensitive fields
@@ -137,7 +137,7 @@ userShcema.methods.toJSON = function () {
   return obj;
 };
 
-userShcema.pre('save', async function (next) {
+userSchema.pre('save', async function (next) {
   //if password field is not modified go to next middleware
   if (!this.isModified('password')) return next();
   // Hashing user password
@@ -159,13 +159,13 @@ const setProfileImageURL = (doc) => {
 //after initialize the doc in db
 // check if the document contains image
 // it work with findOne,findAll,update
-userShcema.post('init', (doc) => {
+userSchema.post('init', (doc) => {
   setProfileImageURL(doc);
 });
 // it work with create
-userShcema.post('save', (doc) => {
+userSchema.post('save', (doc) => {
   setProfileImageURL(doc);
 });
 
-const User = mongoose.model('User', userShcema);
+const User = mongoose.model('User', userSchema);
 module.exports = User;

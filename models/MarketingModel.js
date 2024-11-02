@@ -82,6 +82,14 @@ const MarketingLogsSchema = new mongoose.Schema(
         profits: Number,
         treeProfits: Number,
         desc: String,
+        //analytics of courses sales and packages sales
+        salesAnalytics: [
+          {
+            item: String,
+            amount: Number,
+            percentage: Number,
+          },
+        ],
         paymentMethod: {
           type: String,
         },

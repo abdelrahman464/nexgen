@@ -356,6 +356,7 @@ exports.getMarketLog = async (req, res) => {
 const createProfitsInvoice = async (marketLog, reqBody) => {
   let totalProfits = 0;
   let totalTreeProfits = 0;
+  let salesAnalytics;
   //1-calculate the profits of his direct transactions
   if (
     marketLog.direct_transactions &&
@@ -364,6 +365,11 @@ const createProfitsInvoice = async (marketLog, reqBody) => {
     for (const transaction of marketLog.direct_transactions) {
       totalProfits += transaction.profit;
     }
+    // eslint-disable-next-line no-use-before-define
+    salesAnalytics = calculateSalesAnalytics(
+      marketLog.direct_transactions,
+      marketLog.totalSalesMoney
+    );
   }
   //2-calculate the profits of his children
   if (marketLog.transactions && marketLog.transactions.length !== 0) {
@@ -402,7 +408,7 @@ const createProfitsInvoice = async (marketLog, reqBody) => {
     })} ${new Date().getDate()} (${new Date().toLocaleString("en-US", {
       weekday: "long",
     })})`,
-
+    salesAnalytics, //may be exist and maybe not
     paymentMethod: reqBody.paymentMethod,
     receiverAcc: reqBody.receiverAcc,
   };
@@ -532,4 +538,27 @@ exports.getMarketerChildren = async (req, res) => {
   }
 
   return res.status(200).json({ status: "success", data: children });
+};
+//------------------------
+const calculateSalesAnalytics = (sales, totalSalesAmount) => {
+  const salesAnalytics = [];
+  //hint : each key inside it will be item_name , it's value amount of sales for it
+  const analytics = {};
+  //accumulate each item sales
+  for (const sale of sales) {
+    if (sale.item in analytics) {
+      analytics[sale.item] += sale.amount;
+    } else {
+      analytics[sale.item] = sale.amount;
+    }
+  }
+  // eslint-disable-next-line guard-for-in
+  for (const item in analytics) {
+    salesAnalytics.push({
+      item: item,
+      amount: analytics[item],
+      percentage: (analytics[item] / totalSalesAmount) * 100,
+    });
+  }
+  return salesAnalytics;
 };
