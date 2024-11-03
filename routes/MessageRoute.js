@@ -1,52 +1,52 @@
-const express = require("express");
+const express = require('express');
 const {
   getMessageValidator,
-} = require("../utils/validators/messagesValidator");
+} = require('../utils/validators/messagesValidator');
 const {
   replyToMessage,
   getRepliesToMessage,
   uploadMedia,
-  resiz,
+  resize,
   addMessage,
   getMessage,
   updateMessage,
   deleteMessage,
   toggleReactionToMessage,
   createFilterObj,
-} = require("../services/MessageServices");
-const authServices = require("../services/authServices");
+} = require('../services/MessageServices');
+const authServices = require('../services/authServices');
 
 const router = express.Router();
 
-router.post("/:chatId", authServices.protect, uploadMedia, resiz, addMessage);
+router.post('/:chatId', authServices.protect, uploadMedia, resize, addMessage);
 router.get(
-  "/:chatId",
+  '/:chatId',
   authServices.protect,
   getMessageValidator,
   createFilterObj,
-  getMessage
+  getMessage,
 );
 
 router.put(
-  "/:messageId",
+  '/:messageId',
   authServices.protect,
   uploadMedia,
-  resiz,
-  updateMessage
+  resize,
+  updateMessage,
 );
 router.post(
-  "/:messageId/reply",
+  '/:messageId/reply',
   authServices.protect,
   uploadMedia,
-  resiz,
-  replyToMessage
+  resize,
+  replyToMessage,
 );
-router.get("/:messageId/replies", authServices.protect, getRepliesToMessage);
-router.delete("/:messageId", authServices.protect, deleteMessage);
+router.get('/:messageId/replies', authServices.protect, getRepliesToMessage);
+router.delete('/:messageId', authServices.protect, deleteMessage);
 router.post(
-  "/:messageId/reactions",
+  '/:messageId/reactions',
   authServices.protect,
-  toggleReactionToMessage
+  toggleReactionToMessage,
 );
 
 module.exports = router;

@@ -33,6 +33,8 @@ const {
   getMyFollowersAndFollowing,
   deActiveNotificationBell,
   activeNotificationBell,
+  toggleApproveIdDocument,
+  uploadIdDocument,
 } = require('../services/userService');
 
 const router = express.Router();
@@ -87,7 +89,6 @@ router
   .route('/:id')
   .get(
     authServices.protect,
-    authServices.allowedTo('admin'),
     getUserValidator,
     getUser,
   )
@@ -148,4 +149,18 @@ router.get(
   getMyFollowersAndFollowing,
 );
 
+router.put(
+  '/idDocument/toggleApprove/:id',
+  authServices.protect,
+  authServices.allowedTo('admin'),
+  toggleApproveIdDocument,
+);
+
+router.post(
+  '/idDocument/upload',
+  authServices.protect,
+  uploadImages,
+  resizeImage,
+  uploadIdDocument,
+);
 module.exports = router;

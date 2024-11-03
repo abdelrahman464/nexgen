@@ -1,4 +1,4 @@
-const express = require("express");
+const express = require('express');
 const {
   uploadImage,
   resizeImage,
@@ -16,60 +16,67 @@ const {
   archiveChat,
   unarchiveChat,
   getMyChats,
-} = require("../services/ChatServices");
-const authServices = require("../services/authServices");
+  getAllChats,
+} = require('../services/ChatServices');
+const authServices = require('../services/authServices');
 
 const router = express.Router();
 router.post(
-  "/:receiverId",
+  '/:receiverId',
   authServices.protect,
-  authServices.allowedTo("admin"),
-  createChat
+  authServices.allowedTo('admin'),
+  createChat,
 );
 
 router.post(
-  "/",
+  '/',
   authServices.protect,
-  authServices.allowedTo("admin"),
+  authServices.allowedTo('admin'),
   uploadImage,
   resizeImage,
-  createGroupChat
+  createGroupChat,
+);
+router.get(
+  '/',
+  authServices.protect,
+  authServices.allowedTo('admin'),
+  getAllChats,
 );
 
-router.get("/myChats", authServices.protect, getMyChats);
-router.get("/find/:secondPersonId", authServices.protect, findChat);
+router.get('/myChats', authServices.protect, getMyChats);
+router.get('/find/:secondPersonId', authServices.protect, findChat);
 
 router.put(
-  "/:chatId/addParticipant",
+  '/:chatId/addParticipant',
   authServices.protect,
-  addParticipantToChat
+  addParticipantToChat,
 );
 router.put(
-  "/:chatId/removeParticipant",
+  '/:chatId/removeParticipant',
   authServices.protect,
-  removeParticipantFromChat
+  removeParticipantFromChat,
 );
 router.put(
-  "/:chatId/updateParticipantRole",
+  '/:chatId/updateParticipantRole',
   authServices.protect,
-  updateParticipantRoleInChat
+  updateParticipantRoleInChat,
 );
-router.get("/:chatId/details", authServices.protect, getChatDetails);
+router.get('/:chatId/details', authServices.protect, getChatDetails);
 router.put(
-  "/:chatId/updateGroup",
+  '/:chatId/updateGroup',
   authServices.protect,
   uploadImage,
   resizeImage,
-  updateGrpupChat
+  updateGrpupChat,
 );
-router.delete("/:chatId", authServices.protect, deleteChat);
-router.post("/:chatId/pin/:messageId", authServices.protect, pinMessageInChat);
+router.delete('/:chatId', authServices.protect, deleteChat);
+router.post('/:chatId/pin/:messageId', authServices.protect, pinMessageInChat);
 router.delete(
-  "/:chatId/unpin/:messageId",
+  '/:chatId/unpin/:messageId',
   authServices.protect,
-  unpinMessageInChat
+  unpinMessageInChat,
 );
-router.put("/:chatId/archive", authServices.protect, archiveChat);
-router.put("/:chatId/unarchive", authServices.protect, unarchiveChat);
+router.put('/:chatId/archive', authServices.protect, archiveChat);
+router.put('/:chatId/unarchive', authServices.protect, unarchiveChat);
 
 module.exports = router;

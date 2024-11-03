@@ -22,9 +22,15 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
     },
+    //uploads
     phone: String,
     profileImg: String,
     coverImg: String,
+    idDocument: String,
+    isIdVerified: {
+      type: Boolean,
+      default: false,
+    },
     google: {
       id: String,
       email: String,
@@ -65,7 +71,6 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-
     treeHead: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -154,6 +159,10 @@ const setProfileImageURL = (doc) => {
   if (doc.coverImg) {
     const coverImgUrl = `${process.env.BASE_URL}/users/${doc.coverImg}`;
     doc.coverImg = coverImgUrl;
+  }
+  if (doc.idDocument) {
+    const idDocumentUrl = `${process.env.BASE_URL}/users/idDocument/${doc.idDocument}`;
+    doc.idDocument = idDocumentUrl;
   }
 };
 //after initialize the doc in db

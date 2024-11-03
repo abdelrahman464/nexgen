@@ -28,42 +28,56 @@ exports.uploadImages = uploadMixOfFiles([
     name: 'coverImg',
     maxCount: 1,
   },
+  {
+    name: 'idDocument',
+    maxCount: 1,
+  },
 ]);
 //image processing
+
 exports.resizeImage = asyncHandler(async (req, res, next) => {
-  if (
-    req.files.profileImg &&
-    req.files.profileImg[0].mimetype.startsWith('image/')
-  ) {
-    const newFileName = `profileImg-${uuidv4()}-${Date.now()}.webp`; // Generate new file name
-
-    await sharp(req.files.profileImg[0].buffer)
-      .toFormat('webp') // Convert to WebP
-      .webp({ quality: 95 })
-      .toFile(`uploads/users/${newFileName}`);
-
-    // Save coverImg file name in the request body for database saving
-    req.body.profileImg = newFileName;
-  } else if (req.files.profileImg) {
-    return next(new ApiError('profile Imag is not an image file', 400));
+  // Check if req.files is present, if not, proceed to the next middleware
+  if (!req.files) {
+    return next();
   }
 
-  if (
-    req.files.coverImg &&
-    req.files.coverImg[0].mimetype.startsWith('image/')
-  ) {
-    const newFileName = `coverImg-${uuidv4()}-${Date.now()}.webp`; // Generate new file name
+  // Helper function to process and resize images
+  const processImage = async (file, folderName, fieldName) => {
+    if (file && file.mimetype.startsWith('image/')) {
+      const newFileName = `${fieldName}-${uuidv4()}-${Date.now()}.webp`;
 
-    await sharp(req.files.coverImg[0].buffer)
-      .toFormat('webp') // Convert to WebP
-      .webp({ quality: 95 })
-      .toFile(`uploads/users/${newFileName}`);
+      await sharp(file.buffer)
+        .toFormat('webp')
+        .webp({ quality: 95 })
+        .toFile(`uploads/users/${folderName}/${newFileName}`);
 
-    // Save coverImg file name in the request body for database saving
-    req.body.coverImg = newFileName;
-  } else if (req.files.coverImg) {
-    return next(new ApiError('Image cover is not an image file', 400));
-  }
+      // Save the generated file name in the request body for database saving
+      req.body[fieldName] = newFileName;
+    } else if (file) {
+      return next(new ApiError(`${fieldName} is not an image file`, 400));
+    }
+  };
+
+  // Process profile image
+  await processImage(
+    req.files.profileImg ? req.files.profileImg[0] : null,
+    '',
+    'profileImg',
+  );
+
+  // Process cover image
+  await processImage(
+    req.files.coverImg ? req.files.coverImg[0] : null,
+    '',
+    'coverImg',
+  );
+
+  // Process ID document image
+  await processImage(
+    req.files.idDocument ? req.files.idDocument[0] : null,
+    'idDocument',
+    'idDocument',
+  );
 
   next();
 });
@@ -279,15 +293,28 @@ exports.getPurchasersUsersAndNon = async (req, res, next) => {
     return next(new ApiError(err.message, 400));
   }
 };
-
 //@desc get list of user
 //@route GET /api/v1/users
 //@access private
 exports.getUsers = factory.getALl(User, 'User');
 //@desc get specific User by id
 //@route GET /api/v1/User/:id
-//@access private
-exports.getUser = factory.getOne(User);
+//@access public
+exports.getUser = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id).select(
+      'name email profileImg coverImg role isInstructor startMarketing',
+    );
+    if (!user) {
+      return next(
+        new ApiError(`No document found with this id ${req.params.id}`, 404),
+      );
+    }
+    res.status(200).json({ data: user });
+  } catch (err) {
+    next(new ApiError(err.message, 400));
+  }
+};
 //@desc create user
 //@route POST /api/v1/users
 //@access private
@@ -417,7 +444,6 @@ exports.updateLoggedUserData = asyncHandler(async (req, res, next) => {
     req.user._id,
     {
       name: req.body.name,
-      email: req.body.email,
       phone: req.body.phone,
       profileImg: req.body.profileImg,
       coverImg: req.body.coverImg,
@@ -705,5 +731,53 @@ exports.getMyFollowersAndFollowing = async (req, res, next) => {
       followers: user.followers,
       following: user.following,
     },
+  });
+};
+//@desc toggle approve id
+//@route PUT /api/v1/users/idDocument/toggleApprove/:id
+//@access private admin
+exports.toggleApproveIdDocument = async (req, res, next) => {
+  try {
+    // Toggle approval status of ID document
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return next(new ApiError('User not found', 404));
+    }
+
+    // Toggle the `approveIdDocument` field in one step
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      { $set: { isIdVerified: !user.isIdVerified } },
+      { new: true },
+    );
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        user: updatedUser,
+      },
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 400));
+  }
+};
+//@desc upload idDocument
+//@route POST /api/v1/users/idDocument/upload
+//@access public
+exports.uploadIdDocument = async (req, res, next) => {
+  if (req.user.isIdVerified) {
+    return next(
+      new ApiError('You have already Verified your ID document', 400),
+    );
+  }
+  //update user
+  await User.updateOne(
+    { _id: req.user._id },
+    { idDocument: req.body.idDocument },
+  );
+  res.status(200).json({
+    status: 'success',
+    message: 'ID document uploaded successfully',
   });
 };

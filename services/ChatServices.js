@@ -863,3 +863,18 @@ exports.unarchiveChat = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({ message: 'unarchived' });
 });
+
+//@desc get all chat
+//@route GET /api/v1/chat
+//@access private admin
+exports.getAllChats = async (req, res, next) => {
+  try {
+    const chats = await Chat.find();
+    res.status(200).json({ data: chats });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch chats',
+    });
+  }
+};

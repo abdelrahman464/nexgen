@@ -10,7 +10,7 @@ const factory = require('./handllerFactory');
 const ApiError = require('../utils/apiError');
 // const sendEmail = require("../utils/sendEmail");
 const { uploadMixOfFiles } = require('../middlewares/uploadImageMiddleware');
-const sendEmail = require('../utils/sendEmail');
+// const sendEmail = require('../utils/sendEmail');
 
 exports.uploadMedia = uploadMixOfFiles([
   {
@@ -19,7 +19,7 @@ exports.uploadMedia = uploadMixOfFiles([
   },
 ]);
 
-exports.resiz = asyncHandler(async (req, res, next) => {
+exports.resize = asyncHandler(async (req, res, next) => {
   if (req.files && req.files.media && req.files.media.length) {
     // Initialize an array to store the names of uploaded files
     req.body.media = [];
@@ -112,9 +112,9 @@ exports.addMessage = asyncHandler(async (req, res, next) => {
   ) {
     // Find the receiver(s) in the chat (excluding the sender)
 
-    const receivers = chat.participants
-      .filter((participant) => String(participant.user) !== String(sender))
-      .map((participant) => participant.user);
+    // const receivers = chat.participants
+    //   .filter((participant) => String(participant.user) !== String(sender))
+    //   .map((participant) => participant.user);
 
     // Send email to each receiver
     // receivers.forEach(async (receiver) => {
@@ -151,7 +151,7 @@ exports.createFilterObj = (req, res, next) => {
   next();
 };
 //@desc get all messages in chat
-//@route GET /api/v1/message/chatId
+//@route GET /api/v1/message/:chatId
 //@access protected
 exports.getMessage = factory.getALl(Message, 'Message', 'reactions.user');
 //@desc Update a message by ID

@@ -4,13 +4,11 @@ const bcrypt = require('bcryptjs');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const asyncHandler = require('express-async-handler');
-const { profile } = require('console');
 const User = require('../models/userModel');
 const ApiError = require('../utils/apiError');
 const sendEmail = require('../utils/sendEmail');
 const generateToken = require('../utils/generateToken');
 const { addMemberToChat } = require('./ChatServices');
-const UserSubscriptionModel = require('../models/userSubscriptionModel');
 
 // @desc    User Register,login with Google
 // @route   POST /api/v1/auth/google
@@ -216,11 +214,12 @@ exports.signup = asyncHandler(async (req, res, next) => {
   // send response to client side
   return res.status(201).json({ data: user, token });
 });
+
 //@desc login
 //@route POST /api/v1/auth/login
 //@access public
 exports.login = asyncHandler(async (req, res, next) => {
-  //1- check if password and emaail in the body
+  //1- check if password and email in the body
   //2- check if user exist & check if password is correct
   const user = await User.findOne({ email: req.body.email });
   if (!user || !(await bcrypt.compare(req.body.password, user.password))) {
@@ -274,6 +273,9 @@ exports.protect = asyncHandler(async (req, res, next) => {
   if (!currentUser.active) {
     return next(new ApiError('You Are Not Active', 401));
   }
+  // if (!currentUser.isIdVerified) {
+  //   return next(new ApiError('You Are Not Verified Your ID Document', 401));
+  // }
 
   //add user to request
   //to use this in authorization
