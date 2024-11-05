@@ -1,8 +1,8 @@
 const mongoose = require("mongoose");
 
 const leaderBoardSchema = new mongoose.Schema({
-  year: String,
-  month: String,
+  year: Number,
+  month: Number,
   firstRank: {
     amount: Number,
     members: {

@@ -1,33 +1,47 @@
 const LeaderBoard = require("../models/leaderBoardModel");
 
-exports.addMarketerToLeaderBoard = async (
-  marketerId,
-  totalSalesMoney,
-  year,
-  month
-) => {
-  let leaderBoard = await LeaderBoard.findOne({ year, month });
+exports.addMarketerToLeaderBoard = async (data) => {
+  const { currentMonth, currentYear, marketerId, totalSalesMoney } = data;
+  let leaderBoard = await LeaderBoard.findOne({
+    year: currentYear,
+    month: currentMonth,
+  });
   if (!leaderBoard) {
     await LeaderBoard.create({
-      year,
-      month,
-      firstRank: [
-        {
-          marketer: marketerId,
-          totalSalesMoney,
-        },
-      ],
-      secondRank: [],
-      thirdRank: [],
+      year: currentYear,
+      month: currentMonth,
+      firstRank: {
+        amount: totalSalesMoney,
+        members: [marketerId],
+      },
+      secondRank: {},
+      thirdRank: {},
     });
-  } else {
-    leaderBoard = await reformLeaderBoard(
-      leaderBoard,
-      marketerId,
-      totalSalesMoney
-    );
-    await LeaderBoard.save();
+    return true;
   }
+
+  if (leaderBoard.firstRank?.members.includes(marketerId)) {
+    if (leaderBoard.firstRank.members.length === 1) {
+      //update the amount
+      leaderBoard.firstRank.amount += totalSalesMoney;
+    } else {
+      //get old data
+      const oldAmount = leaderBoard.firstRank.amount;
+      const oldMembers = leaderBoard.firstRank.members;
+      //move exist marketer to lower level
+    }
+  } else if (
+    leaderBoard.secondRank &&
+    leaderBoard.secondRank.members.includes(marketerId)
+  )
+    return true;
+  leaderBoard = await reformLeaderBoard(
+    leaderBoard,
+    marketerId,
+    totalSalesMoney
+  );
+  await LeaderBoard.save();
+
   return true;
 };
 //---------------------------------------------------
@@ -86,7 +100,7 @@ const moveMembersToSecondRank = (
   leaderBoard,
   previousFirstRankMembers,
   previousFirstRankAmount
-) => {
+) => { 
   if (!leaderBoard.secondRank) {
     leaderBoard.secondRank = {
       amount: previousFirstRankAmount,
@@ -137,8 +151,11 @@ const moveMembersToThirdRank = (
 };
 
 //---------------------------------------------------
-exports.getLeaderBoard = async (req) => {
-//   const leaderBoard = await LeaderBoard.findOne({ year, month });
-//   return leaderBoard;
+exports.getLeaderBoard = async (req, res) => {
+  const { year, month } = req.query;
+  const leaderBoard = await LeaderBoard.findOne({ year, month });
+  if (!leaderBoard)
+    return res.status(404).json({ message: "No Leader Board Found" });
+  return res.status(200).json({ leaderBoard });
 };
 //---------------------------------------------------

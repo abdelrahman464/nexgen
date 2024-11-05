@@ -4,6 +4,7 @@ const User = require("../models/userModel");
 const MarketingLog = require("../models/MarketingModel");
 const InstructorProfit = require("../models/instructorProfitsModel");
 const { createMarketerGroupChat } = require("./ChatServices");
+const { addMarketerToLeaderBoard } = require("./leaderBoardService");
 
 const InstructorProfitService = require("./instructorProfitsService");
 //when creating invoice check the date if same month   update invoice  if not create new one
@@ -70,7 +71,7 @@ const giveInstructorPercentage = async (data) => {
     console.log(error.message);
   }
 };
-const updateSellerSales = async (data, percentage) => {
+const updateSellerSales = async (data, percentage, invoices) => {
   console.log("updating seller sales");
   //**update the sales */
   await MarketingLog.findOneAndUpdate(
@@ -90,6 +91,12 @@ const updateSellerSales = async (data, percentage) => {
       },
     }
   );
+  const leaderBoardData = this.calculateTotalSalesMoney(
+    data.totalSalesMoney,
+    invoices
+  );
+  leaderBoardData.marketerId = data.marketerId;
+  await addMarketerToLeaderBoard(leaderBoardData);
   console.log("updated successfully");
   return true;
   //**update the sales */
@@ -158,12 +165,12 @@ exports.calculateProfits = async (
     };
     //7- calculate the profits
     if (marketerMarketLog.role === "customer") {
-      await updateSellerSales(data, 15);
+      await updateSellerSales(data, 15, marketerMarketLog.invoices);
       // eslint-disable-next-line no-use-before-define
       await updateCustomerFathers(data);
     } else {
       //marketer or instructor
-      await updateSellerSales(data, 30);
+      await updateSellerSales(data, 30, marketerMarketLog.invoices);
       // eslint-disable-next-line no-use-before-define
       await updateMarketerFathers(data);
     }
@@ -561,4 +568,34 @@ const calculateSalesAnalytics = (sales, totalSalesAmount) => {
     });
   }
   return salesAnalytics;
+};
+//--------------
+exports.calculateTotalSalesMoney = (
+  totalSalesMoneyForCurrentMonth,
+  invoices
+) => {
+  //1 - get the current date
+  const currentDate = new Date();
+  console.log(currentDate);
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.getMonth()+1; // getMonth() returns 0 for January, 1 for February, etc.
+  //2 - calculate the total sales money for the current month from invoices
+  let totalSalesMoneyForCurrentMonthInvoices = 0;
+  if (invoices.length !== 0) {
+    totalSalesMoneyForCurrentMonthInvoices = invoices
+      .filter((invoice) => {
+        const createdAt = invoice.createdAt;
+        return (
+          createdAt instanceof Date &&
+          createdAt.getFullYear() === currentYear &&
+          createdAt.getMonth() === currentMonth
+        );
+      })
+      .reduce((acc, invoice) => acc + invoice.totalSalesMoney, 0);
+  }
+  const totalSalesMoney =
+    totalSalesMoneyForCurrentMonth + totalSalesMoneyForCurrentMonthInvoices;
+  //3 - return the data
+  console.log(currentMonth, currentYear, totalSalesMoney);
+  return { currentMonth, currentYear, totalSalesMoney };
 };
