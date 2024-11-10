@@ -23,6 +23,11 @@ const packageSchema = new mongoose.Schema(
     priceAfterDiscount: {
       type: Number,
     },
+    type: {
+      type: String,
+      enum: ['service', 'course'],
+      default: 'service',
+    },
   },
   { timestamps: true },
 );

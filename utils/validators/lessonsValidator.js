@@ -7,6 +7,7 @@ const Course = require('../../models/courseModel');
 const Lesson = require('../../models/lessonModel');
 const CourseProgress = require('../../models/courseProgressModel');
 const Section = require('../../models/sectionModel');
+const UserSubscription = require('../../models/userSubscriptionModel');
 
 exports.createLessonValidator = [
   check('section')
@@ -124,8 +125,26 @@ exports.checkCourseAccess = asyncHandler(async (req, res, next) => {
     return next(new ApiError(res.__('errors.Not-Authorized'), 403));
   }
 
-  //check if user can access this course even if he not bought it
-  // await checkCourseAccess(user, id);
+  //check if user have a valid subscription in package of type course
+  const userSubscriptions = await UserSubscription.find({
+    user: user._id,
+  });
+  if (!userSubscriptions) {
+    return next(new ApiError(res.__('errors.Not-Authorized'), 403));
+  }
+
+  userSubscriptions.forEach((subscription) => {
+    if (
+      subscription.package.type === 'course' &&
+      subscription.package.course._id.toString() === course._id.toString()
+    ) {
+      if (subscription.endDate < new Date()) {
+        return next(
+          new ApiError('Your Subscription Is Expired Or Not Found', 403),
+        );
+      }
+    }
+  });
 
   next();
 });
@@ -151,14 +170,29 @@ exports.checkLessonAccess = asyncHandler(async (req, res, next) => {
     return next(new ApiError("You don't have access to this course", 403));
   }
 
-  //check if user can access this course even if he not bought it
-  //await checkCourseAccess(user, lesson.course);
+  //check if user have a valid subscription in package of type course
+  const userSubscriptions = await UserSubscription.find({
+    user: user._id,
+  });
+  if (!userSubscriptions) {
+    return next(new ApiError(res.__('errors.Not-Authorized'), 403));
+  }
+
+  userSubscriptions.forEach((subscription) => {
+    if (
+      subscription.package.type === 'course' &&
+      subscription.package.course.toString() === lesson.course.toString()
+    ) {
+      if (subscription.endDate < new Date()) {
+        return next(new ApiError(res.__('errors.Not-Authorized'), 403));
+      }
+    }
+  });
 
   next();
 });
 
 exports.checkLessonExamAccess = async (req, res, next) => {
-  const userId = req.user._id;
   const { id } = req.params; //Lesson ID
 
   const lesson = await Lesson.findById(id);
@@ -167,7 +201,7 @@ exports.checkLessonExamAccess = async (req, res, next) => {
   }
 
   const courseProgress = await CourseProgress.findOne({
-    user: userId,
+    user: req.user._id,
     course: lesson.course,
   });
 

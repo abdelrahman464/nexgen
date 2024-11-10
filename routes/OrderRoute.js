@@ -9,75 +9,51 @@ const {
   findSpecificOrder,
   findAllOrders,
   filterOrders,
-  courseCheckoutSession,
-  packageCheckoutSession,
-  coursePackageCheckoutSession,
-  capturePayment,
-  createCourseOrder,
-  createCoursePackageOrder,
-  createPackageOrder,
+  // createCourseOrder,
+  // createCoursePackageOrder,
+  // createPackageOrder,
+} = require('../services/orders/OrderService');
+// ---------------------  Cryptomus  ---------------------
+const {
   courseCheckoutSessionCryptomus,
   coursePackageCheckoutSessionCryptomus,
   packageCheckoutSessionCryptomus,
   cryptomusWebhook,
-  // captureBinancePayment,
-  // courseCheckoutSessionBinance,
-  // coursePackageCheckoutSessionBinance,
-  // packageCheckoutSessionBinance,
-} = require('../services/OrderService');
-const { initiateCheckout } = require('../services/mepspayOrder');
+} = require('../services/orders/cryptomus');
+//-----------------------Lahza---------------------------
+const {
+  courseCheckoutSessionLahza,
+  LahzaPaymentCallback,
+  lahzaWebhook,
+} = require('../services/orders/lahza');
+// ---------------------  purchase For User  ---------------------
 const {
   purchaseForUser,
   distributeProfits,
-} = require('../services/OrderService2');
-//validation
+} = require('../services/orders/OrderService2');
 
 //configure Router
 const router = express.Router();
 //1
-router.get('/courseOrder/:courseId/:price/:email/:method', createCourseOrder);
+// router.get('/courseOrder/:courseId/:price/:email/:method', createCourseOrder);
 //2
-router.get(
-  '/coursePackageOrder/:coursePackageId/:price/:email/:method',
-  createCoursePackageOrder,
-);
+// router.get(
+//   '/coursePackageOrder/:coursePackageId/:price/:email/:method',
+//   createCoursePackageOrder,
+// );
 //3
-router.get(
-  '/packageOrder/:packageId/:price/:email/:method',
-  createPackageOrder,
-);
-//4
-router.get('/capture-payment', capturePayment);
+// router.get(
+//   '/packageOrder/:packageId/:price/:email/:method',
+//   createPackageOrder,
+// );
 
-//5 purchase for user
+// purchase for user
 router.put(
   '/purchaseForUser',
   authServices.protect,
   authServices.allowedTo('admin'),
   purchaseForUserValidator,
   purchaseForUser,
-);
-// !!!!  Paypal checkout sessions => 💵 !!!!
-//6
-router.put(
-  '/checkout-session/course/:courseId',
-  authServices.protect,
-  authServices.allowedTo('user', 'admin'),
-  courseCheckoutSession,
-);
-//7
-router.put(
-  '/checkout-session/package/:packageId',
-  authServices.protect,
-  authServices.allowedTo('user', 'admin'),
-  packageCheckoutSession,
-);
-//8
-router.put(
-  '/checkout-session/coursePackage/:coursePackageId',
-  authServices.protect,
-  authServices.allowedTo('user', 'admin'),
-  coursePackageCheckoutSession,
 );
 //-------------------------------------------
 //9 => not used
@@ -105,21 +81,21 @@ router
     authServices.allowedTo('admin', 'user'),
     findSpecificOrder,
   );
-//-------------------------------------------
+//--------------------Cryptomus----------------
 router.put(
-  '/course-checkout/:courseId',
+  '/cryptomus/course-checkout/:courseId',
   authServices.protect,
   authServices.allowedTo('user', 'admin'),
   courseCheckoutSessionCryptomus,
 );
 router.put(
-  '/course-package-checkout/:coursePackageId',
+  '/cryptomus/course-package-checkout/:coursePackageId',
   authServices.protect,
   authServices.allowedTo('user', 'admin'),
   coursePackageCheckoutSessionCryptomus,
 );
 router.put(
-  '/package-checkout/:packageId',
+  '/cryptomus/package-checkout/:packageId',
   authServices.protect,
   authServices.allowedTo('user', 'admin'),
   packageCheckoutSessionCryptomus,
@@ -129,26 +105,30 @@ router.post(
   express.raw({ type: 'application/json' }),
   cryptomusWebhook,
 );
+//-----------------LAHZA-----------------
+router.put(
+  '/lahza/course-checkout/:courseId',
+  authServices.protect,
+  authServices.allowedTo('user', 'admin'),
+  courseCheckoutSessionLahza,
+);
+router.get('/lahza/payment/callback', LahzaPaymentCallback);
 // router.put(
-//   "/course-checkout/:courseId",
+//   '/lahza/course-package-checkout/:coursePackageId',
 //   authServices.protect,
-//   authServices.allowedTo("user", "admin"),
-//   courseCheckoutSessionBinance
+//   authServices.allowedTo('user', 'admin'),
+//   coursePackageCheckoutSessionCryptomus,
 // );
 // router.put(
-//   "/course-package-checkout/:coursePackageId",
+//   '/lahzalahza/package-checkout/:packageId',
 //   authServices.protect,
-//   authServices.allowedTo("user", "admin"),
-//   coursePackageCheckoutSessionBinance
+//   authServices.allowedTo('user', 'admin'),
+//   packageCheckoutSessionCryptomus,
 // );
-// router.put(
-//   "/package-checkout/:packageId",
-//   authServices.protect,
-//   authServices.allowedTo("user", "admin"),
-//   packageCheckoutSessionBinance
-// );
-// router.get("/capture-binance-payment", captureBinancePayment);
-
-router.route('/mepspay/:courseId').post(authServices.protect, initiateCheckout);
+router.post(
+  '/webhook/lahza',
+  express.raw({ type: 'application/json' }),
+  lahzaWebhook,
+);
 
 module.exports = router;

@@ -1,26 +1,26 @@
 const asyncHandler = require('express-async-handler');
-const Order = require('../models/orderModel');
-const Course = require('../models/courseModel');
-const Package = require('../models/packageModel');
-const TeamProfit = require('../models/teamProfits');
-const CoursePackage = require('../models/coursePackageModel');
-const UserSubscription = require('../models/userSubscriptionModel');
-const User = require('../models/userModel');
-const Chat = require('../models/ChatModel');
-const Notification = require('../models/notificationModel');
-const CourseProgress = require('../models/courseProgressModel');
-const { calculateProfits } = require('./marketingService');
-const { availUserToReview } = require('./userService');
+const Order = require('../../models/orderModel');
+const Course = require('../../models/courseModel');
+const Package = require('../../models/packageModel');
+const TeamProfit = require('../../models/teamProfits');
+const CoursePackage = require('../../models/coursePackageModel');
+const UserSubscription = require('../../models/userSubscriptionModel');
+const User = require('../../models/userModel');
+const Chat = require('../../models/ChatModel');
+const Notification = require('../../models/notificationModel');
+const CourseProgress = require('../../models/courseProgressModel');
+const { calculateProfits } = require('../marketingService');
+const { availUserToReview } = require('../userService');
 
 /** 
  i will write here some things that i may forget about business logic 
  1- i checked for instructor percentage in 'createCourse' function only , cause instructor don't own package or live --> line 226
 */
 //** ==> helpers functions => i distribute the code to small functions to make it more readable and easy to maintain
-async function createOrder(user, course, price, isPaid) {
+async function createOrder(userId, courseId, price, isPaid) {
   const order = await Order.create({
-    user: user._id,
-    course: course._id,
+    user: userId,
+    course:courseId,
     totalOrderPrice: price,
     isPaid: isPaid,
     paymentMethodType: isPaid ? 'manual' : null,
@@ -30,23 +30,30 @@ async function createOrder(user, course, price, isPaid) {
   if (!order) throw new Error("Couldn't create order");
 }
 
-async function createCourseProgress(user, course) {
-  await CourseProgress.create({
-    user: user._id,
-    course: course._id,
-    progress: [],
+async function createCourseProgress(userId, courseId) {
+  //check if user already have this course
+  const courseProgress = await CourseProgress.findOne({
+    user: userId,
+    course: courseId,
   });
+  if (!courseProgress) {
+    await CourseProgress.create({
+      user: userId,
+      course: courseId,
+      progress: [],
+    });
+  }
 }
 
-async function addUserToGroupChat(user, course) {
+async function addUserToGroupChat(userId, courseId) {
   const chat = await Chat.findOneAndUpdate(
-    { course: course._id, isGroupChat: true },
-    { $push: { participants: { user: user._id, isAdmin: false } } },
+    { course: courseId, isGroupChat: true },
+    { $push: { participants: { user: userId, isAdmin: false } } },
     { new: true },
   );
   //send notification
   await Notification.create({
-    user: user._id,
+    user: userId,
     message: {
       en: `you has been added to the group ${chat.groupName}`,
       ar: `${chat.groupName} تمت اضافتك الى المجموعة `,
@@ -56,15 +63,15 @@ async function addUserToGroupChat(user, course) {
   });
 }
 
-async function subscribeUserToPackage(user, course) {
-  const package = await Package.findOne({ course: course._id });
+async function subscribeUserToPackage(userId, courseId) {
+  const package = await Package.findOne({ course: courseId });
   if (package) {
     const startDate = new Date();
     const endDate = new Date(startDate);
     const subscriptionDurationDays = 4 * 30; // 4 months
     endDate.setDate(startDate.getDate() + subscriptionDurationDays);
     return await UserSubscription.create({
-      user: user._id,
+      user: userId,
       package: package._id,
       startDate,
       endDate,
@@ -197,6 +204,11 @@ const createPackageOrder = asyncHandler(async (id, userId, isPaid) => {
     startDate,
     endDate,
   });
+  //if package type is course => let  gave course to user
+  if (package.type === 'course') {
+    await createCourseProgress(user._id, package.course._id);
+  }
+
   //avail user to review
   await availUserToReview(user._id);
   //check if user paid for this package
@@ -222,10 +234,10 @@ const createCourseOrder = async (id, userId, isPaid) => {
       ? course.priceAfterDiscount
       : course.price;
 
-    await createOrder(user, course, coursePrice, isPaid);
-    await createCourseProgress(user, course);
-    await addUserToGroupChat(user, course);
-    await subscribeUserToPackage(user, course);
+    await createOrder(user._id, course._id, coursePrice, isPaid);
+    await createCourseProgress(user._id, course._id);
+    await addUserToGroupChat(user._id, course._id);
+    await subscribeUserToPackage(user._id, course._id);
     //avail user to review
     await availUserToReview(user._id);
     //check if user paid for this course
@@ -249,7 +261,6 @@ const createCourseOrder = async (id, userId, isPaid) => {
 exports.purchaseForUser = async (req, res, next) => {
   try {
     const { type, id, userId, isPaid } = req.body;
-    console.log(req.body);
     if (type === 'course') {
       await createCourseOrder(id, userId, isPaid);
     } else if (type === 'package') {

@@ -1,14 +1,14 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const userSubscriptionSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
+    ref: 'User',
     required: true,
   },
   package: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Package",
+    ref: 'Package',
     required: true,
   },
   startDate: {
@@ -22,9 +22,9 @@ const userSubscriptionSchema = new mongoose.Schema({
 });
 userSubscriptionSchema.pre(/^find/, function (next) {
   this.populate({
-    path: "package",
-    select: "title course subscriptionDurationDays",
+    path: 'package',
+    select: 'title course subscriptionDurationDays type',
   });
   next();
 });
-module.exports = mongoose.model("UserSubscription", userSubscriptionSchema);
+module.exports = mongoose.model('UserSubscription', userSubscriptionSchema);
