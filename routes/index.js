@@ -27,6 +27,7 @@ const analyticsRoute = require("./analyticRoute");
 const marketingInvoicesRoute = require("./invoicesReqsRoute");
 const couponRoute = require("./couponRoute");
 const marketerRateingRoute = require("./marketerRatingRoute");
+const leaderBoardRoute = require("./leaderBoardRoute");
 
 const mountRoutes = (app) => {
   // Mount Routes
@@ -69,5 +70,6 @@ const mountRoutes = (app) => {
   app.use("/api/v1/systemReviews", systemReviewRoute);
   app.use("/api/v1/coupons", couponRoute);
   app.use("/api/v1/marketerRating", marketerRateingRoute);
+  app.use("/api/v1/leaderBoard", leaderBoardRoute);
 };
 module.exports = mountRoutes;
