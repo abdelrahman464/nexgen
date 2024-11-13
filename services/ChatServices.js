@@ -662,7 +662,7 @@ exports.getChatDetails = asyncHandler(async (req, res, next) => {
 //@desc Update chat information (e.g., group name, description)
 //@route PUT /api/v1/chat/:chatId/update
 //@access protected
-exports.updateGrpupChat = asyncHandler(async (req, res, next) => {
+exports.updateGroupChat = asyncHandler(async (req, res, next) => {
   const { chatId } = req.params;
   const { groupName, description, image } = req.body;
   const user = req.user._id; // logged user id
@@ -877,4 +877,51 @@ exports.getAllChats = async (req, res, next) => {
       message: 'Failed to fetch chats',
     });
   }
+};
+
+//@desc refer you to customer service
+//@route POST /api/v1/chat/customerService
+//@access private
+exports.customerService = async (req, res, next) => {
+  const { message } = req.body;
+  const userId = req.user._id;
+
+  // Retrieve all customer service users
+  const customerServiceUsers = await User.find({ isCustomerService: true });
+
+  if (customerServiceUsers.length === 0) {
+    return next(new ApiError('No customer service users available', 404));
+  }
+
+  // Select a random customer service representative
+  const randomCustomerServiceUser =
+    customerServiceUsers[
+      Math.floor(Math.random() * customerServiceUsers.length)
+    ];
+
+  // Create a new chat
+  const newChat = await Chat.create({
+    participants: [
+      { user: userId, isAdmin: true },
+      { user: randomCustomerServiceUser._id },
+    ],
+    isGroupChat: true,
+    creator: randomCustomerServiceUser._id,
+    groupName: 'Customer Support',
+    description: 'Chat with customer support',
+  });
+
+  // Create a new message within the chat
+  const newMessage = await Message.create({
+    chat: newChat._id,
+    sender: userId,
+    text: message,
+  });
+
+  res.status(201).json({
+    data: {
+      chat: newChat,
+      initialMessage: newMessage,
+    },
+  });
 };

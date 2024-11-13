@@ -12,8 +12,11 @@ const Course = require('../models/courseModel');
 const Notification = require('../models/notificationModel');
 const Order = require('../models/orderModel');
 const Lesson = require('../models/lessonModel');
+const Section = require('../models/sectionModel');
 const Review = require('../models/reviewModel');
 const CourseProgress = require('../models/courseProgressModel');
+const Package = require('../models/packageModel');
+const UserSubscription = require('../models/userSubscriptionModel');
 const User = require('../models/userModel');
 const Exam = require('../models/examModel');
 const { uploadSingleFile } = require('../middlewares/uploadImageMiddleware');
@@ -252,13 +255,33 @@ exports.deleteCourse = asyncHandler(async (req, res, next) => {
           new ApiError(`Course not found for this id ${req.params.id}`, 404),
         );
       }
-
+      const package = await Package.findOne({ course: course._id });
       // Delete associated lessons and reviews
       await Promise.all([
         Lesson.deleteMany({ course: course._id }).session(session),
+        Section.deleteMany({ course: course._id }).session(session),
         Review.deleteMany({ course: course._id }).session(session),
         Post.deleteMany({ course: course._id }).session(session),
         Chat.deleteMany({ course: course._id }).session(session),
+        Notification.deleteMany({ course: course._id }).session(session),
+        //update order description and set order course to null
+        Order.updateMany(
+          { course: course._id },
+          {
+            $set: {
+              course: null,
+              description: `course ${course.title.en} Deleted`,
+            },
+          },
+        ).session(session),
+        //delete the package and all subscription related to this package
+        Package.deleteMany({ course: course._id }).session(session),
+        UserSubscription.deleteMany({ package: package._id }).session(session),
+        // remove this course from Course Package
+        CourseProgress.updateMany(
+          { course: course._id },
+          { $pull: { course: course._id } },
+        ).session(session),
       ]);
     });
 
@@ -461,7 +484,7 @@ exports.giveCertificate = asyncHandler(async (req, res, next) => {
       en: 'You have received a certificate',
       ar: 'لقد تلقيت شهادة',
     },
-    type: 'certificate',  
+    type: 'certificate',
     course: courseId,
   });
 

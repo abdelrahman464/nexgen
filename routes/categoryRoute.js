@@ -4,14 +4,12 @@ const {
   getCategoryValidator,
   createCategoryValidator,
   updateCategoryValidator,
-  deleteCategoryValidator,
 } = require("../utils/validators/categoryValidator");
 const {
   getCategories,
   createCategory,
   getCategory,
   updateCategory,
-  deleteCategory,
 } = require("../services/categoryService");
 
 const authServices = require("../services/authServices");
@@ -40,11 +38,6 @@ router
     updateCategoryValidator,
     updateCategory
   )
-  .delete(
-    authServices.protect,
-    authServices.allowedTo("admin"),
-    deleteCategoryValidator,
-    deleteCategory
-  );
+
 
 module.exports = router;

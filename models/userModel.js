@@ -22,14 +22,17 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
     },
-    //uploads
+    idNumber: String,
+    //start uploads
     phone: String,
     profileImg: String,
     coverImg: String,
-    idDocument: String,
-    isIdVerified: {
-      type: Boolean,
-      default: false,
+    idDocuments: [String],
+    //end uploads
+    idVerification: {
+      type: String,
+      enum: ['pending', 'verified', 'rejected'],
+      default: 'pending',
     },
     google: {
       id: String,
@@ -66,6 +69,7 @@ const userSchema = new mongoose.Schema(
       default: 'user',
     },
     isInstructor: Boolean,
+    isCustomerService: Boolean,
     country: String,
     active: {
       type: Boolean,
@@ -151,7 +155,7 @@ userSchema.pre('save', async function (next) {
 });
 
 const setProfileImageURL = (doc) => {
-  //return image base url + iamge name
+  //return image base url + image name
   if (doc.profileImg) {
     const profileImageUrl = `${process.env.BASE_URL}/users/${doc.profileImg}`;
     doc.profileImg = profileImageUrl;
@@ -160,9 +164,13 @@ const setProfileImageURL = (doc) => {
     const coverImgUrl = `${process.env.BASE_URL}/users/${doc.coverImg}`;
     doc.coverImg = coverImgUrl;
   }
-  if (doc.idDocument) {
-    const idDocumentUrl = `${process.env.BASE_URL}/users/idDocument/${doc.idDocument}`;
-    doc.idDocument = idDocumentUrl;
+  if (doc.idDocuments) {
+    const imageListWithUrl = [];
+    doc.idDocuments.forEach((image) => {
+      const imageUrl = `${process.env.BASE_URL}/users/idDocuments/${image}`;
+      imageListWithUrl.push(imageUrl);
+    });
+    doc.idDocuments = imageListWithUrl;
   }
 };
 //after initialize the doc in db

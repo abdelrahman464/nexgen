@@ -95,9 +95,12 @@ exports.signup = asyncHandler(async (req, res, next) => {
     email: req.body.email,
     password: req.body.password,
     active: false,
-    profileImg: req.body.profileImg,
     country: req.body.country,
     phone: req.body.phone,
+    idNumber: req.body.idNumber,
+    idDocuments: req.body.idDocuments,
+    profileImg: req.body.profileImg,
+    coverImg: req.body.coverImg,
   });
   if (invitor) {
     addMemberToChat(user._id, invitor);
@@ -273,10 +276,10 @@ exports.protect = asyncHandler(async (req, res, next) => {
   if (!currentUser.active) {
     return next(new ApiError('You Are Not Active', 401));
   }
-  // if (!currentUser.isIdVerified) {
-  //   return next(new ApiError('You Are Not Verified Your ID Document', 401));
-  // }
-
+  if (currentUser.idVerification !== 'verified' && currentUser.role !== 'admin') {
+    return next(new ApiError('You Are Not Verified Your ID Document', 401));
+  }
+//id verification
   //add user to request
   //to use this in authorization
   // check if user is already registered

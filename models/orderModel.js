@@ -1,23 +1,24 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const OrderSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.ObjectId,
-      ref: "User",
-      required: [true, "order must be belong to user"],
+      ref: 'User',
+      required: [true, 'order must be belong to user'],
     },
+    description: String,
     course: {
       type: mongoose.Schema.ObjectId,
-      ref: "Course",
+      ref: 'Course',
     },
     package: {
       type: mongoose.Schema.ObjectId,
-      ref: "Package",
+      ref: 'Package',
     },
     coursePackage: {
       type: mongoose.Schema.ObjectId,
-      ref: "CoursePackage",
+      ref: 'CoursePackage',
     },
     totalOrderPrice: {
       type: Number,
@@ -36,24 +37,24 @@ const OrderSchema = new mongoose.Schema(
     paidAt: Date,
     paypalOrderId: String,
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 OrderSchema.pre(/^find/, function (next) {
-  this.populate({ path: "user", select: "_id name phone email " })
+  this.populate({ path: 'user', select: '_id name phone email ' })
     .populate({
-      path: "course",
-      select: "title -category",
+      path: 'course',
+      select: 'title -category',
     })
     .populate({
-      path: "coursePackage",
-      select: "title ",
+      path: 'coursePackage',
+      select: 'title ',
     })
     .populate({
-      path: "package",
-      select: "title ",
+      path: 'package',
+      select: 'title ',
     });
   next();
 });
 
-module.exports = mongoose.model("Order", OrderSchema);
+module.exports = mongoose.model('Order', OrderSchema);

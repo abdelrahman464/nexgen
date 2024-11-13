@@ -9,7 +9,7 @@ const {
   removeParticipantFromChat,
   updateParticipantRoleInChat,
   getChatDetails,
-  updateGrpupChat,
+  updateGroupChat,
   deleteChat,
   pinMessageInChat,
   unpinMessageInChat,
@@ -17,6 +17,7 @@ const {
   unarchiveChat,
   getMyChats,
   getAllChats,
+  customerService,
 } = require('../services/ChatServices');
 const authServices = require('../services/authServices');
 
@@ -67,7 +68,7 @@ router.put(
   authServices.protect,
   uploadImage,
   resizeImage,
-  updateGrpupChat,
+  updateGroupChat,
 );
 router.delete('/:chatId', authServices.protect, deleteChat);
 router.post('/:chatId/pin/:messageId', authServices.protect, pinMessageInChat);
@@ -78,5 +79,11 @@ router.delete(
 );
 router.put('/:chatId/archive', authServices.protect, archiveChat);
 router.put('/:chatId/unarchive', authServices.protect, unarchiveChat);
+
+router.post(
+  '/customerService',
+  authServices.protect,
+  customerService,
+);
 
 module.exports = router;

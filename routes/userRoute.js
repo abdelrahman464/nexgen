@@ -33,7 +33,7 @@ const {
   getMyFollowersAndFollowing,
   deActiveNotificationBell,
   activeNotificationBell,
-  toggleApproveIdDocument,
+  actionOnIdDocument,
   uploadIdDocument,
 } = require('../services/userService');
 
@@ -150,15 +150,14 @@ router.get(
 );
 
 router.put(
-  '/idDocument/toggleApprove/:id',
+  '/idDocument/:id/action',
   authServices.protect,
   authServices.allowedTo('admin'),
-  toggleApproveIdDocument,
+  actionOnIdDocument,
 );
 
 router.post(
   '/idDocument/upload',
-  authServices.protect,
   uploadImages,
   resizeImage,
   uploadIdDocument,

@@ -44,7 +44,4 @@ exports.updateCategoryValidator = [
     .withMessage(`ar title must be at least 3 chars`),
   validatorMiddleware,
 ];
-exports.deleteCategoryValidator = [
-  check('id').isMongoId().withMessage('Invalid category id format'),
-  validatorMiddleware,
-];
+

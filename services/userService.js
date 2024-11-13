@@ -1,8 +1,8 @@
+const jwt = require('jsonwebtoken');
 const sharp = require('sharp');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
-const asyncHandler = require('express-async-handler');
 const ApiError = require('../utils/apiError');
 const factory = require('./handllerFactory');
 const User = require('../models/userModel');
@@ -29,20 +29,20 @@ exports.uploadImages = uploadMixOfFiles([
     maxCount: 1,
   },
   {
-    name: 'idDocument',
-    maxCount: 1,
+    name: 'idDocuments',
+    maxCount: 3,
   },
 ]);
-//image processing
 
-exports.resizeImage = asyncHandler(async (req, res, next) => {
-  // Check if req.files is present, if not, proceed to the next middleware
+// Image processing
+exports.resizeImage = async (req, res, next) => {
+  // Check if req.files is present; if not, proceed to the next middleware
   if (!req.files) {
     return next();
   }
 
-  // Helper function to process and resize images
-  const processImage = async (file, folderName, fieldName) => {
+  // Helper function to process and resize a single image
+  const processImage = async (file, folderName, fieldName, isArray = false) => {
     if (file && file.mimetype.startsWith('image/')) {
       const newFileName = `${fieldName}-${uuidv4()}-${Date.now()}.webp`;
 
@@ -52,7 +52,12 @@ exports.resizeImage = asyncHandler(async (req, res, next) => {
         .toFile(`uploads/users/${folderName}/${newFileName}`);
 
       // Save the generated file name in the request body for database saving
-      req.body[fieldName] = newFileName;
+      if (isArray) {
+        if (!req.body[fieldName]) req.body[fieldName] = [];
+        req.body[fieldName].push(newFileName);
+      } else {
+        req.body[fieldName] = newFileName;
+      }
     } else if (file) {
       return next(new ApiError(`${fieldName} is not an image file`, 400));
     }
@@ -72,15 +77,18 @@ exports.resizeImage = asyncHandler(async (req, res, next) => {
     'coverImg',
   );
 
-  // Process ID document image
-  await processImage(
-    req.files.idDocument ? req.files.idDocument[0] : null,
-    'idDocument',
-    'idDocument',
-  );
+  // Process each ID document image if present
+  if (req.files.idDocuments) {
+    // eslint-disable-next-line no-restricted-syntax
+    for (const file of req.files.idDocuments) {
+      // eslint-disable-next-line no-await-in-loop
+      await processImage(file, 'idDocuments', 'idDocuments', true);
+    }
+  }
 
   next();
-});
+};
+
 //filter to get all user (isInstructor:true or role:admin)
 exports.createFilterObjToGetInstructors = async (req, res, next) => {
   const filterObject = { $or: [{ isInstructor: true }, { role: 'admin' }] };
@@ -302,9 +310,14 @@ exports.getUsers = factory.getALl(User, 'User');
 //@access public
 exports.getUser = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id).select(
-      'name email profileImg coverImg role isInstructor startMarketing',
-    );
+    let user = {};
+    if (req.user.role === 'admin') {
+      user = await User.findById(req.params.id);
+    } else {
+      user = await User.findById(req.params.id).select(
+        'name email profileImg coverImg role isInstructor isCustomerService startMarketing idNumber phone country',
+      );
+    }
     if (!user) {
       return next(
         new ApiError(`No document found with this id ${req.params.id}`, 404),
@@ -322,30 +335,9 @@ exports.createUser = factory.createOne(User);
 //@desc update specific user
 //@route PUT /api/v1/user/:id
 //@access private
-exports.updateUser = asyncHandler(async (req, res, next) => {
-  const user = await User.findByIdAndUpdate(
-    req.params.id,
-    {
-      name: req.body.name,
-      email: req.body.email,
-      phone: req.body.phone,
-      profileImg: req.body.profileImg,
-      coverImg: req.body.coverImg,
-      role: req.body.role,
-      isInstructor: req.body.isInstructor,
-    },
-    {
-      new: true,
-    },
-  );
-  if (!user) {
-    return next(new ApiError(`No document For this id ${req.params.id}`, 404));
-  }
+exports.updateUser = factory.updateOne(User);
 
-  res.status(200).json({ data: user });
-});
-
-exports.changeUserPassword = asyncHandler(async (req, res, next) => {
+exports.changeUserPassword = async (req, res, next) => {
   const user = await User.findByIdAndUpdate(
     req.params.id,
     {
@@ -360,11 +352,11 @@ exports.changeUserPassword = asyncHandler(async (req, res, next) => {
     return next(new ApiError(`No document For this id ${req.params.id}`, 404));
   }
   res.status(200).json({ data: user });
-});
+};
 //@desc delete User
 //@route DELETE /api/v1/user/:id
 //@access private
-exports.deleteUser = asyncHandler(async (req, res, next) => {
+exports.deleteUser = async (req, res, next) => {
   await mongoose.connection
     .transaction(async (session) => {
       // Find and delete the user
@@ -406,20 +398,20 @@ exports.deleteUser = asyncHandler(async (req, res, next) => {
       console.error('Transaction error:', error);
       return next(new ApiError('Error during transaction', 500));
     });
-});
+};
 
 //@desc get logged user data
 //@route GET /api/v1/user/getMe
 //@access private/protect
-exports.getLoggedUserData = asyncHandler(async (req, res, next) => {
+exports.getLoggedUserData = async (req, res, next) => {
   // i will set the req,params.id because i will go to the next middleware =>>> (getUser)
   req.params.id = req.user._id;
   next();
-});
+};
 //@desc update logged user password
 //@route PUT /api/v1/user/changeMyPassword
 //@access private/protect
-exports.updateLoggedUserPassword = asyncHandler(async (req, res, next) => {
+exports.updateLoggedUserPassword = async (req, res, next) => {
   //update user password passed on user payload (req.user._id)
   const user = await User.findByIdAndUpdate(
     req.user._id,
@@ -435,15 +427,14 @@ exports.updateLoggedUserPassword = asyncHandler(async (req, res, next) => {
   const token = generateToken(req.user._id);
 
   res.status(200).json({ data: user, token });
-});
+};
 //@desc update logged user data without updating password or role
 //@route PUT /api/v1/user/changeMyData
 //@access private/protect
-exports.updateLoggedUserData = asyncHandler(async (req, res, next) => {
+exports.updateLoggedUserData = async (req, res, next) => {
   const user = await User.findByIdAndUpdate(
     req.user._id,
     {
-      name: req.body.name,
       phone: req.body.phone,
       profileImg: req.body.profileImg,
       coverImg: req.body.coverImg,
@@ -453,21 +444,21 @@ exports.updateLoggedUserData = asyncHandler(async (req, res, next) => {
     },
   );
   res.status(200).json({ data: user });
-});
+};
 //@desc deactivate logged user
 //@route DELETE /api/v1/user/active/:id
 //@access protect
-exports.unActiveUser = asyncHandler(async (req, res, next) => {
+exports.unActiveUser = async (req, res, next) => {
   await User.findByIdAndUpdate(req.params.id, { active: false });
   res.status(204).send();
-});
+};
 //@desc activate logged user
 //@route PUT /api/v1/user/active/:id
 //@access protect
-exports.activeUser = asyncHandler(async (req, res, next) => {
+exports.activeUser = async (req, res, next) => {
   await User.findByIdAndUpdate(req.params.id, { active: true });
   res.status(201).json({ data: 'success' });
-});
+};
 //---------
 //@desc avail user to review
 //@route: no route
@@ -506,7 +497,7 @@ exports.getUserAsDoc = async (filter, selectFields = '', populate = '') => {
 //@desc get all course and packages and course packages and orders for specific user
 //@route  users/:id/userData
 //@access protected admin
-exports.getUserData = asyncHandler(async (req, res, next) => {
+exports.getUserData = async (req, res, next) => {
   const data = {};
   // get user data
   const user = await User.findById(req.params.id);
@@ -547,7 +538,7 @@ exports.getUserData = asyncHandler(async (req, res, next) => {
     status: 'success',
     data,
   });
-});
+};
 
 //@desc follow user
 //@route  users/follow/:id
@@ -734,10 +725,14 @@ exports.getMyFollowersAndFollowing = async (req, res, next) => {
   });
 };
 //@desc toggle approve id
-//@route PUT /api/v1/users/idDocument/toggleApprove/:id
+//@route PUT /api/v1/users/idDocument/:id/:action
 //@access private admin
-exports.toggleApproveIdDocument = async (req, res, next) => {
+exports.actionOnIdDocument = async (req, res, next) => {
   try {
+    const { action } = req.body;
+    if (action !== 'verified' && action !== 'rejected') {
+      return next(new ApiError('Invalid action', 400));
+    }
     // Toggle approval status of ID document
     const user = await User.findById(req.params.id);
 
@@ -748,9 +743,32 @@ exports.toggleApproveIdDocument = async (req, res, next) => {
     // Toggle the `approveIdDocument` field in one step
     const updatedUser = await User.findByIdAndUpdate(
       req.params.id,
-      { $set: { isIdVerified: !user.isIdVerified } },
+      { $set: { idVerification: action } },
       { new: true },
     );
+
+    if (updatedUser && action === 'verified') {
+      // Send a notification to the user
+      await Notification.create({
+        user: req.params.id,
+        message: {
+          ar: 'تهانينا! تمت الموافقة على وثائق الهوية الخاصة بك',
+          en: 'Congratulations! Your ID documents have been approved',
+        },
+        type: 'system',
+      });
+    }
+    if (updatedUser && action === 'rejected') {
+      // Send a notification to the user
+      await Notification.create({
+        user: req.params.id,
+        message: {
+          ar: 'تم رفض الوثائق الخاصة بك يرجى تحميل وثيقة صالحة',
+          en: 'Your ID documents have been rejected please upload a valid one',
+        },
+        type: 'system',
+      });
+    }
 
     res.status(200).json({
       status: 'success',
@@ -766,15 +784,59 @@ exports.toggleApproveIdDocument = async (req, res, next) => {
 //@route POST /api/v1/users/idDocument/upload
 //@access public
 exports.uploadIdDocument = async (req, res, next) => {
-  if (req.user.isIdVerified) {
+  //1- check if token exists, if exist get it
+  let token;
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+  if (!token) {
+    return next(new ApiError('you are not login,please login first', 401));
+  }
+  //2- verify token (no change happens,expired token)
+  const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+
+  // 3- Check if user exists
+  const currentUser = await User.findById(decoded.userId);
+  if (!currentUser) {
+    return next(new ApiError('User no longer exists', 401));
+  }
+  //4-check if user changed password after token generated
+  if (currentUser.passwordChangedAt) {
+    //convert data to timestamp by =>getTime()
+    const passwordChangedTimestamp = parseInt(
+      currentUser.passwordChangedAt.getTime() / 1000,
+      10,
+    );
+    //it mean password changer after token generated
+    if (passwordChangedTimestamp > decoded.iat) {
+      return next(
+        new ApiError(
+          'user recently changed his password,please login again',
+          401,
+        ),
+      );
+    }
+  }
+  //5-check if user is active
+  if (!currentUser.active) {
+    return next(new ApiError('You Are Not Active', 401));
+  }
+
+
+
+  //process of uploading id document
+  if (currentUser.idVerification === 'verified') {
     return next(
       new ApiError('You have already Verified your ID document', 400),
     );
   }
   //update user
   await User.updateOne(
-    { _id: req.user._id },
-    { idDocument: req.body.idDocument },
+    { _id: currentUser._id },
+    { idDocuments: req.body.idDocuments },
   );
   res.status(200).json({
     status: 'success',
