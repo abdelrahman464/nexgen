@@ -23,6 +23,8 @@ const {
 //-----------------------Lahza---------------------------
 const {
   courseCheckoutSessionLahza,
+  packageCheckoutSessionLahza,
+  coursePackageCheckoutSessionLahza,
   LahzaPaymentCallback,
   lahzaWebhook,
 } = require('../services/orders/lahza');
@@ -34,6 +36,7 @@ const {
 
 //configure Router
 const router = express.Router();
+
 //1
 // router.get('/courseOrder/:courseId/:price/:email/:method', createCourseOrder);
 //2
@@ -106,25 +109,25 @@ router.post(
   cryptomusWebhook,
 );
 //-----------------LAHZA-----------------
+router.get('/lahza/payment/callback', LahzaPaymentCallback);
 router.put(
-  '/lahza/course-checkout/:courseId',
+  '/lahza/courseCheckout/:courseId',
   authServices.protect,
   authServices.allowedTo('user', 'admin'),
   courseCheckoutSessionLahza,
 );
-router.get('/lahza/payment/callback', LahzaPaymentCallback);
-// router.put(
-//   '/lahza/course-package-checkout/:coursePackageId',
-//   authServices.protect,
-//   authServices.allowedTo('user', 'admin'),
-//   coursePackageCheckoutSessionCryptomus,
-// );
-// router.put(
-//   '/lahzalahza/package-checkout/:packageId',
-//   authServices.protect,
-//   authServices.allowedTo('user', 'admin'),
-//   packageCheckoutSessionCryptomus,
-// );
+router.put(
+  '/lahza/coursePackageCheckout/:coursePackageId',
+  authServices.protect,
+  authServices.allowedTo('user', 'admin'),
+  coursePackageCheckoutSessionLahza,
+);
+router.put(
+  '/lahza/packageCheckout/:packageId',
+  authServices.protect,
+  authServices.allowedTo('user', 'admin'),
+  packageCheckoutSessionLahza,
+);
 router.post(
   '/webhook/lahza',
   express.raw({ type: 'application/json' }),

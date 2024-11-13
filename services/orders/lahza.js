@@ -75,15 +75,15 @@ const verifyLahzaTransaction = async (reference) => {
 };
 //handler for verification
 exports.LahzaPaymentCallback = async (req, res, next) => {
-  const { reference } = req.query;
+  const reference = req.query.reference;
 
   try {
     const isVerified = await verifyLahzaTransaction(reference);
     if (isVerified) {
       // Proceed with order fulfillment
-      res.status(200).json({ status: 'Payment verified and successful!' });
+      res.redirect(`https://nexgen-academy.com/${req.locale}`);
     } else {
-      res.status(400).json({ error: 'Payment verification failed' });
+      res.redirect(`https://nexgen-academy.com/${req.locale}/error-page`);
     }
   } catch (error) {
     res.status(500).json({ error: 'Verification process failed' });
@@ -137,74 +137,80 @@ exports.courseCheckoutSessionLahza = asyncHandler(async (req, res, next) => {
   }
 });
 
-// Course Package Checkout Session using Cryptomus
-// exports.coursePackageCheckoutSessionCryptomus = asyncHandler(
-//   async (req, res, next) => {
-//     const { coursePackageId } = req.params;
-//     const { user } = req;
-//     const coursePackage = await CoursePackage.findById(coursePackageId);
-//     if (!coursePackage) {
-//       return next(new ApiError("There's no course Package", 404));
-//     }
+// Course Package Checkout Session using lahza
+exports.coursePackageCheckoutSessionLahza = asyncHandler(
+  async (req, res, next) => {
+    const { coursePackageId } = req.params;
+    const { user } = req;
+    const coursePackage = await CoursePackage.findById(coursePackageId);
+    if (!coursePackage) {
+      return next(new ApiError("There's no course Package", 404));
+    }
 
-//     const coursePackagePrice =
-//       coursePackage.priceAfterDiscount || coursePackage.price;
-//     const totalOrderPrice = Math.ceil(coursePackagePrice);
+    const coursePackagePrice =
+      coursePackage.priceAfterDiscount || coursePackage.price;
+    const totalOrderPrice = Math.ceil(coursePackagePrice * 100);
 
-//     const additionalData = `${coursePackageId}|${user.email}|coursePackage`;
-//     const currency = 'USD';
+    const metadata = {
+      id: coursePackageId,
+      email: user.email,
+      type: 'coursePackage',
+    };
 
-//     try {
-//       const cryptomusOrder = await createCryptomusOrder(
-//         totalOrderPrice.toString(),
-//         currency,
-//         additionalData,
-//       );
-//       res.status(200).json({
-//         status: 'success',
-//         redirectUrl: cryptomusOrder.result.url, // URL for Cryptomus payment
-//       });
-//     } catch (err) {
-//       return next(
-//         new ApiError(`Cryptomus order creation failed: ${err.message}`, 500),
-//       );
-//     }
-//   },
-// );
+    try {
+      const order = await createLahzaTransaction(
+        user.email,
+        totalOrderPrice.toString(),
+        metadata,
+      );
 
-// // Package Checkout Session using Cryptomus
-// exports.packageCheckoutSessionCryptomus = asyncHandler(
-//   async (req, res, next) => {
-//     const { packageId } = req.params;
-//     const { user } = req;
-//     const package = await Package.findById(packageId);
-//     if (!package) {
-//       return next(new ApiError("There's no Package", 404));
-//     }
+      res.status(200).json({
+        status: 'success',
+        redirectUrl: order,
+      });
+    } catch (err) {
+      return next(
+        new ApiError(`Lahza order creation failed: ${err.message}`, 500),
+      );
+    }
+  },
+);
 
-//     const packagePrice = package.priceAfterDiscount || package.price;
-//     const totalOrderPrice = Math.ceil(packagePrice);
+// // Package Checkout Session using lahza
+exports.packageCheckoutSessionLahza = asyncHandler(async (req, res, next) => {
+  const { packageId } = req.params;
+  const { user } = req;
+  const package = await Package.findById(packageId);
+  if (!package) {
+    return next(new ApiError("There's no Package", 404));
+  }
 
-//     const additionalData = `${packageId}|${user.email}|package`;
-//     const currency = 'USD';
+  const packagePrice = package.priceAfterDiscount || package.price;
+  const totalOrderPrice = Math.ceil(packagePrice * 100);
 
-//     try {
-//       const cryptomusOrder = await createCryptomusOrder(
-//         totalOrderPrice.toString(),
-//         currency,
-//         additionalData,
-//       );
-//       res.status(200).json({
-//         status: 'success',
-//         redirectUrl: cryptomusOrder.result.url, // URL for Cryptomus payment
-//       });
-//     } catch (err) {
-//       return next(
-//         new ApiError(`Cryptomus order creation failed: ${err.message}`, 500),
-//       );
-//     }
-//   },
-// );
+  const metadata = {
+    id: packageId,
+    email: user.email,
+    type: 'package',
+  };
+
+  try {
+    const order = await createLahzaTransaction(
+      user.email,
+      totalOrderPrice.toString(),
+      metadata,
+    );
+
+    res.status(200).json({
+      status: 'success',
+      redirectUrl: order,
+    });
+  } catch (err) {
+    return next(
+      new ApiError(`Lahza order creation failed: ${err.message}`, 500),
+    );
+  }
+});
 // // Webhook handler for Cryptomus payment notifications
 
 exports.lahzaWebhook = async (req, res, next) => {
@@ -217,8 +223,6 @@ exports.lahzaWebhook = async (req, res, next) => {
     const metadata = event.data.metadata;
     const price = event.data.amount / 100;
 
-    console.log(`Payment succeeded for reference: ${transactionReference}`);
-    console.log('Metadata:', metadata);
 
     // Now you can access specific metadata fields
     const id = metadata.id;
@@ -237,7 +241,7 @@ exports.lahzaWebhook = async (req, res, next) => {
         break;
       default:
         console.error(`Unknown type: ${type}`);
-        return res.redirect('/error-page');
+        return res.redirect('https://nexgen-academy.com/${req.locale}/error-page');
     }
 
     // Acknowledge receipt of the webhook
