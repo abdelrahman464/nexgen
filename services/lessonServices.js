@@ -3,7 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const asyncHandler = require('express-async-handler');
 const { v4: uuidv4 } = require('uuid');
-
+const axios = require('axios');
+const crypto = require('crypto');
 const ApiError = require('../utils/apiError');
 const factory = require('./handllerFactory');
 const Lesson = require('../models/lessonModel');
@@ -313,17 +314,68 @@ exports.getSectionLessons = async (req, res, next) => {
 //   return res.status(200).json({ status: "success", data: lessons });
 // };
 
+// Function to generate video data for a specific video ID
+
+async function getVideoData(videoId, user) {
+  const url = `https://dev.vdocipher.com/api/videos/${videoId}/otp`;
+
+  // Custom watermark configuration
+  const payload = {
+    ttl: 300, // OTP valid for 5 minutes
+    whitelisthref: 'nexgen-academy.com',
+    userId: user._id,
+    annotate: JSON.stringify([
+      {
+        type: 'rtext',
+        text: `${user._id} - ${user.email}`,
+        alpha: '0.60',
+        color: '0xFFFFFF',
+        size: '15',
+        interval: '5000',
+        x: '10',
+        y: '10',
+      },
+    ]),
+  };
+
+  try {
+    const response = await axios.post(url, payload, {
+      headers: {
+        authorization: `Apisecret ${process.env.VDOCIPHER_SECRET_KEY}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching video data:', error);
+    throw error;
+  }
+}
 // Get a specific lesson by ID
 exports.getLessonById = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
-  const lesson = await Lesson.findById(id);
 
-  if (!lesson) {
-    // If no lesson is found with the given ID, send a 404 response
+  try {
+    const lesson = await Lesson.findById(id);
+
+    if (!lesson) {
+      // If no lesson is found with the given ID, send a 404 response
+      return next(new ApiError('No lesson found with that ID', 404));
+    }
+
+    const videoData = await getVideoData(lesson.videoUrl, {
+      _id: req.user._id,
+      email: req.user.email,
+    });
+
+    return res
+      .status(200)
+      .json({ status: 'success', data: { lesson, videoData } });
+  } catch (err) {
+    console.error(err);
     return next(new ApiError('No lesson found with that ID', 404));
   }
-
-  return res.status(200).json({ data: lesson });
 });
 
 // Update a lesson by ID
