@@ -118,6 +118,23 @@ const userSchema = new mongoose.Schema(
         ref: 'User',
       },
     ],
+    //to calculate the total time spent by the user
+    timeSpent: {
+      totalTimeSpent: {
+        type: Number,
+        default: 0, // Total time in seconds
+      },
+      lastLogin: {
+        type: Date,
+      },
+      monthlyTimeSpent: {
+        type: Number,
+        default: 0, // Time spent in the current 30-day period in seconds
+      },
+      monthlyStartDate: {
+        type: Date, // Start date for the 30-day calculation
+      },
+    },
   },
   { timestamps: true },
 );
