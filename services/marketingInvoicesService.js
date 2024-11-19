@@ -152,55 +152,6 @@ exports.updateInvoiceStatus = async (req, res) => {
     return res.status(500).json({ status: "error", error: `${error.message}` });
   }
 };
-/*
+
 //---------------------------------------------------------------------------------------------------//
-// Create a new WithdrawRequest
-//@params "month" of the invoice
-exports.requestInvoice = async (req, res, next) => {
-  try {
-    const { invoiceId, recieverAcc, paymentMethod } = req.body;
 
-    // Find the marketing log containing the invoice
-    const marketingLog = await MarketingLog.findOne({
-      "invoices._id": invoiceId,
-    });
-
-    if (!marketingLog) {
-      return res
-        .status(200)
-        .json({ status: `failed`, msg: "You don't work as a marketer" });
-    }
-
-    // Find the specific invoice within the marketing log
-    const invoice = marketingLog.invoices.id(invoiceId);
-
-    if (!invoice) {
-      return res
-        .status(404)
-        .json({ status: `failed`, msg: "Invoice not found" });
-    }
-
-    // Check if the invoice is already pending
-    if (invoice.status === "pending") {
-      return res.status(400).json({
-        status: `failed`,
-        msg: "You have requested this invoice to be paid before",
-      });
-    }
-
-    // Update invoice fields
-    invoice.status = "pending";
-    invoice.recieverAcc = recieverAcc;
-    invoice.paymentMethod = paymentMethod;
-
-    await marketingLog.save();
-
-    return res.status(200).json({
-      status: `success`,
-      msg: "You have requested this invoice to be paid successfully",
-    });
-  } catch (error) {
-    return next(error); // Pass errors to the error handling middleware
-  }
-};
-*/

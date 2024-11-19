@@ -6,6 +6,7 @@ const {
   getMarketLog,
   getMarketerChildren,
   createInvoice,
+  setPaymentDetails,
 } = require("../services/marketingService");
 
 const {
@@ -37,7 +38,12 @@ router.get(
   authServices.allowedTo("user", "admin"),
   getMarketerChildren
 );
-
+router.put(
+  "/setPaymentDetails/:id", //id is the marketer id
+  authServices.protect,
+  authServices.allowedTo("user", "admin"),
+  setPaymentDetails
+);
 router.put(
   "/calculateProfitsManual",
   authServices.protect,
