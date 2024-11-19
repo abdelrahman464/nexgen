@@ -1,29 +1,31 @@
-const asyncHandler = require('express-async-handler');
-const Order = require('../../models/orderModel');
-const Course = require('../../models/courseModel');
-const Package = require('../../models/packageModel');
-const TeamProfit = require('../../models/teamProfits');
-const CoursePackage = require('../../models/coursePackageModel');
-const UserSubscription = require('../../models/userSubscriptionModel');
-const User = require('../../models/userModel');
-const Chat = require('../../models/ChatModel');
-const Notification = require('../../models/notificationModel');
-const CourseProgress = require('../../models/courseProgressModel');
-const { calculateProfits } = require('../marketingService');
-const { availUserToReview } = require('../userService');
-
+const asyncHandler = require("express-async-handler");
+const Order = require("../../models/orderModel");
+const Course = require("../../models/courseModel");
+const Package = require("../../models/packageModel");
+const CoursePackage = require("../../models/coursePackageModel");
+const UserSubscription = require("../../models/userSubscriptionModel");
+const User = require("../../models/userModel");
+const Chat = require("../../models/ChatModel");
+const Notification = require("../../models/notificationModel");
+const CourseProgress = require("../../models/courseProgressModel");
+const { calculateProfits } = require("../marketingService");
+const { availUserToReview } = require("../userService");
+const { checkResaleStatus } = require("./OrderService");
 /** 
  i will write here some things that i may forget about business logic 
  1- i checked for instructor percentage in 'createCourse' function only , cause instructor don't own package or live --> line 226
 */
 //** ==> helpers functions => i distribute the code to small functions to make it more readable and easy to maintain
 async function createOrder(userId, courseId, price, isPaid) {
+  let isResale;
+  if (isPaid) isResale = await checkResaleStatus(userId);
   const order = await Order.create({
     user: userId,
-    course:courseId,
+    course: courseId,
     totalOrderPrice: price,
     isPaid: isPaid,
-    paymentMethodType: isPaid ? 'manual' : null,
+    isResale,
+    paymentMethodType: isPaid ? "manual" : null,
     paidAt: isPaid ? Date.now() : null,
   });
 
@@ -49,7 +51,7 @@ async function addUserToGroupChat(userId, courseId) {
   const chat = await Chat.findOneAndUpdate(
     { course: courseId, isGroupChat: true },
     { $push: { participants: { user: userId, isAdmin: false } } },
-    { new: true },
+    { new: true }
   );
   //send notification
   await Notification.create({
@@ -59,7 +61,7 @@ async function addUserToGroupChat(userId, courseId) {
       ar: `${chat.groupName} تمت اضافتك الى المجموعة `,
     },
     chat: chat._id,
-    type: 'chat',
+    type: "chat",
   });
 }
 
@@ -82,21 +84,24 @@ async function subscribeUserToPackage(userId, courseId) {
 //1
 const createCoursePackageOrder = async (id, userId, isPaid) => {
   const coursePackage = await CoursePackage.findById(id);
-  if (!coursePackage) throw new Error('CoursePackage not found');
+  if (!coursePackage) throw new Error("CoursePackage not found");
 
   const user = await User.findById(userId);
-  if (!user) throw new Error('User not found');
+  if (!user) throw new Error("User not found");
 
   const coursePackagePrice = coursePackage.priceAfterDiscount
     ? coursePackage.priceAfterDiscount
     : coursePackage.price;
 
+  let isResale;
+  if (isPaid) isResale = await checkResaleStatus(userId);
   const order = await Order.create({
     user: user._id,
     coursePackage: coursePackage._id,
     totalOrderPrice: coursePackagePrice,
     isPaid: isPaid,
-    paymentMethodType: isPaid ? 'manual' : null,
+    isResale,
+    paymentMethodType: isPaid ? "manual" : null,
     paidAt: isPaid ? Date.now() : null,
   });
 
@@ -116,7 +121,7 @@ const createCoursePackageOrder = async (id, userId, isPaid) => {
       const chat = await Chat.findOneAndUpdate(
         { course: courseId, isGroupChat: true },
         { $push: { participants: { user: user._id, isAdmin: false } } },
-        { new: true },
+        { new: true }
       );
       if (chat) {
         await Notification.create({
@@ -126,7 +131,7 @@ const createCoursePackageOrder = async (id, userId, isPaid) => {
             ar: `${chat.groupName} تمت اضافتك الى المجموعة `,
           },
           chat: chat._id,
-          type: 'chat',
+          type: "chat",
         });
       }
 
@@ -143,7 +148,7 @@ const createCoursePackageOrder = async (id, userId, isPaid) => {
           endDate,
         });
       }
-    }),
+    })
   );
   //avail user to review
   await availUserToReview(user._id);
@@ -161,21 +166,24 @@ const createCoursePackageOrder = async (id, userId, isPaid) => {
 //2
 const createPackageOrder = asyncHandler(async (id, userId, isPaid) => {
   const package = await Package.findById(id);
-  if (!package) throw new Error('Package not found');
+  if (!package) throw new Error("Package not found");
 
   const user = await User.findById(userId);
-  if (!user) throw new Error('User not found');
+  if (!user) throw new Error("User not found");
 
   const packagePrice = package.priceAfterDiscount
     ? package.priceAfterDiscount
     : package.price;
 
+  let isResale;
+  if (isPaid) isResale = await checkResaleStatus(userId);
   const order = await Order.create({
     user: user._id,
     package: package._id,
     totalOrderPrice: packagePrice,
     isPaid: isPaid,
-    paymentMethodType: isPaid ? 'manual' : null,
+    isResale,
+    paymentMethodType: isPaid ? "manual" : null,
     paidAt: isPaid ? Date.now() : null,
     // paypalOrderId: paypalOrderId  // Adding the PayPal order ID to the order document
   });
@@ -205,7 +213,7 @@ const createPackageOrder = asyncHandler(async (id, userId, isPaid) => {
     endDate,
   });
   //if package type is course => let  gave course to user
-  if (package.type === 'course') {
+  if (package.type === "course") {
     await createCourseProgress(user._id, package.course._id);
   }
 
@@ -261,80 +269,23 @@ const createCourseOrder = async (id, userId, isPaid) => {
 exports.purchaseForUser = async (req, res, next) => {
   try {
     const { type, id, userId, isPaid } = req.body;
-    if (type === 'course') {
+    if (type === "course") {
       await createCourseOrder(id, userId, isPaid);
-    } else if (type === 'package') {
+    } else if (type === "package") {
       await createPackageOrder(id, userId, isPaid);
-    } else if (type === 'coursePackage') {
+    } else if (type === "coursePackage") {
       await createCoursePackageOrder(id, userId, isPaid);
     } else {
-      throw new Error('Invalid order type');
+      throw new Error("Invalid order type");
     }
     res.status(200).json({
-      status: 'success',
-      message: 'Order created successfully',
+      status: "success",
+      message: "Order created successfully",
     });
   } catch (error) {
     res.status(400).json({
-      status: 'failed',
+      status: "failed",
       message: error.message,
     });
   }
-};
-
-//----------------------------------------------
-
-//@use => this function to calculate profits and distribute it to the team members
-
-const calculateTeamProfits = async (totalProfit, dates) => {
-  const desc = `Profits from ${dates.startDate} to ${dates.endDate}`;
-
-  console.log('start calculate profits2');
-  const teamProfits = await TeamProfit.create({
-    totalProfit,
-    marketing: (totalProfit * 0.52).toFixed(2),
-    dawood: (totalProfit * 0.41).toFixed(2),
-
-    artosh: ((totalProfit * 0.07) / 5).toFixed(2), //softwave developers
-    gomaa: ((totalProfit * 0.07) / 5).toFixed(2),
-    yousef: ((totalProfit * 0.07) / 5).toFixed(2),
-    mostafa: ((totalProfit * 0.07) / 5).toFixed(2),
-    awad: ((totalProfit * 0.07) / 5).toFixed(2),
-    desc,
-  });
-  if (!teamProfits) throw new Error("Couldn't calculate profits");
-  console.log('end calculate profits2');
-  return true;
-};
-
-exports.distributeProfits = async (req, res) => {
-  const orders = await Order.find({ isCalculated: false }).sort({
-    createdAt: 1,
-  });
-  if (orders.length === 0)
-    return res.status(404).json({ status: 'faild', msg: 'no orders' });
-  const sales = orders.map((order) => order.totalOrderPrice);
-  const totalSales = sales.reduce((acc, item) => acc + item, 0);
-  const dates = {
-    startDate: orders[0].paidAt,
-    endDate: orders[orders.length - 1].paidAt,
-  };
-  console.log('start calculate profits');
-  await calculateTeamProfits(totalSales, dates);
-  //update isCalculated to true
-  const orderIds = orders.map((order) => order._id);
-  await Order.updateMany({ _id: { $in: orderIds } }, { isCalculated: true });
-
-  res.status(200).json({
-    status: 'success',
-    totalSales,
-  });
-  // res.status(200).json({
-  //   status: "success",
-  //   data: {
-  //     totalSales,
-  //     sales,
-  //     orders,
-  //   },
-  // });
 };
