@@ -10,7 +10,7 @@ const Notification = require("../../models/notificationModel");
 const CourseProgress = require("../../models/courseProgressModel");
 const { calculateProfits } = require("../marketingService");
 const { availUserToReview } = require("../userService");
-const { checkResaleStatus } = require("./OrderService");
+const { checkExistingPaidOrder } = require("./OrderService");
 /** 
  i will write here some things that i may forget about business logic 
  1- i checked for instructor percentage in 'createCourse' function only , cause instructor don't own package or live --> line 226
@@ -18,7 +18,7 @@ const { checkResaleStatus } = require("./OrderService");
 //** ==> helpers functions => i distribute the code to small functions to make it more readable and easy to maintain
 async function createOrder(userId, courseId, price, isPaid) {
   let isResale;
-  if (isPaid) isResale = await checkResaleStatus(userId);
+  if (isPaid) isResale = await checkExistingPaidOrder(userId);
   const order = await Order.create({
     user: userId,
     course: courseId,
@@ -94,7 +94,7 @@ const createCoursePackageOrder = async (id, userId, isPaid) => {
     : coursePackage.price;
 
   let isResale;
-  if (isPaid) isResale = await checkResaleStatus(userId);
+  if (isPaid) isResale = await checkExistingPaidOrder(userId);
   const order = await Order.create({
     user: user._id,
     coursePackage: coursePackage._id,
@@ -176,7 +176,7 @@ const createPackageOrder = asyncHandler(async (id, userId, isPaid) => {
     : package.price;
 
   let isResale;
-  if (isPaid) isResale = await checkResaleStatus(userId);
+  if (isPaid) isResale = await checkExistingPaidOrder(userId);
   const order = await Order.create({
     user: user._id,
     package: package._id,

@@ -1,4 +1,3 @@
-const crypto = require('crypto');
 const axios = require('axios');
 const asyncHandler = require('express-async-handler');
 const ApiError = require('../../utils/apiError');
@@ -6,23 +5,17 @@ const Order = require('../../models/orderModel');
 const Course = require('../../models/courseModel');
 const Package = require('../../models/packageModel');
 const CoursePackage = require('../../models/coursePackageModel');
-const UserSubscription = require('../../models/userSubscriptionModel');
-const User = require('../../models/userModel');
-const Chat = require('../../models/ChatModel');
-const Notification = require('../../models/notificationModel');
-const CourseProgress = require('../../models/courseProgressModel');
 const { checkCourseAccess } = require('../../utils/validators/courseValidator');
-const { calculateProfits } = require('../marketingService');
-const { availUserToReview } = require('../userService');
 const {
   createCourseOrderHandler,
   createPackageOrderHandler,
   createCoursePackageOrderHandler,
 } = require('./OrderService');
 
-const createLahzaTransaction = async (email, amount, metadata) => {
+const createLahzaTransaction = async (email, first_name, amount, metadata) => {
   const data = {
     email,
+    first_name,
     amount,
     metadata,
     currency: 'USD',
@@ -42,7 +35,6 @@ const createLahzaTransaction = async (email, amount, metadata) => {
       },
     );
 
-    console.log('Lahza response:', response.data);
     return response.data.data.authorization_url;
   } catch (error) {
     console.error(
@@ -122,6 +114,7 @@ exports.courseCheckoutSessionLahza = asyncHandler(async (req, res, next) => {
   try {
     const order = await createLahzaTransaction(
       user.email,
+      user.name,
       totalOrderPrice.toString(),
       metadata,
     );
@@ -160,6 +153,7 @@ exports.coursePackageCheckoutSessionLahza = asyncHandler(
     try {
       const order = await createLahzaTransaction(
         user.email,
+        user.name,
         totalOrderPrice.toString(),
         metadata,
       );
@@ -197,6 +191,7 @@ exports.packageCheckoutSessionLahza = asyncHandler(async (req, res, next) => {
   try {
     const order = await createLahzaTransaction(
       user.email,
+      user.name,
       totalOrderPrice.toString(),
       metadata,
     );
@@ -223,7 +218,6 @@ exports.lahzaWebhook = async (req, res, next) => {
     const metadata = event.data.metadata;
     const price = event.data.amount / 100;
 
-
     // Now you can access specific metadata fields
     const id = metadata.id;
     const type = metadata.type;
@@ -241,7 +235,9 @@ exports.lahzaWebhook = async (req, res, next) => {
         break;
       default:
         console.error(`Unknown type: ${type}`);
-        return res.redirect('https://nexgen-academy.com/${req.locale}/error-page');
+        return res.redirect(
+          'https://nexgen-academy.com/${req.locale}/error-page',
+        );
     }
 
     // Acknowledge receipt of the webhook

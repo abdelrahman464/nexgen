@@ -31,7 +31,6 @@ const {
 // ---------------------  purchase For User  ---------------------
 const {
   purchaseForUser,
-  distributeProfits,
 } = require('../services/orders/OrderService2');
 
 //configure Router
@@ -59,13 +58,6 @@ router.put(
   purchaseForUser,
 );
 //-------------------------------------------
-//9 => not used
-router.put(
-  '/distribute-profits',
-  authServices.protect,
-  authServices.allowedTo('user', 'admin'),
-  distributeProfits,
-);
 //-----------CRUD Operations-----------------
 router
   .route('/')
