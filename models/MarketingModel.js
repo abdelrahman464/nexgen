@@ -115,6 +115,24 @@ const MarketingLogsSchema = new mongoose.Schema(
         },
       },
     ],
+    commissionsInvoices: [
+      {
+        profits: Number,
+        desc: String,
+        createdAt: {
+          type: Date,
+          default: Date.now(),
+        },
+        status: {
+          type: String,
+          Enum: ["unpaid", "paid", "rejected"],
+          default: "unpaid",
+        },
+        paidAt: {
+          type: Date,
+        },
+      },
+    ],
   },
   { timestamps: true }
 );

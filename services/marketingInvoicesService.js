@@ -3,6 +3,8 @@ const {
   getInstructorProfitsInvoices,
   updateInstructorProfitsInvoiceStatus,
 } = require("./instructorProfitsService");
+const { getMonthMoney } = require("./marketingService");
+
 //1
 const getInvoices = async (status) => {
   try {
@@ -154,4 +156,58 @@ exports.updateInvoiceStatus = async (req, res) => {
 };
 
 //---------------------------------------------------------------------------------------------------//
+/**
+ * calculate the profits of last month and create the invoice
+ * @param {Object} marketLog
+ * @returns {Object} marketLog
+ */
+exports.createProfitsInvoice = async (marketLog) => {
+  const { profitPercentage, totalSalesMoney, profits, sales } = marketLog;
+  //validation -----
+  //1- check if he has sales
+  if (!profits || profits === 0) return marketLog;
+  //2- check if he has profits to be calculated
+  const result = await getMonthMoney(
+    marketLog.invoices,
+    new Date().getMonth() - 1 //last month , cause cron-job is running at the first day of the new month
+  );
 
+  const takenProfits = result.monthProfits;
+  //3- check if he has profits to be calculated
+  if (profits === takenProfits) return marketLog;
+
+  //4-calculate the available profits
+  const availableProfits = profits - takenProfits;
+  //5- create the invoice
+  const invoice = {
+    totalSalesMoney: totalSalesMoney.toFixed(2),
+    mySales: sales.length,
+    profitPercentage,
+    profits: availableProfits,
+    desc: `final invoice for month ${new Date().getMonth()}`,
+  };
+
+  marketLog.invoices.push(invoice);
+  return marketLog;
+};
+//function 2 ---------------------
+exports.createCommissionInvoice = async (marketLog) => {
+  if (marketLog.commissions?.length === 0) return marketLog;
+
+  let profits = 0;
+  //1-calculate the profits of his wallet
+  profits = marketLog.commissions.reduce(
+    (acc, commission) => acc + commission.profit,
+    0
+  );
+  //4- create the invoice
+  const invoice = {
+    profits: profits.toFixed(2) / 2, //distribute the profits between the wallet and the commissions
+    desc: `Invoice for month ${new Date().getMonth()}`,
+  };
+  //5- push the invoice to the walletInvoices
+  marketLog.walletInvoices.push(invoice);
+  marketLog.commissionsInvoices.push(invoice);
+
+  return marketLog;
+};

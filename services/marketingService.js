@@ -331,27 +331,13 @@ const createProfitsInvoice = async (marketLog) => {
   //3-calculate the available profits
   const availableProfits = profits - takenProfits;
 
-  //calculate the start point of the invoice
-  const startPointDate =
-    marketLog.invoices && marketLog.invoices.length > 0
-      ? marketLog.invoices[marketLog.invoices.length - 1].createdAt
-      : marketLog.createdAt;
-
   //4- create the invoice
   const invoice = {
     totalSalesMoney: totalSalesMoney.toFixed(2),
     mySales: sales.length,
     profitPercentage,
     profits: availableProfits,
-    desc: `Invoice for period : ${startPointDate.toLocaleString("default", {
-      month: "long",
-    })} ${startPointDate.getDate()} (${startPointDate.toLocaleString("en-US", {
-      weekday: "long",
-    })}) to  ${new Date().toLocaleString("default", {
-      month: "long",
-    })} ${new Date().getDate()} (${new Date().toLocaleString("en-US", {
-      weekday: "long",
-    })})`,
+    desc: `partial invoice for the month ${new Date().getMonth() - 1}`,
   };
 
   marketLog.invoices.push(invoice);
