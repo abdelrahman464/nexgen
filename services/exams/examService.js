@@ -300,6 +300,7 @@ exports.checkLessonQuestionsStatus = async (lessonExamResult) => {
   // Get all questions of this lesson
   const lessonExam = await Exam.findOne({
     lesson: lessonExamResult.lesson._id,
+    model: lessonExamResult.modelExam,
   }).select('questions');
   // Convert each question to a plain JavaScript object
   //This allows you to freely add new properties
@@ -347,6 +348,7 @@ exports.checkCourseQuestionsStatus = async (courseExamResult) => {
   // Get all questions of this lesson
   const courseExam = await Exam.findOne({
     course: courseExamResult.course,
+    model: courseExamResult.modelExam,
   }).select('questions');
   // Convert each question to a plain JavaScript object
   //This allows you to freely add new properties
