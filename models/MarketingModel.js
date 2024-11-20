@@ -7,7 +7,7 @@ const MarketingLogsSchema = new mongoose.Schema(
   {
     role: {
       type: String,
-      enum: ["customer", "marketer", "instructor"],
+      enum: ["head", "marketer", "instructor"],
     },
     marketer: {
       type: mongoose.Schema.Types.ObjectId,
@@ -17,25 +17,42 @@ const MarketingLogsSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
-    //to determine if this marketer has sent request to be a marketer
-    hasSentRequest: {
-      type: Boolean,
-      default: false,
+    paymentDetails: {
+      paymentMethod: String,
+      receiverAcc: String,
     },
     //we will use this when update brokers of marketer
     totalSalesMoney: {
       type: Number,
       default: 0,
     },
-    direct_transactions: [
+    profitPercentage: {
+      type: Number,
+    },
+    profits: {
+      type: Number,
+      default: 0,
+    },
+    salesAnalytics: [
       {
-        child: {
+        year: Number,
+        month: Number,
+        analytics: [
+          {
+            item: String,
+            amount: Number,
+            percentage: Number,
+          },
+        ],
+      },
+    ],
+    sales: [
+      {
+        purchaser: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "User",
         },
-        percentage: Number,
         amount: Number,
-        profit: Number,
         item: String, //course or package
         Date: {
           type: Date,
@@ -43,32 +60,14 @@ const MarketingLogsSchema = new mongoose.Schema(
         },
       },
     ],
-    transactions: [
-      {
-        child: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
-        },
-        percentage: Number,
-        amount: Number,
-        profit: Number,
-        item: String, //course or package
-        Date: {
-          type: Date,
-          default: Date.now(),
-        },
-      },
-    ],
-    wallet: [
+    commissions: [
       {
         member: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "User",
         },
-        percentage: Number,
-        amount: Number,
         profit: Number,
-        Date: {
+        lastUpdate: {
           type: Date,
           default: Date.now(),
         },
@@ -79,23 +78,10 @@ const MarketingLogsSchema = new mongoose.Schema(
       {
         totalSalesMoney: Number,
         mySales: Number,
+        profitPercentage: Number,
         profits: Number,
         treeProfits: Number,
         desc: String,
-        //analytics of courses sales and packages sales
-        salesAnalytics: [
-          {
-            item: String,
-            amount: Number,
-            percentage: Number,
-          },
-        ],
-        paymentMethod: {
-          type: String,
-        },
-        receiverAcc: {
-          type: String,
-        },
         createdAt: {
           type: Date,
           default: Date.now(),
@@ -124,12 +110,23 @@ const MarketingLogsSchema = new mongoose.Schema(
           Enum: ["unpaid", "paid", "rejected"],
           default: "unpaid",
         },
-        //these two parameters
-        paymentMethod: {
-          type: String,
+        paidAt: {
+          type: Date,
         },
-        receiverAcc: {
+      },
+    ],
+    commissionsInvoices: [
+      {
+        profits: Number,
+        desc: String,
+        createdAt: {
+          type: Date,
+          default: Date.now(),
+        },
+        status: {
           type: String,
+          Enum: ["unpaid", "paid", "rejected"],
+          default: "unpaid",
         },
         paidAt: {
           type: Date,
