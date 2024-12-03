@@ -1,5 +1,5 @@
-const MarketerRating = require("../models/marketersRatingModel");
-const factory = require("./handllerFactory");
+const MarketerRating = require("../../models/marketersRatingModel");
+const factory = require("../handllerFactory");
 
 // GET courses/:courseId/reviews
 exports.filterMarketerObjects = (req, res, next) => {

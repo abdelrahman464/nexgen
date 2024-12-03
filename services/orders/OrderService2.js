@@ -9,7 +9,7 @@ const User = require('../../models/userModel');
 const Chat = require('../../models/ChatModel');
 const Notification = require('../../models/notificationModel');
 const CourseProgress = require('../../models/courseProgressModel');
-const { calculateProfits } = require('../marketingService');
+const { calculateProfits } = require('../marketing/marketingService');
 const { availUserToReview } = require('../userService');
 
 /** 

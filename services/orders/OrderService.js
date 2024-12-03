@@ -1,15 +1,15 @@
-const factory = require('../handllerFactory');
-const Order = require('../../models/orderModel');
-const Course = require('../../models/courseModel');
-const Package = require('../../models/packageModel');
-const CoursePackage = require('../../models/coursePackageModel');
-const UserSubscription = require('../../models/userSubscriptionModel');
-const User = require('../../models/userModel');
-const Chat = require('../../models/ChatModel');
-const Notification = require('../../models/notificationModel');
-const CourseProgress = require('../../models/courseProgressModel');
-const { calculateProfits } = require('../marketingService');
-const { availUserToReview } = require('../userService');
+const factory = require("../handllerFactory");
+const Order = require("../../models/orderModel");
+const Course = require("../../models/courseModel");
+const Package = require("../../models/packageModel");
+const CoursePackage = require("../../models/coursePackageModel");
+const UserSubscription = require("../../models/userSubscriptionModel");
+const User = require("../../models/userModel");
+const Chat = require("../../models/ChatModel");
+const Notification = require("../../models/notificationModel");
+const CourseProgress = require("../../models/courseProgressModel");
+const { calculateProfits } = require("../marketing/marketingService");
+const { availUserToReview } = require("../userService");
 
 const filterOrders = async (req, res, next) => {
   const filterObject = {};
@@ -21,7 +21,7 @@ const filterOrders = async (req, res, next) => {
     delete newQuery.userId;
   }
   //2- if the user is trying to get their own orders
-  else if (req.user.role === 'user') {
+  else if (req.user.role === "user") {
     filterObject.user = req.user._id;
   }
 
@@ -356,7 +356,7 @@ async function addUserToGroupChatAndNotify(userId, courseId) {
   const chat = await Chat.findOneAndUpdate(
     { course: courseId, isGroupChat: true },
     { $addToSet: { participants: { user: userId, isAdmin: false } } },
-    { new: true },
+    { new: true }
   );
 
   if (chat) {
@@ -367,7 +367,7 @@ async function addUserToGroupChatAndNotify(userId, courseId) {
         ar: `تمت اضافتك الى المجموعة ${chat.groupName}`,
       },
       chat: chat._id,
-      type: 'chat',
+      type: "chat",
     });
   }
 }
@@ -402,9 +402,9 @@ const createCourseOrderHandler = async (courseId, email, price, method) => {
     Course.findById(courseId),
     User.findOne({ email }),
   ]);
-  if (!course || !user) throw new Error('Course or user not found');
+  if (!course || !user) throw new Error("Course or user not found");
 
-  await createOrderIfNotExist(user._id, course._id, price, method, 'course');
+  await createOrderIfNotExist(user._id, course._id, price, method, "course");
   await createCourseProgressIfNotExist(user._id, course._id);
   await addUserToGroupChatAndNotify(user._id, course._id);
 
@@ -412,7 +412,7 @@ const createCourseOrderHandler = async (courseId, email, price, method) => {
     await createOrUpdateSubscription(
       user._id,
       course.subscriptionPackage._id,
-      5 * 30,
+      5 * 30
     ); // 5 months
   }
 
@@ -431,16 +431,16 @@ const createPackageOrderHandler = async (packageId, email, price, method) => {
     Package.findById(packageId),
     User.findOne({ email }),
   ]);
-  if (!package || !user) throw new Error('Package or user not found');
+  if (!package || !user) throw new Error("Package or user not found");
 
-  await createOrderIfNotExist(user._id, package._id, price, method, 'package');
+  await createOrderIfNotExist(user._id, package._id, price, method, "package");
   await createOrUpdateSubscription(
     user._id,
     package._id,
-    package.subscriptionDurationDays,
+    package.subscriptionDurationDays
   );
 
-  if (package.type === 'course' && package.course) {
+  if (package.type === "course" && package.course) {
     await createCourseProgressIfNotExist(user._id, package.course._id);
   }
 
@@ -457,21 +457,21 @@ const createCoursePackageOrderHandler = async (
   coursePackageId,
   email,
   price,
-  method,
+  method
 ) => {
   const [coursePackage, user] = await Promise.all([
     CoursePackage.findById(coursePackageId),
     User.findOne({ email }),
   ]);
   if (!coursePackage || !user)
-    throw new Error('CoursePackage or user not found');
+    throw new Error("CoursePackage or user not found");
 
   await createOrderIfNotExist(
     user._id,
     coursePackage._id,
     price,
     method,
-    'coursePackage',
+    "coursePackage"
   );
 
   await Promise.all(
@@ -483,7 +483,7 @@ const createCoursePackageOrderHandler = async (
       if (package) {
         await createOrUpdateSubscription(user._id, package._id, 4 * 30); // 4 months
       }
-    }),
+    })
   );
 
   await availUserToReview(user._id);
