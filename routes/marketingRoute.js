@@ -7,7 +7,7 @@ const {
   getMarketerChildren,
   createInvoice,
   setPaymentDetails,
-} = require("../services/marketingService");
+} = require("../services/marketing/marketingService");
 
 const {
   checkAuthority,

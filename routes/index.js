@@ -20,7 +20,6 @@ const ChatRoute = require("./ChatRoute");
 const MessageRoute = require("./MessageRoute");
 const notificationRoute = require("./notificationRoute");
 const marketingRoute = require("./marketingRoute");
-const marketingReqRoute = require("./marktingReqsRoute");
 const contactRoute = require("./contactRoute");
 const systemReviewRoute = require("./systemReviewRoute");
 const analyticsRoute = require("./analyticRoute");
@@ -28,6 +27,8 @@ const marketingInvoicesRoute = require("./invoicesReqsRoute");
 const couponRoute = require("./couponRoute");
 const marketerRateingRoute = require("./marketerRatingRoute");
 const leaderBoardRoute = require("./leaderBoardRoute");
+
+const marketingAnalytics = require("./marketingAnalyticsRoute");
 
 const mountRoutes = (app) => {
   // Mount Routes
@@ -60,7 +61,6 @@ const mountRoutes = (app) => {
   app.use("/api/v1/notifications", notificationRoute);
 
   app.use("/api/v1/marketing", marketingRoute);
-  app.use("/api/v1/marketingReq", marketingReqRoute);
   app.use("/api/v1/marketingInvoices", marketingInvoicesRoute);
 
   app.use("/api/v1/contactInfo", contactRoute);
@@ -71,5 +71,7 @@ const mountRoutes = (app) => {
   app.use("/api/v1/coupons", couponRoute);
   app.use("/api/v1/marketerRating", marketerRateingRoute);
   app.use("/api/v1/leaderBoard", leaderBoardRoute);
+
+  app.use("/api/v1/marketingAnalytics", marketingAnalytics);
 };
 module.exports = mountRoutes;

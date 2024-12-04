@@ -1,8 +1,8 @@
-const MarketingLog = require("../models/MarketingModel");
+const MarketingLog = require("../../models/MarketingModel");
 const {
   getInstructorProfitsInvoices,
   updateInstructorProfitsInvoiceStatus,
-} = require("./instructorProfitsService");
+} = require("../instructorProfitsService");
 const { getMonthMoney } = require("./marketingService");
 
 //1

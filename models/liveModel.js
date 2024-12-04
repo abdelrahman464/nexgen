@@ -5,6 +5,7 @@ const LiveSchema = new mongoose.Schema(
     title: {
       type: String,
       required: true,
+      i18n: true,
     },
     date: {
       type: Date,

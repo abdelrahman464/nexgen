@@ -33,19 +33,6 @@ const MarketingLogsSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    salesAnalytics: [
-      {
-        year: Number,
-        month: Number,
-        analytics: [
-          {
-            item: String,
-            amount: Number,
-            percentage: Number,
-          },
-        ],
-      },
-    ],
     sales: [
       {
         purchaser: {
@@ -53,7 +40,8 @@ const MarketingLogsSchema = new mongoose.Schema(
           ref: "User",
         },
         amount: Number,
-        item: String, //course or package
+        itemType: String, //course or package
+        item: { type: String, i18n: true }, //course or package
         Date: {
           type: Date,
           default: Date.now(),
@@ -80,16 +68,14 @@ const MarketingLogsSchema = new mongoose.Schema(
         mySales: Number,
         profitPercentage: Number,
         profits: Number,
-        treeProfits: Number,
-        desc: String,
         createdAt: {
           type: Date,
           default: Date.now(),
         },
         status: {
           type: String,
-          Enum: ["unpaid", "paid"],
-          default: "unpaid",
+          Enum: ["pending", "paid"],
+          default: "pending",
         },
         paidAt: {
           type: Date,
@@ -99,7 +85,6 @@ const MarketingLogsSchema = new mongoose.Schema(
     walletInvoices: [
       {
         profits: Number,
-        desc: String,
         reasonToWithdraw: String,
         createdAt: {
           type: Date,
@@ -118,7 +103,6 @@ const MarketingLogsSchema = new mongoose.Schema(
     commissionsInvoices: [
       {
         profits: Number,
-        desc: String,
         createdAt: {
           type: Date,
           default: Date.now(),

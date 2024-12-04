@@ -1,6 +1,6 @@
 const express = require("express");
 const authServices = require("../services/authServices");
-const marketerRatingService = require("../services/marketerRatingService");
+const marketerRatingService = require("../services/marketing/marketerRatingService");
 
 const router = express.Router();
 

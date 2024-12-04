@@ -30,10 +30,6 @@ const OrderSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    isCalculated: {
-      type: Boolean,
-      default: false,
-    },
     isResale: {
       type: Boolean,
       default: false,
