@@ -1,6 +1,7 @@
 const { check, query } = require('express-validator');
 const validatorMiddleware = require('../../middlewares/validatorMiddleware');
 const User = require('../../models/userModel');
+const Order = require('../../models/orderModel');
 
 exports.purchaseForUserValidator = [
   check('id')
@@ -63,5 +64,37 @@ exports.isAuthToView = async (req, res, next) => {
     return next();
   } catch (err) {
     return res.status(403).json({ status: `failed`, error: err.message });
+  }
+};
+
+// * Prevent users from placing an order if they have created one within the past hour.
+exports.checkExistingPaidOrder = async (req, res, next) => {
+  try {
+    // Get the user's orders created within the past hour and already paid
+    const orders = await Order.find({
+      user: req.user._id,
+      isPaid: true,
+      createdAt: { $gte: new Date(Date.now() - 60 * 60 * 1000) },
+    });
+
+    // If there are any paid orders in the past hour, calculate the remaining time
+    if (orders.length > 0) {
+      const lastOrderTime = orders[0].createdAt.getTime();
+      const nextAllowedTime = new Date(lastOrderTime + 60 * 60 * 1000); // 1 hour after the last order
+      const remainingTime = Math.max(0, nextAllowedTime.getTime() - Date.now());
+
+      // Format remaining time into minutes and seconds
+      const minutes = Math.floor(remainingTime / 60000);
+      const seconds = Math.floor((remainingTime % 60000) / 1000);
+
+      return res.status(403).json({
+        status: 'failed',
+        error: `You have already placed an order within the past hour. Please wait ${minutes} minutes and ${seconds} seconds to place another order.`,
+      });
+    }
+
+    return next(); // Allow the request if no recent paid orders are found
+  } catch (err) {
+    return res.status(500).json({ status: 'failed', error: err.message });
   }
 };

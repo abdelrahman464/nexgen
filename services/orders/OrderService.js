@@ -169,61 +169,66 @@ const createCourseOrderHandler = async (courseId, email, price, method) => {
   ]);
   if (!course || !user) throw new Error('Course or user not found');
 
-  const order = await createOrder(
-    user._id,
-    course._id,
-    price,
-    method,
-    'course',
-  );
+  let order = await createOrder(user._id, course._id, price, method, 'course');
   if (order) {
+    // Populate the necessary fields
+    order = await order.populate([
+      { path: 'user', select: '_id name phone email' },
+      { path: 'course', select: 'title -category' },
+      { path: 'coursePackage', select: 'title' },
+      { path: 'package', select: 'title' },
+    ]);
+
     // Generate the PDF
-    const pdfPath = await generateOrderPDF(order);
+    let pdfPath = await generateOrderPDF(order);
+    pdfPath = pdfPath.replace('uploads/orders/', '');
     await Notification.create({
       user: user._id,
       message: {
-        en: `Your order has been placed successfully. You can download the order summary from <a href="${pdfPath}">here</a>`,
-        ar: `تمت عملية الشراء بنجاح. يمكنك تحميل ملخص الطلب من <a href="${pdfPath}">هنا</a>`,
+        en: `You have successfully purchased the course ${course.title.en} click here to download the invoice`,
+        ar: `لقد قمت بشراء الدورة ${course.title.ar} بنجاح اضغط هنا لتحميل الفاتورة`,
       },
-      type: 'system',
+      file: pdfPath,
+      type: 'order',
     });
+
+    await createCourseProgress(user._id, course._id);
+    await addUserToGroupChatAndNotify(user._id, course._id);
+
+    if (course.subscriptionPackage) {
+      await createOrUpdateSubscription(
+        user._id,
+        course.subscriptionPackage._id,
+        5 * 30,
+      ); // 5 months
+    }
+
+    await availUserToReview(user._id);
+    await calculateProfits({
+      email: user.email,
+      amount: price,
+      date: order.createdAt,
+      item: `Course: ${course.title}`,
+      instructorId: course.instructorPercentage > 0 ? course.instructor : null,
+    });
+
+    //  Send the email
+    // try {
+    //   await sendEmail({
+    //     to: user.email,
+    //     subject: 'Order Confirmation',
+    //     html: htmlEmail({
+    //       startDate: new Date(subscription.current_period_start * 1000),
+    //       endDate: new Date(subscription.current_period_end * 1000),
+    //       subscriptionDurationDays: package.subscriptionDurationDays,
+    //       OrderPrice: session.amount_total / 100,
+    //       orderId: order._id,
+    //     }),
+    //   });
+    // } catch (err) {
+    //   console.error('Error sending email', err);
+    // }
   }
-  await createCourseProgress(user._id, course._id);
-  await addUserToGroupChatAndNotify(user._id, course._id);
-
-  if (course.subscriptionPackage) {
-    await createOrUpdateSubscription(
-      user._id,
-      course.subscriptionPackage._id,
-      5 * 30,
-    ); // 5 months
-  }
-
-  await availUserToReview(user._id);
-  await calculateProfits({
-    email: user.email,
-    amount: price,
-    date: order.createdAt,
-    item: `Course: ${course.title}`,
-    instructorId: course.instructorPercentage > 0 ? course.instructor : null,
-  });
-
-  //  Send the email
-  // try {
-  //   await sendEmail({
-  //     to: user.email,
-  //     subject: 'Order Confirmation',
-  //     html: htmlEmail({
-  //       startDate: new Date(subscription.current_period_start * 1000),
-  //       endDate: new Date(subscription.current_period_end * 1000),
-  //       subscriptionDurationDays: package.subscriptionDurationDays,
-  //       OrderPrice: session.amount_total / 100,
-  //       orderId: order._id,
-  //     }),
-  //   });
-  // } catch (err) {
-  //   console.error('Error sending email', err);
-  // }
 };
 
 // Handler for creating a package order
