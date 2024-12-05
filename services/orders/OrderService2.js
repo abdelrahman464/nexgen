@@ -8,9 +8,10 @@ const User = require("../../models/userModel");
 const Chat = require("../../models/ChatModel");
 const Notification = require("../../models/notificationModel");
 const CourseProgress = require("../../models/courseProgressModel");
-const { calculateProfits } = require("../marketingService");
+const { calculateProfits } = require("../marketing/marketingService");
 const { availUserToReview } = require("../userService");
 const { checkExistingPaidOrder } = require("./OrderService");
+
 /** 
  i will write here some things that i may forget about business logic 
  1- i checked for instructor percentage in 'createCourse' function only , cause instructor don't own package or live --> line 226

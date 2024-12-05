@@ -1,13 +1,13 @@
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-await-in-loop */
-const User = require("../models/userModel");
-const MarketingLog = require("../models/MarketingModel");
-const InstructorProfit = require("../models/instructorProfitsModel");
-const { createMarketerGroupChat } = require("./ChatServices");
-const { addMarketerToLeaderBoard } = require("./leaderBoardService");
+const User = require("../../models/userModel");
+const MarketingLog = require("../../models/MarketingModel");
+const InstructorProfit = require("../../models/instructorProfitsModel");
+const { createMarketerGroupChat } = require("../ChatServices");
+const { addMarketerToLeaderBoard } = require("../leaderBoardService");
 
-const InstructorProfitService = require("./instructorProfitsService");
-const ApiError = require("../utils/apiError");
+const InstructorProfitService = require("../instructorProfitsService");
+const ApiError = require("../../utils/apiError");
 //when creating invoice check the date if same month   update invoice  if not create new one
 
 //1
@@ -82,6 +82,7 @@ const updateSellerSales = async (data, profitPercentage, invoices) => {
         sales: {
           purchaser: data.purchaser,
           amount: data.amount,
+          itemType: data.itemType,
           item: data.item || null,
         },
       },
@@ -92,12 +93,7 @@ const updateSellerSales = async (data, profitPercentage, invoices) => {
       },
     }
   );
-  const leaderBoardData = this.calculateTotalSalesMoney(
-    data.totalSalesMoney,
-    invoices
-  );
-  leaderBoardData.marketerId = data.marketerId;
-  await addMarketerToLeaderBoard(leaderBoardData);
+  await addMarketerToLeaderBoard(marketerId, data.totalSalesMoney);
   console.log("updated successfully");
   return true;
   //**update the sales */
@@ -159,6 +155,7 @@ exports.calculateProfits = async (
       marketerId: marketerMarketLog.marketer,
       purchaser: user._id,
       amount: details.amount,
+      itemType: details.itemType,
       item: details.item,
       totalSalesMoney:
         marketerMarketLog.totalSalesMoney + parseFloat(details.amount),
@@ -337,7 +334,6 @@ const createProfitsInvoice = async (marketLog) => {
     mySales: sales.length,
     profitPercentage,
     profits: availableProfits,
-    desc: `partial invoice for the month ${new Date().getMonth() - 1}`,
   };
 
   marketLog.invoices.push(invoice);
@@ -440,66 +436,12 @@ exports.getMarketerChildren = async (req, res) => {
   );
 
   if (children.length === 0) {
-    return res.status(404).json({ status: "faild", msg: "no data found" });
+    return res.status(404).json({ status: "failed", msg: "no data found" });
   }
 
   return res.status(200).json({ status: "success", data: children });
 };
-//------------------------
-exports.calculateSalesAnalytics = (sales, totalSalesAmount) => {
-  const analytics = [];
-  //hint : each key inside it will be item_name , it's value amount of sales for it
-  const analyticsObject = {};
-  //accumulate each item sales
-  for (const sale of sales) {
-    if (sale.item in analytics) {
-      analyticsObject[sale.item] += sale.amount;
-    } else {
-      analyticsObject[sale.item] = sale.amount;
-    }
-  }
-  // eslint-disable-next-line guard-for-in
-  for (const item in analyticsObject) {
-    analytics.push({
-      item: item,
-      amount: analytics[item],
-      percentage: (analytics[item] / totalSalesAmount) * 100,
-    });
-  }
-  const year = new Date().getFullYear();
-  const month = new Date().getMonth();
-  return { year, month, analytics };
-};
-//--------------
-exports.calculateTotalSalesMoney = (
-  totalSalesMoneyForCurrentMonth,
-  invoices
-) => {
-  //1 - get the current date
-  const currentDate = new Date();
-  console.log(currentDate);
-  const currentYear = currentDate.getFullYear();
-  const currentMonth = currentDate.getMonth() + 1; // getMonth() returns 0 for January, 1 for February, etc.
-  //2 - calculate the total sales money for the current month from invoices
-  let totalSalesMoneyForCurrentMonthInvoices = 0;
-  if (invoices.length !== 0) {
-    totalSalesMoneyForCurrentMonthInvoices = invoices
-      .filter((invoice) => {
-        const createdAt = invoice.createdAt;
-        return (
-          createdAt instanceof Date &&
-          createdAt.getFullYear() === currentYear &&
-          createdAt.getMonth() === currentMonth
-        );
-      })
-      .reduce((acc, invoice) => acc + invoice.totalSalesMoney, 0);
-  }
-  const totalSalesMoney =
-    totalSalesMoneyForCurrentMonth + totalSalesMoneyForCurrentMonthInvoices;
-  //3 - return the data
-  console.log(currentMonth, currentYear, totalSalesMoney);
-  return { currentMonth, currentYear, totalSalesMoney };
-};
+
 //---------------
 exports.detectPercentage = (role, totalSalesMoney) => {
   let percentage;

@@ -4,7 +4,7 @@ const {
   getAllRequestedInvoices,
   getRequestedInvoice,
   updateInvoiceStatus,
-} = require("../services/marketingInvoicesService");
+} = require("../services/marketing/marketingInvoicesService");
 const {
   checkStatusValidator,
   updateInvoiceStatusValidator,

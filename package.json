@@ -24,6 +24,7 @@
     "express-validator": "^7.2.0",
     "i18n": "^0.15.1",
     "jsonwebtoken": "^9.0.2",
+    "lowdash": "^1.2.0",
     "mongoose": "^6.0.13",
     "mongoose-i18n-localize": "^0.3.0",
     "morgan": "^1.10.0",

@@ -118,6 +118,16 @@ initSocket(server);
 //schedule the cron job
 // const { invoicesCronJob } = require("./utils/cronJob/automatedTasks");
 
+// Global Error Handling Middleware
+app.use((err, req, res, next) => {
+  console.error("Error:", err.message);
+  console.error("Error:", err.isOperational);
+
+  const statusCode = err.statusCode || 500;
+  const message = err.isOperational ? err.message : "Internal Server Error";
+
+  res.status(statusCode).json({ error: message });
+});
 // invoicesCronJob();
 //handle Rejection out side express
 //Events =>list =>callback(err)

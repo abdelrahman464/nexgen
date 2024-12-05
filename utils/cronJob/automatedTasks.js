@@ -3,8 +3,7 @@ const MarketingLog = require("../../models/MarketingModel");
 const {
   createProfitsInvoice,
   createCommissionInvoice,
-} = require("../../services/marketingInvoicesService");
-const { calculateSalesAnalytics } = require("../../services/marketingService");
+} = require("../../services/marketing/marketingInvoicesService");
 
 exports.invoicesCronJob = () => {
   cron.schedule("* * * * *", () => {
@@ -20,13 +19,6 @@ exports.resetMarketLogs = async () => {
       return;
     }
     marketLogs.map(async (log) => {
-      //1- create a sales analytics object for the current month
-      const salesAnalytics = await calculateSalesAnalytics(
-        log.sales,
-        log.totalSalesMoney
-      );
-      if (salesAnalytics.analytics.length !== 0)
-        log.salesAnalytics.push(salesAnalytics);
       //2- create any invoices remaining for the current month
       log = await createProfitsInvoice(log);
       //3- create any commissions remaining for the current month

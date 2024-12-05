@@ -8,9 +8,10 @@ const User = require('../../models/userModel');
 const Chat = require('../../models/ChatModel');
 const Notification = require('../../models/notificationModel');
 const CourseProgress = require('../../models/courseProgressModel');
-const { calculateProfits } = require('../marketingService');
+const { calculateProfits } = require('../marketing/marketingService');
 const { availUserToReview } = require('../userService');
 const { sendEmail } = require('../../utils/sendEmail');
+const { generateOrderPDF } = require('../../utils/generatePdf');
 
 const filterOrders = async (req, res, next) => {
   const filterObject = {};
@@ -70,9 +71,11 @@ const checkExistingPaidOrder = async (userId) => {
   return false;
 };
 
-async function createOrderIfNotExist(userId, itemId, price, method, itemType) {
+async function createOrder(userId, itemId, price, method, itemType) {
   //to avoid duplication of orders
-  const existingOrder = await Order.findOne({
+  let order;
+  let flag = false;
+  order = await Order.findOne({
     user: userId,
     [itemType]: itemId,
     paymentMethodType: method,
@@ -82,8 +85,8 @@ async function createOrderIfNotExist(userId, itemId, price, method, itemType) {
 
   const isResale = await checkExistingPaidOrder(userId);
 
-  if (!existingOrder) {
-    await Order.create({
+  if (!order) {
+    order = await Order.create({
       user: userId,
       [itemType]: itemId,
       totalOrderPrice: price,
@@ -92,11 +95,14 @@ async function createOrderIfNotExist(userId, itemId, price, method, itemType) {
       paidAt: Date.now(),
       isResale: isResale,
     });
+    flag = true;
   }
+  if (flag) return order;
+  return null;
 }
 
 // Utility to create course progress if not already exists
-async function createCourseProgressIfNotExist(userId, courseId) {
+async function createCourseProgress(userId, courseId) {
   const existingProgress = await CourseProgress.findOne({
     user: userId,
     course: courseId,
@@ -163,8 +169,26 @@ const createCourseOrderHandler = async (courseId, email, price, method) => {
   ]);
   if (!course || !user) throw new Error('Course or user not found');
 
-  await createOrderIfNotExist(user._id, course._id, price, method, 'course');
-  await createCourseProgressIfNotExist(user._id, course._id);
+  const order = await createOrder(
+    user._id,
+    course._id,
+    price,
+    method,
+    'course',
+  );
+  if (order) {
+    // Generate the PDF
+    const pdfPath = await generateOrderPDF(order);
+    await Notification.create({
+      user: user._id,
+      message: {
+        en: `Your order has been placed successfully. You can download the order summary from <a href="${pdfPath}">here</a>`,
+        ar: `تمت عملية الشراء بنجاح. يمكنك تحميل ملخص الطلب من <a href="${pdfPath}">هنا</a>`,
+      },
+      type: 'system',
+    });
+  }
+  await createCourseProgress(user._id, course._id);
   await addUserToGroupChatAndNotify(user._id, course._id);
 
   if (course.subscriptionPackage) {
@@ -179,6 +203,7 @@ const createCourseOrderHandler = async (courseId, email, price, method) => {
   await calculateProfits({
     email: user.email,
     amount: price,
+    date: order.createdAt,
     item: `Course: ${course.title}`,
     instructorId: course.instructorPercentage > 0 ? course.instructor : null,
   });
@@ -209,7 +234,7 @@ const createPackageOrderHandler = async (packageId, email, price, method) => {
   ]);
   if (!package || !user) throw new Error('Package or user not found');
 
-  await createOrderIfNotExist(user._id, package._id, price, method, 'package');
+  await createOrder(user._id, package._id, price, method, 'package');
   await createOrUpdateSubscription(
     user._id,
     package._id,
@@ -217,7 +242,7 @@ const createPackageOrderHandler = async (packageId, email, price, method) => {
   );
 
   if (package.type === 'course' && package.course) {
-    await createCourseProgressIfNotExist(user._id, package.course._id);
+    await createCourseProgress(user._id, package.course._id);
   }
 
   await availUserToReview(user._id);
@@ -242,7 +267,7 @@ const createCoursePackageOrderHandler = async (
   if (!coursePackage || !user)
     throw new Error('CoursePackage or user not found');
 
-  await createOrderIfNotExist(
+  await createOrder(
     user._id,
     coursePackage._id,
     price,
@@ -252,7 +277,7 @@ const createCoursePackageOrderHandler = async (
 
   await Promise.all(
     coursePackage.courses.map(async (courseId) => {
-      await createCourseProgressIfNotExist(user._id, courseId);
+      await createCourseProgress(user._id, courseId);
       await addUserToGroupChatAndNotify(user._id, courseId);
 
       const package = await Package.findOne({ course: courseId });
