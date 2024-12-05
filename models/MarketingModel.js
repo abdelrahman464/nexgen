@@ -33,6 +33,13 @@ const MarketingLogsSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    clicks: [
+      {
+        month: String,
+        year: Number,
+        count: Number,
+      },
+    ],
     sales: [
       {
         purchaser: {

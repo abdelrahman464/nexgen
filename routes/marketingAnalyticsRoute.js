@@ -16,5 +16,9 @@ router.get(
   authServices.allowedTo("admin"),
   marketingAnalyticsService.getItemAnalytics
 );
+router.put(
+  "/incrementSignUpClicks/:id", //marketing id
+  marketingAnalyticsService.incrementSignUpClicks
+);
 
 module.exports = router;

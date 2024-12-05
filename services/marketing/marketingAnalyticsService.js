@@ -1,5 +1,6 @@
 const User = require("../../models/userModel");
 const Order = require("../../models/orderModel");
+const marketLog = require("../../models/MarketingModel");
 const ApiError = require("../../utils/apiError");
 const _ = require("lodash");
 //@desc > detect type of each order's item and return it's title
@@ -174,7 +175,7 @@ exports.getItemAnalytics = async (req, res, next) => {
         //given period data
         givenPeriodSales,
         students: givenPeriodOrders.length,
-        
+
         //opposite period data
         oppositePeriodSales: 0,
         oppositePeriodStudents: 0,
@@ -249,3 +250,50 @@ function toISOFormat(dateString) {
   // return date.toISOString();
   return date;
 }
+//----------------
+//clicks
+exports.incrementSignUpClicks = async (req, res) => {
+  try {
+    const months = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+    const month = new Date().getMonth();
+    const year = new Date().getFullYear();
+
+    const marketerId = req.params.id;
+
+    const marketLogDoc = await marketLog.findOne({ marketer: marketerId });
+    if (!marketLogDoc) {
+      return res.status(404).json({
+        status: "failed",
+        msg: "No marketing logs found for this marketer",
+      });
+    }
+    const clicks = marketLogDoc.clicks;
+
+    //check if this month and year already exists
+    const monthIndex = clicks?.findIndex(
+      (click) => click.month === months[month] && click.year === year
+    );
+    if (monthIndex !== -1) {
+      clicks[monthIndex].count += 1;
+    } else {
+      clicks.push({ month: months[month], year, count: 1 });
+    }
+    await marketLogDoc.save();
+    return res.status(200).json({ status: "success" });
+  } catch (err) {
+    res.status(500).json({ status: "failed", error: err.message });
+  }
+};
