@@ -10,6 +10,7 @@ const Notification = require('../../models/notificationModel');
 const CourseProgress = require('../../models/courseProgressModel');
 const { calculateProfits } = require('../marketingService');
 const { availUserToReview } = require('../userService');
+const { sendEmail } = require('../../utils/sendEmail');
 
 const filterOrders = async (req, res, next) => {
   const filterObject = {};
@@ -181,6 +182,23 @@ const createCourseOrderHandler = async (courseId, email, price, method) => {
     item: `Course: ${course.title}`,
     instructorId: course.instructorPercentage > 0 ? course.instructor : null,
   });
+
+  //  Send the email
+  // try {
+  //   await sendEmail({
+  //     to: user.email,
+  //     subject: 'Order Confirmation',
+  //     html: htmlEmail({
+  //       startDate: new Date(subscription.current_period_start * 1000),
+  //       endDate: new Date(subscription.current_period_end * 1000),
+  //       subscriptionDurationDays: package.subscriptionDurationDays,
+  //       OrderPrice: session.amount_total / 100,
+  //       orderId: order._id,
+  //     }),
+  //   });
+  // } catch (err) {
+  //   console.error('Error sending email', err);
+  // }
 };
 
 // Handler for creating a package order

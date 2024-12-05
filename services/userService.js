@@ -729,7 +729,7 @@ exports.getMyFollowersAndFollowing = async (req, res, next) => {
 //@access private admin
 exports.actionOnIdDocument = async (req, res, next) => {
   try {
-    const { action } = req.body;
+    const { action, note } = req.body;
     if (action !== 'verified' && action !== 'rejected') {
       return next(new ApiError('Invalid action', 400));
     }
@@ -743,7 +743,7 @@ exports.actionOnIdDocument = async (req, res, next) => {
     // Toggle the `approveIdDocument` field in one step
     const updatedUser = await User.findByIdAndUpdate(
       req.params.id,
-      { $set: { idVerification: action } },
+      { $set: { idVerification: action, note } },
       { new: true },
     );
 
@@ -824,8 +824,6 @@ exports.uploadIdDocument = async (req, res, next) => {
   if (!currentUser.active) {
     return next(new ApiError('You Are Not Active', 401));
   }
-
-
 
   //process of uploading id document
   if (currentUser.idVerification === 'verified') {
