@@ -34,6 +34,9 @@ const userSchema = new mongoose.Schema(
       enum: ['pending', 'verified', 'rejected'],
       default: 'pending',
     },
+    note: {
+      type: String,
+    },
     google: {
       id: String,
       email: String,

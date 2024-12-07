@@ -9,19 +9,19 @@ const NotificationSchema = new mongoose.Schema(
       required: ['true', 'User required'],
     },
     post: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId, // with {type =post}
       ref: 'Post',
     },
     chat: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId, // with {type =chat}
       ref: 'Chat',
     },
     course: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId, // with {type =certificate}
       ref: 'Course',
     },
     followedUser: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId, // with {type =follow}
       ref: 'User',
     },
     message: {
@@ -29,13 +29,14 @@ const NotificationSchema = new mongoose.Schema(
       required: [true, 'Message required'],
       i18n: true,
     },
+    file: String, //add pdf path that have order details -> with {type = order }
     read: {
       type: Boolean,
       default: false,
     },
     type: {
       type: String,
-      enum: ['system', 'post', 'chat', 'certificate', 'follow'],
+      enum: ['system', 'post', 'chat', 'certificate', 'follow', 'order'],
       default: 'system',
     },
   },
@@ -44,7 +45,7 @@ const NotificationSchema = new mongoose.Schema(
 // ^find => it mean if part of of teh word contains find
 NotificationSchema.pre(/^find/, function (next) {
   // this => query
- 
+
   this.populate({
     path: 'post',
     select: 'content -user -package -course',
@@ -53,6 +54,23 @@ NotificationSchema.pre(/^find/, function (next) {
     select: 'name email profileImg',
   });
   next();
+});
+const setCourseImageURL = (doc) => {
+  //return image base url + iamge name
+  if (doc.file) {
+    const fileUrl = `${process.env.BASE_URL}/orders/${doc.file}`;
+    doc.file = fileUrl;
+  }
+};
+//after initializ the doc in db
+// check if the document contains image
+// it work with findOne,findAll,update
+NotificationSchema.post('init', (doc) => {
+  setCourseImageURL(doc);
+});
+// it work with create
+NotificationSchema.post('save', (doc) => {
+  setCourseImageURL(doc);
 });
 
 // // Emit a notification event after saving a new notification

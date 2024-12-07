@@ -3,6 +3,7 @@ const {
   purchaseForUserValidator,
   queryParamsValidator,
   isAuthToView,
+  checkExistingPaidOrder,
 } = require('../utils/validators/orderValidator');
 const authServices = require('../services/authServices');
 const {
@@ -29,9 +30,7 @@ const {
   lahzaWebhook,
 } = require('../services/orders/lahza');
 // ---------------------  purchase For User  ---------------------
-const {
-  purchaseForUser,
-} = require('../services/orders/OrderService2');
+const { purchaseForUser } = require('../services/orders/OrderService2');
 
 //configure Router
 const router = express.Router();
@@ -81,18 +80,21 @@ router.put(
   '/cryptomus/course-checkout/:courseId',
   authServices.protect,
   authServices.allowedTo('user', 'admin'),
+  checkExistingPaidOrder,
   courseCheckoutSessionCryptomus,
 );
 router.put(
   '/cryptomus/course-package-checkout/:coursePackageId',
   authServices.protect,
   authServices.allowedTo('user', 'admin'),
+  checkExistingPaidOrder,
   coursePackageCheckoutSessionCryptomus,
 );
 router.put(
   '/cryptomus/package-checkout/:packageId',
   authServices.protect,
   authServices.allowedTo('user', 'admin'),
+  checkExistingPaidOrder,
   packageCheckoutSessionCryptomus,
 );
 router.post(
@@ -106,16 +108,19 @@ router.put(
   '/lahza/courseCheckout/:courseId',
   authServices.protect,
   authServices.allowedTo('user', 'admin'),
+  checkExistingPaidOrder,
   courseCheckoutSessionLahza,
 );
 router.put(
   '/lahza/coursePackageCheckout/:coursePackageId',
   authServices.protect,
   authServices.allowedTo('user', 'admin'),
+  checkExistingPaidOrder,
   coursePackageCheckoutSessionLahza,
 );
 router.put(
   '/lahza/packageCheckout/:packageId',
+  checkExistingPaidOrder,
   authServices.protect,
   authServices.allowedTo('user', 'admin'),
   packageCheckoutSessionLahza,

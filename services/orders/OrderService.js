@@ -1,15 +1,17 @@
-const factory = require("../handllerFactory");
-const Order = require("../../models/orderModel");
-const Course = require("../../models/courseModel");
-const Package = require("../../models/packageModel");
-const CoursePackage = require("../../models/coursePackageModel");
-const UserSubscription = require("../../models/userSubscriptionModel");
-const User = require("../../models/userModel");
-const Chat = require("../../models/ChatModel");
-const Notification = require("../../models/notificationModel");
-const CourseProgress = require("../../models/courseProgressModel");
-const { calculateProfits } = require("../marketing/marketingService");
-const { availUserToReview } = require("../userService");
+const factory = require('../handllerFactory');
+const Order = require('../../models/orderModel');
+const Course = require('../../models/courseModel');
+const Package = require('../../models/packageModel');
+const CoursePackage = require('../../models/coursePackageModel');
+const UserSubscription = require('../../models/userSubscriptionModel');
+const User = require('../../models/userModel');
+const Chat = require('../../models/ChatModel');
+const Notification = require('../../models/notificationModel');
+const CourseProgress = require('../../models/courseProgressModel');
+const { calculateProfits } = require('../marketing/marketingService');
+const { availUserToReview } = require('../userService');
+const { sendEmail } = require('../../utils/sendEmail');
+const { generateOrderPDF } = require('../../utils/generatePdf');
 
 const filterOrders = async (req, res, next) => {
   const filterObject = {};
@@ -21,7 +23,7 @@ const filterOrders = async (req, res, next) => {
     delete newQuery.userId;
   }
   //2- if the user is trying to get their own orders
-  else if (req.user.role === "user") {
+  else if (req.user.role === 'user') {
     filterObject.user = req.user._id;
   }
 
@@ -69,7 +71,7 @@ const checkExistingPaidOrder = async (userId) => {
   return false;
 };
 
-async function createOrderIfNotExist(userId, itemId, price, method, itemType) {
+async function createOrder(userId, itemId, price, method, itemType) {
   //to avoid duplication of orders
   let order;
   let flag = false;
@@ -95,12 +97,12 @@ async function createOrderIfNotExist(userId, itemId, price, method, itemType) {
     });
     flag = true;
   }
-  if (flag);
+  if (flag) return order;
   return null;
 }
 
 // Utility to create course progress if not already exists
-async function createCourseProgressIfNotExist(userId, courseId) {
+async function createCourseProgress(userId, courseId) {
   const existingProgress = await CourseProgress.findOne({
     user: userId,
     course: courseId,
@@ -119,7 +121,7 @@ async function addUserToGroupChatAndNotify(userId, courseId) {
   const chat = await Chat.findOneAndUpdate(
     { course: courseId, isGroupChat: true },
     { $addToSet: { participants: { user: userId, isAdmin: false } } },
-    { new: true }
+    { new: true },
   );
 
   if (chat) {
@@ -130,7 +132,7 @@ async function addUserToGroupChatAndNotify(userId, courseId) {
         ar: `تمت اضافتك الى المجموعة ${chat.groupName}`,
       },
       chat: chat._id,
-      type: "chat",
+      type: 'chat',
     });
   }
 }
@@ -165,34 +167,68 @@ const createCourseOrderHandler = async (courseId, email, price, method) => {
     Course.findById(courseId),
     User.findOne({ email }),
   ]);
-  if (!course || !user) throw new Error("Course or user not found");
+  if (!course || !user) throw new Error('Course or user not found');
 
-  const order = await createOrderIfNotExist(
-    user._id,
-    course._id,
-    price,
-    method,
-    "course"
-  );
-  await createCourseProgressIfNotExist(user._id, course._id);
-  await addUserToGroupChatAndNotify(user._id, course._id);
+  let order = await createOrder(user._id, course._id, price, method, 'course');
+  if (order) {
+    // Populate the necessary fields
+    order = await order.populate([
+      { path: 'user', select: '_id name phone email' },
+      { path: 'course', select: 'title -category' },
+      { path: 'coursePackage', select: 'title' },
+      { path: 'package', select: 'title' },
+    ]);
 
-  if (course.subscriptionPackage) {
-    await createOrUpdateSubscription(
-      user._id,
-      course.subscriptionPackage._id,
-      5 * 30
-    ); // 5 months
+    // Generate the PDF
+    let pdfPath = await generateOrderPDF(order);
+    pdfPath = pdfPath.replace('uploads/orders/', '');
+    await Notification.create({
+      user: user._id,
+      message: {
+        en: `You have successfully purchased the course ${course.title.en} click here to download the invoice`,
+        ar: `لقد قمت بشراء الدورة ${course.title.ar} بنجاح اضغط هنا لتحميل الفاتورة`,
+      },
+      file: pdfPath,
+      type: 'order',
+    });
+
+    await createCourseProgress(user._id, course._id);
+    await addUserToGroupChatAndNotify(user._id, course._id);
+
+    if (course.subscriptionPackage) {
+      await createOrUpdateSubscription(
+        user._id,
+        course.subscriptionPackage._id,
+        5 * 30,
+      ); // 5 months
+    }
+
+    await availUserToReview(user._id);
+    await calculateProfits({
+      email: user.email,
+      amount: price,
+      date: order.createdAt,
+      item: `Course: ${course.title}`,
+      instructorId: course.instructorPercentage > 0 ? course.instructor : null,
+    });
+
+    //  Send the email
+    // try {
+    //   await sendEmail({
+    //     to: user.email,
+    //     subject: 'Order Confirmation',
+    //     html: htmlEmail({
+    //       startDate: new Date(subscription.current_period_start * 1000),
+    //       endDate: new Date(subscription.current_period_end * 1000),
+    //       subscriptionDurationDays: package.subscriptionDurationDays,
+    //       OrderPrice: session.amount_total / 100,
+    //       orderId: order._id,
+    //     }),
+    //   });
+    // } catch (err) {
+    //   console.error('Error sending email', err);
+    // }
   }
-
-  await availUserToReview(user._id);
-  await calculateProfits({
-    email: user.email,
-    amount: price,
-    date: order.createdAt,
-    item: `Course: ${course.title}`,
-    instructorId: course.instructorPercentage > 0 ? course.instructor : null,
-  });
 };
 
 // Handler for creating a package order
@@ -201,17 +237,17 @@ const createPackageOrderHandler = async (packageId, email, price, method) => {
     Package.findById(packageId),
     User.findOne({ email }),
   ]);
-  if (!package || !user) throw new Error("Package or user not found");
+  if (!package || !user) throw new Error('Package or user not found');
 
-  await createOrderIfNotExist(user._id, package._id, price, method, "package");
+  await createOrder(user._id, package._id, price, method, 'package');
   await createOrUpdateSubscription(
     user._id,
     package._id,
-    package.subscriptionDurationDays
+    package.subscriptionDurationDays,
   );
 
-  if (package.type === "course" && package.course) {
-    await createCourseProgressIfNotExist(user._id, package.course._id);
+  if (package.type === 'course' && package.course) {
+    await createCourseProgress(user._id, package.course._id);
   }
 
   await availUserToReview(user._id);
@@ -227,33 +263,33 @@ const createCoursePackageOrderHandler = async (
   coursePackageId,
   email,
   price,
-  method
+  method,
 ) => {
   const [coursePackage, user] = await Promise.all([
     CoursePackage.findById(coursePackageId),
     User.findOne({ email }),
   ]);
   if (!coursePackage || !user)
-    throw new Error("CoursePackage or user not found");
+    throw new Error('CoursePackage or user not found');
 
-  await createOrderIfNotExist(
+  await createOrder(
     user._id,
     coursePackage._id,
     price,
     method,
-    "coursePackage"
+    'coursePackage',
   );
 
   await Promise.all(
     coursePackage.courses.map(async (courseId) => {
-      await createCourseProgressIfNotExist(user._id, courseId);
+      await createCourseProgress(user._id, courseId);
       await addUserToGroupChatAndNotify(user._id, courseId);
 
       const package = await Package.findOne({ course: courseId });
       if (package) {
         await createOrUpdateSubscription(user._id, package._id, 4 * 30); // 4 months
       }
-    })
+    }),
   );
 
   await availUserToReview(user._id);
