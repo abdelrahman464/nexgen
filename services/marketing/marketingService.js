@@ -2,12 +2,14 @@
 /* eslint-disable no-await-in-loop */
 const User = require("../../models/userModel");
 const MarketingLog = require("../../models/MarketingModel");
+const Order = require("../../models/orderModel");
 const InstructorProfit = require("../../models/instructorProfitsModel");
 const { createMarketerGroupChat } = require("../ChatServices");
 const { addMarketerToLeaderBoard } = require("../leaderBoardService");
 
 const InstructorProfitService = require("../instructorProfitsService");
 const ApiError = require("../../utils/apiError");
+const _ = require("lodash");
 //when creating invoice check the date if same month   update invoice  if not create new one
 
 //1
@@ -431,15 +433,36 @@ exports.createInvoice = async (req, res) => {
 exports.getMarketerChildren = async (req, res) => {
   const marketerId = req.params.id;
 
-  const children = await User.find({ invitor: marketerId }).select(
-    "name email profileImg createdAt"
-  );
+  const teamMembers = await User.find({ invitor: marketerId })
+    .select("name email profileImg createdAt")
+    .lean();
 
-  if (children.length === 0) {
+  if (teamMembers.length === 0) {
     return res.status(404).json({ status: "failed", msg: "no data found" });
   }
+  //get orders for these children
+  const result = await filterTeamMembers(teamMembers);
+  if (_.isEmpty(result))
+    return res
+      .status(400)
+      .json({ status: "failed", msg: "no orders found for these teamMembers" });
 
-  return res.status(200).json({ status: "success", data: children });
+  const {
+    totalRegistrations,
+    totalSubscribers,
+    teamMembers1,
+    teamMembers2,
+    resaleCounter,
+  } = result;
+  //check filter if he want to get only the children who have sales
+  return res.status(200).json({
+    status: "success",
+    totalRegistrations,
+    totalSubscribers,
+    resaleCounter,
+    teamMembers1,
+    teamMembers2,
+  });
 };
 
 //---------------
@@ -509,3 +532,41 @@ exports.deleteUnUsed = async () => {
 
   console.log("Documents deleted successfully, except for specified members.");
 };
+const filterTeamMembers = async (teamMembers) => {
+  let resaleCounter = 0;
+  const usersIds = teamMembers.map((user) => user._id);
+  const orders = await Order.find({ user: { $in: usersIds } });
+  
+  if (orders.length === 0) return {};
+  //  1.1 - loop on orders and push each order to user.orders
+  orders.map((order) => {
+    if (order.isResale) resaleCounter++;
+    teamMembers.map((member) => {
+      if (member._id.toString() === order.user._id.toString()) {
+        if (!member.orders) member.orders = [];
+        member.orders.push(order);
+      }
+    });
+  });
+  const teamMembers1 = [];
+  const teamMembers2 = [];
+  teamMembers.map((member) => {
+    if (member.orders) teamMembers1.push(member);
+    else teamMembers2.push(member);
+  });
+
+  return {
+    totalRegistrations: teamMembers.length,
+    totalSubscribers: teamMembers1.length,
+    teamMembers1,
+    teamMembers2,
+    resaleCounter,
+  };
+};
+// what types of filter
+/**
+ * 1- the ones who have sales
+ * 2- the ones who don't have sales
+ *  2.1 - loop on orders and push each distinct order to user.orders
+ *  2.2 - filter users who don't have orders
+ */
