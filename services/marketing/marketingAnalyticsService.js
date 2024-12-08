@@ -4,7 +4,7 @@ const marketLog = require("../../models/MarketingModel");
 const ApiError = require("../../utils/apiError");
 const _ = require("lodash");
 //@desc > detect type of each order's item and return it's title
-const getItemDetails = (order, lang = "en") => {
+const getItemDetails = (order, lang) => {
   let itemTitle;
 
   if (order.course) {
@@ -25,6 +25,8 @@ const getItemDetails = (order, lang = "en") => {
 };
 /**
  * @description calculate percentage of each item has been sold in total sales since the marketer started
+ * @argument orders : array of orders
+ * @argument lang : language of the item title
  */
 exports.calculateSalesAnalytics = (orders, lang) => {
   const analytics = [];
@@ -36,7 +38,7 @@ exports.calculateSalesAnalytics = (orders, lang) => {
 
   orders.forEach((order) => {
     soldItem = getItemDetails(order, lang);
-    console.log(soldItem);
+ 
     if (soldItem.title in analyticsObject) {
       analyticsObject[soldItem.title].sales += order.totalOrderPrice;
     } else {
@@ -47,8 +49,7 @@ exports.calculateSalesAnalytics = (orders, lang) => {
     }
     totalSales += order.totalOrderPrice;
   });
-  console.log("ss");
-  console.log(analyticsObject);
+
   //calculate percentage of each item
   let percentage = 0;
   Object.keys(analyticsObject).forEach((key) => {
@@ -94,12 +95,12 @@ const getCurrentMonthSalesMoney = (orders) =>
 //the coming functions are for page1 => analytics
 exports.getTotalSalesAnalytics = async (req, res) => {
   try {
-    const lang = req.query.lang || "en";
+    const lang = req.locale;
     const marketerId = req.params.id || req.user._id;
     //get his users
     const users = await User.find({ invitor: marketerId }).select("_id");
     if (users.length === 0)
-      throw new ApiError(404, "No users found for this marketer");
+      throw new ApiError("No users found for this marketer", 404);
 
     const usersIds = users.map((user) => user._id);
     //get order of his users in this month and year
@@ -138,8 +139,6 @@ exports.getItemAnalytics = async (req, res, next) => {
     const startDate = toISOFormat(req.query.startDate); //ISO date format
     const endDate = toISOFormat(req.query.endDate); //ISO date format
 
-    console.log(startDate);
-    console.log(endDate);
     const marketerId = req.query.marketerId || req.user._id;
     const itemId = req.params.id;
 
@@ -242,7 +241,7 @@ const getOppositePeriodOrders = async (itemId, startDate, endDate) => {
 function toISOFormat(dateString) {
   // Parse the input date (MM/DD/YYYY)
   const [day, month, year] = dateString.split("/").map(Number);
-  console.log(day, month, year);
+ 
   // Create a Date object
   const date = new Date(Date.UTC(year, month - 1, day));
 

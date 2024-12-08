@@ -1,75 +1,10 @@
-const { check } = require("express-validator");
+const { check, query } = require("express-validator");
 const validatorMiddleware = require("../../middlewares/validatorMiddleware");
 const ApiError = require("../apiError");
 const User = require("../../models/userModel");
 const Analytic = require("../../models/analyticsModel");
-// exports.createArticalValidator = [
-//   check("title")
-//     .notEmpty()
-//     .withMessage("Artical title required")
-//     .isLength({ min: 2 })
-//     .withMessage("Artical title too short")
-//     .isLength({ max: 100 })
-//     .withMessage("Artical title too long"),
-//   check("description")
-//     .notEmpty()
-//     .withMessage("Artical description required")
-//     .isLength({ min: 10 })
-//     .withMessage("Artical description too short, should be at least 10 char"),
-//   check("content")
-//     .notEmpty()
-//     .withMessage("Artical content required")
-//     .isLength({ min: 10 })
-//     .withMessage("Artical content too short, should be at least 10 char"),
-//   check("videoUrl").isString().withMessage("videourl must be a string"),
-//   check("imageCover")
-//     .notEmpty()
-//     .withMessage("Blog image required")
-//     .isString()
-//     .withMessage("image must be a string"),
+const { getUserAsDoc } = require("../../services/userService");
 
-//   validatorMiddleware,
-// ];
-
-// exports.getOneArticalValidator = [
-//   check("id").isMongoId().withMessage("invalid id formate"),
-//   validatorMiddleware,
-// ];
-
-// exports.updateArticalValidator = [
-//   check("id").isMongoId().withMessage("Invalid artical id format"),
-//   check("title")
-//     .notEmpty()
-//     .withMessage("artical title required")
-//     .isLength({ min: 2 })
-//     .withMessage("artical title too short")
-//     .isLength({ max: 100 })
-//     .withMessage("artical title too long")
-//     .optional(),
-//   check("description")
-//     .notEmpty()
-//     .withMessage("artical description required")
-//     .isLength({ min: 10 })
-//     .withMessage("artical description too short, should be at least 10 char")
-//     .optional(),
-//   check("content")
-//     .optional()
-//     .notEmpty()
-//     .withMessage("Artical content required")
-//     .isLength({ min: 10 })
-//     .withMessage("Artical content too short, should be at least 10 char"),
-//   check("videoUrl")
-//     .isString()
-//     .withMessage("videourl must be a string")
-//     .optional(),
-//   check("imageCover")
-//     .notEmpty()
-//     .withMessage("Blog image required")
-//     .isString()
-//     .withMessage("image must be a string")
-//     .optional(),
-//   validatorMiddleware,
-// ];
 //------------------------------------------------
 exports.canMakeOne = async (req, res, next) => {
   if (!req.user.invitor) {
@@ -100,5 +35,48 @@ exports.isAuthorized = async (req, res, next) => {
     return next(new ApiError(`you are not authorized`, 401));
   }
 
+  return next();
+};
+//------------------------------------------------
+exports.analyticPerformanceValidator = [
+  check("id").isMongoId().withMessage("Invalid user id format"),
+  query("startDate")
+    .notEmpty()
+    .withMessage("startDate is required")
+    .custom((value) => {
+      const regex = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
+      if (!regex.test(value)) {
+        throw new Error("Invalid date format");
+      }
+      return true;
+    }),
+  query("endDate")
+    .notEmpty()
+    .withMessage("endDate is required")
+    .custom((value) => {
+      const regex = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
+      if (!regex.test(value)) {
+        throw new Error("Invalid date format");
+      }
+      return true;
+    }),
+  validatorMiddleware,
+];
+//------------------------------------------------
+exports.isRequestFromHisTrainer = async (req, res, next) => {
+  const user = await getUserAsDoc(
+    {
+      _id: req.params.id,
+    },
+    "_id invitor"
+  );
+  if (!user) {
+    const doc = "user";
+    return next(new ApiError(res.__("errors.Not-Found", { doc }), 401));
+  }
+  if (user.invitor.toString() !== req.user._id.toString()) {
+ 
+    return next(new ApiError(res.__("errors.Not-Authorized"), 401));
+  }
   return next();
 };

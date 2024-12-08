@@ -243,7 +243,7 @@ const updateHeadCommission = async (data) => {
   return "updated successfully";
 };
 //-----------------------------------------------------------------------------------------------------------------------//
-exports.getMarketLog = async (req, res) => {
+exports.getMarketLog = async (req, res, next) => {
   try {
     //1- extract the marketerId
     const marketerId = req.params.id || req.user._id;
@@ -258,7 +258,7 @@ exports.getMarketLog = async (req, res) => {
     // .populate("transactions.child", "name email profileImg"); //req.user._id
     //3- check existance
     if (!marketLog) {
-      throw new ApiError("No marketerLog found", 404);
+      throw new ApiError(res.__(`Not-Found`), 404);
     }
     //4- calculate the commission & wallet balance
     if (marketLog.commissions?.length !== 0) {
@@ -536,7 +536,7 @@ const filterTeamMembers = async (teamMembers) => {
   let resaleCounter = 0;
   const usersIds = teamMembers.map((user) => user._id);
   const orders = await Order.find({ user: { $in: usersIds } });
-  
+
   if (orders.length === 0) return {};
   //  1.1 - loop on orders and push each order to user.orders
   orders.map((order) => {

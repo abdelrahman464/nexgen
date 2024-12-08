@@ -1,6 +1,6 @@
 {
   "errors": {
-    "Not-Authorized": "غير مصرح لك بأداء هذا الإجراء",
+    "Not-Authorized": "غير مصرح لك بأداء هذا الإجراء {{action}}",
     "Duplicate": "موجود بالفعل",
     "Not-Found": "{{document}} غير موجود"
   }

@@ -88,3 +88,62 @@ exports.createOne = factory.createOne(Analytic);
 exports.updateOne = factory.updateOne(Analytic);
 //check if the user is the owner or marketer
 exports.deleteOne = factory.deleteOne(Analytic);
+
+//-------------------------------------------------
+/**
+ *
+ * @param {*} analytics
+ *
+ * @returns {passedDocs,failedDocs} the number of passed and failed documents
+ */
+function filterAnalyticsDocs(analytics) {
+  let passedDocs = 0;
+  let failedDocs = 0;
+  analytics.map((analytic) => {
+    if (analytic.isPassed) passedDocs += 1;
+    else failedDocs += 1;
+  });
+  return { passedDocs, failedDocs };
+}
+//---------------------------------------------------
+function toISOFormat(dateString) {
+  // Parse the input date (MM/DD/YYYY)
+  const [day, month, year] = dateString.split("/").map(Number);
+  // Create a Date object
+  const date = new Date(Date.UTC(year, month - 1, day));
+  // Convert to ISO format
+  // return date.toISOString();
+  return date;
+}
+//---------------------------------------------------
+
+
+exports.getAnalyticsPerformance = async (req, res, next) => {
+  let { startDate, endDate } = req.query;
+  const userId = req.params.id;
+  startDate = toISOFormat(startDate);
+  endDate = toISOFormat(endDate);
+
+  const analyticsCount = await Analytic.count({
+    user: userId,
+    isPassed: true,
+  });
+  if (analyticsCount === 0)
+    return next(new ApiError("No analytics found", 404));
+
+  const analyticsDocs = await Analytic.find({
+    user: userId,
+    createdAt: { $gte: startDate, $lte: endDate },
+  }).select("-__v -updatedAt");
+
+  const result = filterAnalyticsDocs(analyticsDocs, startDate, endDate);
+  //get analytics with the same period
+  return res.status(200).json({
+    status: "success",
+    totalAnalytics: analyticsCount,
+    passedDocs: result.passedDocs,
+    failedDocs: result.failedDocs,
+    analyticsDocs,
+  });
+};
+

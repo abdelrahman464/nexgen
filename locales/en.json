@@ -1,7 +1,36 @@
 {
   "errors": {
-    "Not-Authorized": "You are not authorized to perform this action",
-    "Duplicate": "already exists",
-    "Not-Found": "{{document}} not found"
+    "invalidAction": "Invalid action",
+    "transactionError": "Error during transaction",
+    "Not-Authorized": "you are not authorized to perform this action {{action}}",
+    "Not-Found": "{{doc}} not found"
+  },
+  "user": {
+    "alreadyFollowing": "You are already following this user",
+    "notFollowing": "You are not following this user",
+    "cannotFollowSelf": "You cannot follow yourself",
+    "cannotUnfollowSelf": "You cannot unfollow yourself",
+    "followed": "You followed this user",
+    "unfollowed": "You unfollowed this user",
+    "idVerified": "Congratulations! Your ID documents have been approved",
+    "idRejected": "Your ID documents have been rejected, please upload a valid one",
+    "idAlreadyVerified": "You have already verified your ID document",
+    "idUploaded": "ID document uploaded successfully",
+    "notActive": "You are not active",
+    "passwordChanged": "User recently changed their password, please login again",
+    "loginRequired": "You are not logged in, please login first"
+  },
+  "notification": {
+    "follow": "{{name}} followed you",
+    "idVerification": {
+      "verified": "Your ID documents have been approved",
+      "rejected": "Your ID documents have been rejected, please upload a valid one"
+    }
+  },
+  "success": {
+    "default": "Success",
+    "idUploaded": "ID document uploaded successfully",
+    "notificationBellActivated": "Notification bell activated",
+    "notificationBellDeactivated": "Notification bell deactivated"
   }
 }

@@ -8,7 +8,7 @@ exports.updateOne = (Model) => async (req, res, next) => {
     });
     if (!document) {
       return next(
-        new ApiError(`No document For this id ${req.params.id}`, 404)
+        new ApiError(res.__("errors.Not-Found", { document: "document" }), 404)
       );
     }
     res.status(200).json({ status: `updated successfully`, data: document });
