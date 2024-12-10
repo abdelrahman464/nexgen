@@ -99,10 +99,7 @@ exports.createFilterObj = (examType) => async (req, res, next) => {
   next();
 };
 
-exports.sendLoggedUserIdToParams = async (req, res, next) => {
-  req.params.userId = req.user._id;
-  next();
-};
+
 //Basic CRUD------------------------------------------------------------
 exports.createExam = asyncHandler(async (req, res, next) => {
   const { lesson, course, model, passingScore, type } = req.body;

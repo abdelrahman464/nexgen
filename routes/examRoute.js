@@ -14,7 +14,6 @@ const {
   getExam,
   createFilterObj,
   userScores,
-  sendLoggedUserIdToParams,
   getCourseProgress,
   getLessonPerformance,
   getCoursePerformance,
@@ -67,14 +66,7 @@ router
   .route('/userScore/:courseId/:userId')
   .get(authService.protect, authService.allowedTo('admin', 'user'), userScores);
 
-router
-  .route('/myScore/:courseId')
-  .get(
-    authService.protect,
-    authService.allowedTo('user', 'admin'),
-    sendLoggedUserIdToParams,
-    userScores,
-  );
+
 
 router
   .route('/courses/:courseId')
