@@ -16,6 +16,12 @@ router.get(
   authServices.allowedTo("admin"),
   marketingAnalyticsService.getItemAnalytics
 );
+router.get(
+  "/getInvitationLinkAnalytics/:id", //marketer id
+  authServices.protect,
+  authServices.allowedTo("user", "admin"),
+  marketingAnalyticsService.getInvitationLinkAnalytics
+);
 router.put(
   "/incrementSignUpClicks/:id", //marketing id
   marketingAnalyticsService.incrementSignUpClicks

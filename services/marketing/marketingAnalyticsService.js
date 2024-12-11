@@ -1,6 +1,7 @@
 const User = require("../../models/userModel");
 const Order = require("../../models/orderModel");
 const marketLog = require("../../models/MarketingModel");
+const InvitationLinkAnalytics = require("../../models/invitationLinkAnalyticsModel");
 const ApiError = require("../../utils/apiError");
 const _ = require("lodash");
 //@desc > detect type of each order's item and return it's title
@@ -38,7 +39,7 @@ exports.calculateSalesAnalytics = (orders, lang) => {
 
   orders.forEach((order) => {
     soldItem = getItemDetails(order, lang);
- 
+
     if (soldItem.title in analyticsObject) {
       analyticsObject[soldItem.title].sales += order.totalOrderPrice;
     } else {
@@ -241,7 +242,7 @@ const getOppositePeriodOrders = async (itemId, startDate, endDate) => {
 function toISOFormat(dateString) {
   // Parse the input date (MM/DD/YYYY)
   const [day, month, year] = dateString.split("/").map(Number);
- 
+
   // Create a Date object
   const date = new Date(Date.UTC(year, month - 1, day));
 
@@ -253,46 +254,61 @@ function toISOFormat(dateString) {
 //clicks
 exports.incrementSignUpClicks = async (req, res) => {
   try {
-    const months = [
-      "January",
-      "February",
-      "March",
-      "April",
-      "May",
-      "June",
-      "July",
-      "August",
-      "September",
-      "October",
-      "November",
-      "December",
-    ];
-    const month = new Date().getMonth();
-    const year = new Date().getFullYear();
-
     const marketerId = req.params.id;
 
-    const marketLogDoc = await marketLog.findOne({ marketer: marketerId });
-    if (!marketLogDoc) {
-      return res.status(404).json({
-        status: "failed",
-        msg: "No marketing logs found for this marketer",
-      });
-    }
-    const clicks = marketLogDoc.clicks;
+    const month = new Date().getMonth() + 1;
+    const year = new Date().getFullYear();
 
-    //check if this month and year already exists
-    const monthIndex = clicks?.findIndex(
-      (click) => click.month === months[month] && click.year === year
-    );
-    if (monthIndex !== -1) {
-      clicks[monthIndex].count += 1;
+    const invitationLinkAnalyticsDoc = await InvitationLinkAnalytics.findOne({
+      marketer: marketerId,
+    });
+    if (!invitationLinkAnalyticsDoc) {
+      //create new document
+      await InvitationLinkAnalytics.create({
+        marketer: marketerId,
+        year,
+        month,
+        clicksCount: 1,
+      });
     } else {
-      clicks.push({ month: months[month], year, count: 1 });
+      //increment the count
+      invitationLinkAnalyticsDoc.clicksCount += 1;
+      await invitationLinkAnalyticsDoc.save();
     }
-    await marketLogDoc.save();
-    return res.status(200).json({ status: "success" });
+    return res
+      .status(200)
+      .json({ status: "success", invitationLinkAnalyticsDoc });
   } catch (err) {
     res.status(500).json({ status: "failed", error: err.message });
+  }
+};
+//------------------------------------------------
+exports.getInvitationLinkAnalytics = async (req, res) => {
+  try {
+    const marketerId = req.params.id;
+    const month = req.query.month || new Date().getMonth() + 1;
+    const year = req.query.year || new Date().getFullYear();
+
+    const clicks = await InvitationLinkAnalytics.findOne({
+      marketer: marketerId,
+      month,
+      year,
+    });
+    //get registration count
+    const startOfMonth = new Date(year, month - 1, 1); // Adjust month - 1 for JavaScript Date
+    const startOfNextMonth = new Date(year, month, 1); // Automatically handles transitions to the next year
+
+    const registrationCounters = await User.countDocuments({
+      invitor: marketerId,
+      createdAt: {
+        $gte: startOfMonth,
+        $lt: startOfNextMonth,
+      },
+    });
+    return res
+      .status(200)
+      .json({ status: "success", registrationCounters, clicks });
+  } catch (error) {
+    console.log(error.message);
   }
 };
