@@ -838,3 +838,8 @@ exports.uploadIdDocument = async (req, res, next) => {
     message: "ID document uploaded successfully",
   });
 };
+//------------------------------------
+exports.getUsersByFilter = async (filter) => {
+  const users = await User.find(filter);
+  return users;
+};

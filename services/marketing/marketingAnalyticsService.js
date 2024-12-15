@@ -3,6 +3,7 @@ const Order = require("../../models/orderModel");
 const marketLog = require("../../models/MarketingModel");
 const InvitationLinkAnalytics = require("../../models/invitationLinkAnalyticsModel");
 const ApiError = require("../../utils/apiError");
+const { getUsersByFilter } = require("../../services/userService");
 const _ = require("lodash");
 //@desc > detect type of each order's item and return it's title
 const getItemDetails = (order, lang) => {
@@ -255,6 +256,7 @@ function toISOFormat(dateString) {
 exports.incrementSignUpClicks = async (req, res) => {
   try {
     const marketerId = req.params.id;
+    const invitationKey = req.query.invitationKey || "defaultKey";
 
     const month = new Date().getMonth() + 1;
     const year = new Date().getFullYear();
@@ -268,11 +270,23 @@ exports.incrementSignUpClicks = async (req, res) => {
         marketer: marketerId,
         year,
         month,
-        clicksCount: 1,
+        clicksDetails: [{ invitationKey, clicks: 1 }],
       });
     } else {
       //increment the count
-      invitationLinkAnalyticsDoc.clicksCount += 1;
+      let flag = false;
+      invitationLinkAnalyticsDoc.clicksDetails.forEach((click) => {
+        if (click.invitationKey === invitationKey) {
+          click.clicks += 1;
+          flag = true;
+        }
+      });
+      if (!flag) {
+        invitationLinkAnalyticsDoc.clicksDetails.push({
+          invitationKey,
+          clicks: 1,
+        });
+      }
       await invitationLinkAnalyticsDoc.save();
     }
     return res
@@ -310,5 +324,26 @@ exports.getInvitationLinkAnalytics = async (req, res) => {
       .json({ status: "success", registrationCounters, clicks });
   } catch (error) {
     console.log(error.message);
+  }
+};
+//---------------------------------------
+//-----
+exports.getInvitationKeySignUps = async (req, res) => {
+  try {
+    const marketerId = req.params.id;
+    const invitationKey = req.query.invitationKey;
+    const users = await getUsersByFilter({
+      invitor: marketerId,
+      invitationKey,
+    });
+    if (users.length === 0) {
+      return res.status(404).json({ status: "failed", msg: "no data found" });
+    }
+    return res
+      .status(200)
+      .json({ status: "success", totalUsers: users.length, users });
+  } catch (error) {
+    const statusCode = error instanceof ApiError ? error.statusCode : 500;
+    return res.status(statusCode).json({ error: error.message });
   }
 };

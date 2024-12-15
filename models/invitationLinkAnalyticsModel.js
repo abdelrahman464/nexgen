@@ -8,7 +8,12 @@ const invitationLinkAnalyticsSchema = new mongoose.Schema(
     },
     year: Number,
     month: Number,
-    clicksCount: Number,
+    clicksDetails: [
+      {
+        invitationKey: String,
+        clicks: Number,
+      },
+    ],
   },
   { timestamps: true }
 );

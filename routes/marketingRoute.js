@@ -7,6 +7,7 @@ const {
   getMarketerChildren,
   createInvoice,
   setPaymentDetails,
+  modifyInvitationKeys,
 } = require("../services/marketing/marketingService");
 
 const {
@@ -37,6 +38,13 @@ router.get(
   authServices.protect,
   authServices.allowedTo("user", "admin"),
   getMarketerChildren
+);
+
+router.put(
+  "/modifyInvitationKeys/:id", //id is the marketer id
+  authServices.protect,
+  authServices.allowedTo("user", "admin"),
+  modifyInvitationKeys
 );
 router.put(
   "/setPaymentDetails/:id", //id is the marketer id

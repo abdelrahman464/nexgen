@@ -17,6 +17,7 @@ const MarketingLogsSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    invitationKeys: [String],
     paymentDetails: {
       paymentMethod: String,
       receiverAcc: String,

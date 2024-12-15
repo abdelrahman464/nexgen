@@ -6,7 +6,6 @@ const Order = require("../../models/orderModel");
 const InstructorProfit = require("../../models/instructorProfitsModel");
 const { createMarketerGroupChat } = require("../ChatServices");
 const { addMarketerToLeaderBoard } = require("../leaderBoardService");
-
 const InstructorProfitService = require("../instructorProfitsService");
 const ApiError = require("../../utils/apiError");
 const _ = require("lodash");
@@ -570,3 +569,31 @@ const filterTeamMembers = async (teamMembers) => {
  *  2.1 - loop on orders and push each distinct order to user.orders
  *  2.2 - filter users who don't have orders
  */
+//---------------------------
+exports.modifyInvitationKeys = async (req, res) => {
+  try {
+    console.log("modifyInvitationKeys");
+    const { option } = req.query;
+    const marketLog = await MarketingLog.findOne({
+      marketer: req.params.id,
+    }).select("_id invitationKeys");
+    if (!marketLog) throw new ApiError("No marketerLog found", 404);
+
+    if (!option || option === "add") {
+      const { invitationKeys } = req.body;
+      marketLog.invitationKeys.push(...invitationKeys);
+      marketLog.invitationKeys = _.uniq(marketLog.invitationKeys);
+    }
+    if (option === "remove") {
+      const { invitationKeys } = req.body;
+      marketLog.invitationKeys = marketLog.invitationKeys.filter(
+        (key) => !invitationKeys.includes(key)
+      );
+    }
+    await marketLog.save();
+    return res.status(200).json({ status: "success", msg: "keys modified" });
+  } catch (error) {
+    console.log("error from modifyInvitationKeys: ", error.message);
+    return res.status(500).json({ error: error.message });
+  }
+};
