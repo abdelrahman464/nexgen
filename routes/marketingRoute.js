@@ -13,6 +13,7 @@ const {
 const {
   checkAuthority,
   createInvoiceValidator,
+  modifyInvitationKeysValidator,
 } = require("../utils/validators/marketingValidator");
 
 const router = express.Router();
@@ -44,6 +45,7 @@ router.put(
   "/modifyInvitationKeys/:id", //id is the marketer id
   authServices.protect,
   authServices.allowedTo("user", "admin"),
+  modifyInvitationKeysValidator,
   modifyInvitationKeys
 );
 router.put(

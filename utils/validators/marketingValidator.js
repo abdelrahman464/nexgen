@@ -48,3 +48,20 @@ exports.createInvoiceValidator = [
   //catch error
   validatorMiddleware,
 ];
+
+//------------------------------------
+exports.modifyInvitationKeysValidator = [
+  //rules
+  query("option")
+    .optional()
+    .isIn(["add", "remove"])
+    .withMessage("option must be add or remove"),
+  check("id").isMongoId().withMessage("Invalid marketer id format"),
+  check("keys")
+    .notEmpty()
+    .withMessage("Keys are required")
+    .isArray()
+    .withMessage("Keys must be an array"),
+  //catch error
+  validatorMiddleware,
+];

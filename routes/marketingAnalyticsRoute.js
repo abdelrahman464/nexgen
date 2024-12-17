@@ -17,19 +17,14 @@ router.get(
   marketingAnalyticsService.getItemAnalytics
 );
 router.get(
-  "/getInvitationLinkAnalytics/:id", //marketer id
+  "/getInvitationsAnalytics/:marketerId", //marketer id
   authServices.protect,
   authServices.allowedTo("user", "admin"),
-  marketingAnalyticsService.getInvitationLinkAnalytics
-);
-router.get(
-  "/getInvitationKeySignUps/:id", //marketer id
-  authServices.protect,
-  authServices.allowedTo("user", "admin"),
-  marketingAnalyticsService.getInvitationKeySignUps
+  //validation layer on [marketerId , month ,year ,invitationKey]
+  marketingAnalyticsService.getInvitationsAnalytics
 );
 router.put(
-  "/incrementSignUpClicks/:id", //marketing id
+  "/incrementSignUpClicks/:marketerId", //marketing id
   marketingAnalyticsService.incrementSignUpClicks
 );
 

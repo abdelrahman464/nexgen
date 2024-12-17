@@ -12,6 +12,10 @@ const AnalyticSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    lesson: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Lesson",
+    },
     content: {
       type: String,
       required: true,

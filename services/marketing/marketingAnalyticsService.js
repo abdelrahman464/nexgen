@@ -297,9 +297,10 @@ exports.incrementSignUpClicks = async (req, res) => {
   }
 };
 //------------------------------------------------
-exports.getInvitationLinkAnalytics = async (req, res) => {
+exports.getInvitationsAnalytics = async (req, res, next) => {
   try {
-    const marketerId = req.params.id;
+    const { marketerId } = req.params;
+    const invitationKey = req.query.invitationKey;
     const month = req.query.month || new Date().getMonth() + 1;
     const year = req.query.year || new Date().getFullYear();
 
@@ -307,43 +308,32 @@ exports.getInvitationLinkAnalytics = async (req, res) => {
       marketer: marketerId,
       month,
       year,
-    });
+    }).lean();
+    if (invitationKey) {
+      clicks.clicksDetails = clicks.clicksDetails?.find(
+        (click) => click.invitationKey === invitationKey
+      );
+    }
     //get registration count
     const startOfMonth = new Date(year, month - 1, 1); // Adjust month - 1 for JavaScript Date
     const startOfNextMonth = new Date(year, month, 1); // Automatically handles transitions to the next year
 
-    const registrationCounters = await User.countDocuments({
+    const registeredUsers = await getUsersByFilter({
       invitor: marketerId,
+      invitationKey,
       createdAt: {
         $gte: startOfMonth,
         $lt: startOfNextMonth,
       },
     });
-    return res
-      .status(200)
-      .json({ status: "success", registrationCounters, clicks });
+    return res.status(200).json({
+      status: "success",
+      registeredUsersCounter: registeredUsers.length,
+      registeredUsers,
+      clicks,
+    });
   } catch (error) {
     console.log(error.message);
-  }
-};
-//---------------------------------------
-//-----
-exports.getInvitationKeySignUps = async (req, res) => {
-  try {
-    const marketerId = req.params.id;
-    const invitationKey = req.query.invitationKey;
-    const users = await getUsersByFilter({
-      invitor: marketerId,
-      invitationKey,
-    });
-    if (users.length === 0) {
-      return res.status(404).json({ status: "failed", msg: "no data found" });
-    }
-    return res
-      .status(200)
-      .json({ status: "success", totalUsers: users.length, users });
-  } catch (error) {
-    const statusCode = error instanceof ApiError ? error.statusCode : 500;
-    return res.status(statusCode).json({ error: error.message });
+    next(new ApiError(500, error.message));
   }
 };

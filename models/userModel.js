@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema(
     },
     invitationKey: {
       type: String,
-      default: "not specified",
+      default: "defaultKey",
     },
     startMarketing: {
       type: Boolean,
