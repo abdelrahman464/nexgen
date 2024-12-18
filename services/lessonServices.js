@@ -322,16 +322,16 @@ async function getVideoData(videoId, user) {
   // Custom watermark configuration
   const payload = {
     ttl: 300, // OTP valid for 5 minutes
-    whitelisthref: 'nexgen-academy.com',
+    // whitelisthref: 'nexgen-academy.com',
     userId: user._id,
     annotate: JSON.stringify([
       {
         type: 'rtext',
         text: `${user._id} - ${user.email}`,
         alpha: '0.60',
-        color: '0xFFFFFF',
+        color: '0xFF0000',
         size: '15',
-        interval: '5000',
+        interval: '3000',
         x: '10',
         y: '10',
       },
@@ -348,8 +348,8 @@ async function getVideoData(videoId, user) {
     });
     return response.data;
   } catch (error) {
-    console.error('Error fetching video data:', error);
-    throw error;
+    console.error('Error fetching video data');
+    // throw error;
   }
 }
 // Get a specific lesson by ID
@@ -358,11 +358,15 @@ exports.getLessonById = asyncHandler(async (req, res, next) => {
 
   try {
     const lesson = await Lesson.findById(id);
-
     if (!lesson) {
       // If no lesson is found with the given ID, send a 404 response
       return next(new ApiError('No lesson found with that ID', 404));
     }
+
+    const localizedLesson = Lesson.schema.methods.toJSONLocalizedOnly(
+      lesson,
+      req.locale,
+    );
 
     const videoData = await getVideoData(lesson.videoUrl, {
       _id: req.user._id,
@@ -371,7 +375,10 @@ exports.getLessonById = asyncHandler(async (req, res, next) => {
 
     return res
       .status(200)
-      .json({ status: 'success', data: { lesson, videoData } });
+      .json({
+        status: 'success',
+        data: { lesson: localizedLesson, videoData },
+      });
   } catch (err) {
     console.error(err);
     return next(new ApiError('No lesson found with that ID', 404));

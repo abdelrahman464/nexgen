@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const factory = require('../handllerFactory');
 const Order = require('../../models/orderModel');
 const Course = require('../../models/courseModel');
@@ -11,7 +12,7 @@ const CourseProgress = require('../../models/courseProgressModel');
 const { calculateProfits } = require('../marketing/marketingService');
 const { availUserToReview } = require('../userService');
 const { sendEmail } = require('../../utils/sendEmail');
-const { generateOrderPDF } = require('../../utils/generatePdf');
+const { PDFGenerator } = require('../../utils/generatePdf');
 
 const filterOrders = async (req, res, next) => {
   const filterObject = {};
@@ -179,19 +180,6 @@ const createCourseOrderHandler = async (courseId, email, price, method) => {
       { path: 'package', select: 'title' },
     ]);
 
-    // Generate the PDF
-    let pdfPath = await generateOrderPDF(order);
-    pdfPath = pdfPath.replace('uploads/orders/', '');
-    await Notification.create({
-      user: user._id,
-      message: {
-        en: `You have successfully purchased the course ${course.title.en} click here to download the invoice`,
-        ar: `لقد قمت بشراء الدورة ${course.title.ar} بنجاح اضغط هنا لتحميل الفاتورة`,
-      },
-      file: pdfPath,
-      type: 'order',
-    });
-
     await createCourseProgress(user._id, course._id);
     await addUserToGroupChatAndNotify(user._id, course._id);
 
@@ -210,6 +198,18 @@ const createCourseOrderHandler = async (courseId, email, price, method) => {
       date: order.createdAt,
       item: `Course: ${course.title}`,
       instructorId: course.instructorPercentage > 0 ? course.instructor : null,
+    });
+    // Generate the PDF
+    let pdfPath = await PDFGenerator.generateOrderPDF(order);
+    pdfPath = pdfPath.replace('uploads/orders/', '');
+    await Notification.create({
+      user: user._id,
+      message: {
+        en: `You have successfully purchased the course ${course.title.en} click here to download the invoice`,
+        ar: `لقد قمت بشراء الدورة ${course.title.ar} بنجاح اضغط هنا لتحميل الفاتورة`,
+      },
+      file: pdfPath,
+      type: 'order',
     });
 
     //  Send the email
@@ -300,6 +300,312 @@ const createCoursePackageOrderHandler = async (
   });
 };
 
+// Get order statistics
+// Route GET /api/v1/orders/statistics
+const getOrderStatistics = async (req, res) => {
+  try {
+    // Build match object based on product type filter
+    const matchStage = {};
+    if (req.query.courseId) {
+      matchStage.course = mongoose.Types.ObjectId(req.query.courseId);
+    } else if (req.query.packageId) {
+      matchStage.package = mongoose.Types.ObjectId(req.query.packageId);
+    } else if (req.query.coursePackageId) {
+      matchStage.coursePackage = mongoose.Types.ObjectId(
+        req.query.coursePackageId,
+      );
+    }
+
+    // 1. Overall Statistics with optional filter
+    const overallStats = await Order.aggregate([
+      {
+        $match: matchStage,
+      },
+      {
+        $group: {
+          _id: null,
+          totalOrders: { $sum: 1 },
+          totalRevenue: { $sum: '$totalOrderPrice' },
+          paidOrders: {
+            $sum: { $cond: ['$isPaid', 1, 0] },
+          },
+          unpaidOrders: {
+            $sum: { $cond: ['$isPaid', 0, 1] },
+          },
+          resaleOrders: {
+            $sum: { $cond: ['$isResale', 1, 0] },
+          },
+          averageOrderValue: { $avg: '$totalOrderPrice' },
+        },
+      },
+    ]);
+
+    // 2. Monthly Statistics with optional filter
+    const monthlyStats = await Order.aggregate([
+      {
+        $match: {
+          paidAt: { $ne: null },
+          ...matchStage,
+        },
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$paidAt' },
+            month: { $month: '$paidAt' },
+          },
+          orders: { $sum: 1 },
+          revenue: { $sum: '$totalOrderPrice' },
+          paidOrders: {
+            $sum: { $cond: ['$isPaid', 1, 0] },
+          },
+          resaleOrders: {
+            $sum: { $cond: ['$isResale', 1, 0] },
+          },
+          averageOrderValue: { $avg: '$totalOrderPrice' },
+        },
+      },
+      {
+        $sort: { '_id.year': -1, '_id.month': -1 },
+      },
+    ]);
+
+    // 3. Payment Methods Statistics with optional filter
+    const paymentMethodStats = await Order.aggregate([
+      {
+        $match: matchStage,
+      },
+      {
+        $group: {
+          _id: '$paymentMethodType',
+          count: { $sum: 1 },
+          revenue: { $sum: '$totalOrderPrice' },
+        },
+      },
+    ]);
+
+    // 4. Daily Statistics for current month with optional filter
+    const currentDate = new Date();
+    const startOfMonth = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      1,
+    );
+    const endOfMonth = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth() + 1,
+      0,
+    );
+
+    const dailyStats = await Order.aggregate([
+      {
+        $match: {
+          paidAt: {
+            $gte: startOfMonth,
+            $lte: endOfMonth,
+          },
+          ...matchStage,
+        },
+      },
+      {
+        $group: {
+          _id: { $dayOfMonth: '$paidAt' },
+          orders: { $sum: 1 },
+          revenue: { $sum: '$totalOrderPrice' },
+        },
+      },
+      {
+        $sort: { _id: 1 },
+      },
+    ]);
+
+    // 5. Recent Orders with optional filter
+    const recentOrders = await Order.find(matchStage)
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate('user', 'name email')
+      .populate('course', 'title')
+      .populate('package', 'title')
+      .populate('coursePackage', 'title');
+
+    // 6. Calculate Growth Rates
+    // Using the already declared currentDate from above
+    const currentMonth = currentDate.getMonth() + 1; // Adding 1 because getMonth() is 0-based
+    const currentYear = currentDate.getFullYear();
+
+    // Find current month's data
+    const currentMonthData = monthlyStats.find(
+      (stat) =>
+        stat._id.month === currentMonth && stat._id.year === currentYear,
+    ) || { orders: 0, revenue: 0 };
+
+    // Calculate previous month considering year transition
+    let previousMonth = currentMonth - 1;
+    let previousYear = currentYear;
+    if (previousMonth === 0) {
+      previousMonth = 12;
+      previousYear = currentYear - 1;
+    }
+
+    // Find previous month's data
+    const previousMonthData = monthlyStats.find(
+      (stat) =>
+        stat._id.month === previousMonth && stat._id.year === previousYear,
+    ) || { orders: 0, revenue: 0 };
+
+    const growthRate = {
+      orderGrowth: `${
+        // eslint-disable-next-line no-nested-ternary
+        previousMonthData.orders === 0
+          ? currentMonthData.orders > 0
+            ? 100
+            : 0
+          : (
+              ((currentMonthData.orders - previousMonthData.orders) /
+                previousMonthData.orders) *
+              100
+            ).toFixed(1)
+      }%`,
+      revenueGrowth: `${
+        // eslint-disable-next-line no-nested-ternary
+        previousMonthData.revenue === 0
+          ? currentMonthData.revenue > 0
+            ? 100
+            : 0
+          : (
+              ((currentMonthData.revenue - previousMonthData.revenue) /
+                previousMonthData.revenue) *
+              100
+            ).toFixed(1)
+      }%`,
+    };
+
+    // 7. Get Product Details if filter is applied
+    let productDetails = null;
+    if (req.query.courseId) {
+      productDetails = await Course.findById(req.query.courseId).select(
+        'title',
+      );
+    } else if (req.query.packageId) {
+      productDetails = await Package.findById(req.query.packageId).select(
+        'title',
+      );
+    } else if (req.query.coursePackageId) {
+      productDetails = await CoursePackage.findById(
+        req.query.coursePackageId,
+      ).select('title');
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        productDetails,
+        overview: overallStats[0],
+        monthlyStats,
+        paymentMethods: paymentMethodStats,
+        dailyStats,
+        recentOrders,
+        growthRate, //monthly growth rate
+      },
+    });
+  } catch (error) {
+    res.status(400).json({
+      status: 'fail',
+      message: error.message,
+    });
+  }
+};
+
+// Get orders by specific month with optional product filter
+const getOrdersByMonth = async (req, res) => {
+  try {
+    const { month, year } = req.query;
+
+    if (!month || !year) {
+      throw new Error('Please provide both month and year');
+    }
+
+    // Build match object based on product type filter
+    const matchStage = {};
+    if (req.query.courseId) {
+      matchStage.course = mongoose.Types.ObjectId(req.query.courseId);
+    } else if (req.query.packageId) {
+      matchStage.package = mongoose.Types.ObjectId(req.query.packageId);
+    } else if (req.query.coursePackageId) {
+      matchStage.coursePackage = mongoose.Types.ObjectId(
+        req.query.coursePackageId,
+      );
+    }
+
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+
+    const orders = await Order.find({
+      paidAt: {
+        $gte: startDate,
+        $lte: endDate,
+      },
+      ...matchStage,
+    }).sort({ paidAt: -1 });
+
+    const stats = await Order.aggregate([
+      {
+        $match: {
+          paidAt: {
+            $gte: startDate,
+            $lte: endDate,
+          },
+          ...matchStage,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalOrders: { $sum: 1 },
+          totalRevenue: { $sum: '$totalOrderPrice' },
+          avgOrderValue: { $avg: '$totalOrderPrice' },
+          paidOrders: {
+            $sum: { $cond: ['$isPaid', 1, 0] },
+          },
+          resaleOrders: {
+            $sum: { $cond: ['$isResale', 1, 0] },
+          },
+        },
+      },
+    ]);
+
+    // Get Product Details if filter is applied
+    let productDetails = null;
+    if (req.query.courseId) {
+      productDetails = await Course.findById(req.query.courseId).select(
+        'title',
+      );
+    } else if (req.query.packageId) {
+      productDetails = await Package.findById(req.query.packageId).select(
+        'title',
+      );
+    } else if (req.query.coursePackageId) {
+      productDetails = await CoursePackage.findById(
+        req.query.coursePackageId,
+      ).select('title');
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        productDetails,
+        monthStats: stats[0] || null,
+        orders,
+      },
+    });
+  } catch (error) {
+    res.status(400).json({
+      status: 'fail',
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   createCourseOrderHandler,
   createPackageOrderHandler,
@@ -308,4 +614,6 @@ module.exports = {
   findAllOrders,
   findSpecificOrder,
   checkExistingPaidOrder,
+  getOrderStatistics,
+  getOrdersByMonth,
 };

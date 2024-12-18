@@ -71,7 +71,7 @@ exports.updateUserProgress = async (
   score,
   wrongAnswers,
 ) =>
-  await CourseProgress.findOneAndUpdate(
+  (await CourseProgress.findOneAndUpdate(
     { user: userId, course: courseId },
     {
       $push: {
@@ -86,14 +86,17 @@ exports.updateUserProgress = async (
       },
     },
     { new: true, upsert: false },
-  );
+  ));
 
 // Handle success or failure response
 exports.handleExamResponse = (res, passed, score, totalScore) =>
   res.status(200).json({
-    status: `${passed ? 'Congrats' : 'unfortunately'} you got ${score} out of ${totalScore}, ${
-      passed ? 'You have passed the exam.' : 'You have not passed the exam.'
-    }`,
+    status: 'success',
+    data: {
+      passed,
+      score,
+      totalScore,
+    },
   });
 
 /******************************************************************** */

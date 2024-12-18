@@ -10,17 +10,20 @@ const {
   findSpecificOrder,
   findAllOrders,
   filterOrders,
+  getOrderStatistics,
+  getOrdersByMonth,
   // createCourseOrder,
   // createCoursePackageOrder,
   // createPackageOrder,
 } = require('../services/orders/OrderService');
 // ---------------------  Cryptomus  ---------------------
 const {
-  courseCheckoutSessionCryptomus,
-  coursePackageCheckoutSessionCryptomus,
-  packageCheckoutSessionCryptomus,
-  cryptomusWebhook,
-} = require('../services/orders/cryptomus');
+  coursePackageCheckoutSessionPlisio,
+  courseCheckoutSessionPlisio,
+  packageCheckoutSessionPlisio,
+  plisioWebhook,
+  plisioPaymentCallback
+} = require('../services/orders/plisio');
 //-----------------------Lahza---------------------------
 const {
   courseCheckoutSessionLahza,
@@ -68,6 +71,18 @@ router
     filterOrders,
     findAllOrders,
   );
+router.get(
+  '/statistics',
+  authServices.protect,
+  authServices.allowedTo('admin'),
+  getOrderStatistics,
+);
+router.get(
+  '/byMonth',
+  authServices.protect,
+  authServices.allowedTo('admin'),
+  getOrdersByMonth,
+);
 router
   .route('/:id')
   .get(
@@ -75,32 +90,33 @@ router
     authServices.allowedTo('admin', 'user'),
     findSpecificOrder,
   );
-//--------------------Cryptomus----------------
+//--------------------Plisio----------------
+router.post('/plisio/payment/callback', plisioPaymentCallback);
 router.put(
-  '/cryptomus/course-checkout/:courseId',
+  '/plisio/courseCheckout/:courseId',
   authServices.protect,
   authServices.allowedTo('user', 'admin'),
   checkExistingPaidOrder,
-  courseCheckoutSessionCryptomus,
+  courseCheckoutSessionPlisio,
 );
 router.put(
-  '/cryptomus/course-package-checkout/:coursePackageId',
+  '/plisio/coursePackageCheckout/:coursePackageId',
   authServices.protect,
   authServices.allowedTo('user', 'admin'),
   checkExistingPaidOrder,
-  coursePackageCheckoutSessionCryptomus,
+  coursePackageCheckoutSessionPlisio,
 );
 router.put(
-  '/cryptomus/package-checkout/:packageId',
+  '/plisio/packageCheckout/:packageId',
   authServices.protect,
   authServices.allowedTo('user', 'admin'),
   checkExistingPaidOrder,
-  packageCheckoutSessionCryptomus,
+  packageCheckoutSessionPlisio,
 );
 router.post(
-  '/webhook/cryptomus',
+  '/webhook/plisio',
   express.raw({ type: 'application/json' }),
-  cryptomusWebhook,
+  plisioWebhook,
 );
 //-----------------LAHZA-----------------
 router.get('/lahza/payment/callback', LahzaPaymentCallback);
