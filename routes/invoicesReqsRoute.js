@@ -22,7 +22,7 @@ router
   .get(
     authServices.protect,
     authServices.allowedTo("user", "admin"),
-    checkMongoId,
+    checkMongoId("id"),
     getRequestedInvoice
   );
 router

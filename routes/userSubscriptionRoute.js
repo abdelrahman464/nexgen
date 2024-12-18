@@ -20,7 +20,7 @@ router
   .post(
     authServices.protect,
     authServices.allowedTo("admin"),
-    checkMongoId,
+    checkMongoId("id"),
     userSubscriptionService.AddsubscriberToCollection
   );
 

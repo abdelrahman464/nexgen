@@ -28,7 +28,7 @@ router.get(
   '/courseLessons/:id',
   authServices.protect,
   authServices.allowedTo('user', 'admin'),
-  checkMongoId,
+  checkMongoId("id"),
   checkCourseAccess,
   getCourseLessons,
 );
@@ -36,7 +36,7 @@ router.get(
   '/sectionLessons/:id/:sectionId',
   authServices.protect,
   authServices.allowedTo('user', 'admin'),
-  checkMongoId,
+  checkMongoId("id"),
   checkCourseAccess,
   getSectionLessons,
 );
@@ -53,7 +53,7 @@ router.get(
   '/:id',
   authServices.protect,
   authServices.allowedTo('user', 'admin'),
-  checkMongoId,
+  checkMongoId("id"),
   checkLessonAccess,
   getLessonById,
 );
@@ -76,7 +76,7 @@ router.put(
   authServices.allowedTo('admin'),
   uploadFiles,
   resizeFiles,
-  checkMongoId,
+  checkMongoId("id"),
   updateLessonValidator,
   updateLesson,
 );
@@ -86,7 +86,7 @@ router.delete(
   '/:id',
   authServices.protect,
   authServices.allowedTo('admin'),
-  checkMongoId,
+  checkMongoId("id"),
   deleteLesson,
 );
 

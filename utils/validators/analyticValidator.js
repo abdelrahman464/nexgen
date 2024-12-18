@@ -6,18 +6,24 @@ const Analytic = require("../../models/analyticsModel");
 const { getUserAsDoc } = require("../../services/userService");
 
 //------------------------------------------------
-exports.canMakeOne = async (req, res, next) => {
+/**
+ *@isTranslated => ture
+ *   */
+exports.hasInvitor = async (req, res, next) => {
   if (!req.user.invitor) {
-    return next(new ApiError(`you don't have an invitor`, 404));
+    return next(new ApiError(res.__("analytics-errors.hasNoInvitor"), 400));
   }
   //check if the invitor is a valid user
   const invitor = await User.findById(req.user.invitor);
   if (!invitor) {
-    return next(new ApiError(`No invitor for this user`, 404));
+    return next(new ApiError(res.__("analytics-errors.hasNoInvitor"), 400));
   }
   return next();
 };
 //------------------------------------------------
+/**
+ *@isTranslated => ture
+ *   */
 exports.isAuthorized = async (req, res, next) => {
   const { id } = req.params;
   if (req.user.role === "admin") {
@@ -25,14 +31,14 @@ exports.isAuthorized = async (req, res, next) => {
   }
   const analytic = await Analytic.findById(id);
   if (!analytic) {
-    return next(new ApiError(`No analytic found with this id`, 404));
+    return next(new ApiError(res.__("analytics-errors.One-Not-Found"), 404));
   }
   if (
     analytic.user.toString() !== req.user._id.toString() && //not owner
     analytic.marketer &&
     analytic.marketer.toString() !== req.user._id.toString() //not marketer
   ) {
-    return next(new ApiError(`you are not authorized`, 401));
+    return next(new ApiError(res.__("errors.Not-Authorized"), 401));
   }
 
   return next();
@@ -75,7 +81,7 @@ exports.isRequestFromHisTrainer = async (req, res, next) => {
     return next(new ApiError(res.__("errors.Not-Found", { doc }), 401));
   }
   if (user.invitor.toString() !== req.user._id.toString()) {
- 
+    console.log("user.invitor", user.invitor);
     return next(new ApiError(res.__("errors.Not-Authorized"), 401));
   }
   return next();

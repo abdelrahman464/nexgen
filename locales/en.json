@@ -2,10 +2,16 @@
   "errors": {
     "invalidAction": "Invalid action",
     "transactionError": "Error during transaction",
-    "Not-Authorized": "you are not authorized to perform this action {{action}}",
+    "Not-Authorized": "you are not authorized to perform this action",
     "Not-Found": "{{doc}} not found"
   },
-  "user": {
+  "analytics-errors": {
+    "hasNoInvitor": "Unauthorized action ,You have no invitor",
+    "Not-Found": "No analytics found",
+    "One-Not-Found": "No analytic found for the given id"
+  },
+  "user-errors": {
+    "unSubscribe": "Unauthorized action , You are not subscribed to any package",
     "alreadyFollowing": "You are already following this user",
     "notFollowing": "You are not following this user",
     "cannotFollowSelf": "You cannot follow yourself",

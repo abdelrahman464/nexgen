@@ -3,5 +3,13 @@
     "Not-Authorized": "غير مصرح لك بأداء هذا الإجراء {{action}}",
     "Duplicate": "موجود بالفعل",
     "Not-Found": "{{document}} غير موجود"
+  },
+  "analytics-errors": {
+    "hasNoInvitor": "غير مسموح لك بسبب عدم وجود مدرب لك",
+    "Not-Found": " لم يتم العثور علي أي تحليلات ",
+    "One-Not-Found": "لم يتم العثور علي تحليل للمعرف المعطي"
+  },
+  "user-errors": {
+    "unSubscribe": "غير مسموح لك بسبب عدم اشتراكك ب اي باقه"
   }
 }

@@ -1,7 +1,7 @@
 const express = require("express");
 
 const {
-  canMakeOne,
+  hasInvitor,
   isAuthorized,
   analyticPerformanceValidator,
   isRequestFromHisTrainer,
@@ -21,7 +21,10 @@ const {
   deleteOne,
   getAnalyticsPerformance,
 } = require("../services/analyticService");
-const { isIdParamForSender } = require("../utils/public/publicValidator");
+const {
+  checkMongoId,
+  isIdParamForSender,
+} = require("../utils/public/publicValidator");
 //create router
 const router = express.Router();
 //configure router
@@ -37,7 +40,7 @@ router.get(
 );
 //  2
 router.get(
-  "/user-analytic-performance/:id", //id is the user id
+  "/user-analytic-performance/:id", //id is the userId
   authServices.protect,
   authServices.allowedTo("user", "admin"),
   analyticPerformanceValidator,
@@ -60,7 +63,7 @@ router
     isUserSubscribed,
     uploadImage,
     resizeImage,
-    canMakeOne,
+    hasInvitor,
     // processPostValidator,
     assignIds,
     createOne
@@ -70,6 +73,7 @@ router // -- 5
   .get(
     authServices.protect,
     authServices.allowedTo("user", "admin"),
+    checkMongoId("id"),
     isAuthorized,
     getOne
   ) // -- 6

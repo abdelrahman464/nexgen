@@ -5,6 +5,7 @@ const ApiError = require("../utils/apiError");
 const Analytic = require("../models/analyticsModel");
 const factory = require("./handllerFactory");
 const { uploadMixOfFiles } = require("../middlewares/uploadImageMiddleware");
+const _ = require("lodash");
 
 exports.uploadImage = uploadMixOfFiles([
   {
@@ -34,28 +35,6 @@ exports.resizeImage = asyncHandler(async (req, res, next) => {
   next();
 });
 //----- filters
-//1
-exports.filterStatus = (req, res, next) => {
-  //req.filterObj is already initialized in the filterOnUserId middleware
-
-  if (req.query.isPassed) {
-    if (req.query.isPassed === "1" || req.query.isPassed === "true")
-      req.filterObj.isPassed = true;
-    else if (req.query.isPassed === "0" || req.query.isPassed === "false")
-      req.filterObj.isPassed = false;
-    else return next(new ApiError("Invalid query", 400));
-    //remove the key from the query
-    req.newQuery = delete req.newQuery.isPassed;
-  }
-  req.query = req.newQuery;
-  return next();
-};
-//2
-exports.assignIds = (req, res, next) => {
-  req.body.user = req.user._id;
-  req.body.marketer = req.user.invitor || null;
-  next();
-};
 //3
 exports.filterOnUserRole = (req, res, next) => {
   //initialize the filter object
@@ -77,6 +56,41 @@ exports.filterOnUserRole = (req, res, next) => {
   req.newQuery = newQuery;
   return next();
 };
+//1
+exports.filterStatus = (req, res, next) => {
+  //initialize the filter object if not initialized in the previous middleware
+  if (_.isObject(req.filterObj) === false) {
+    req.filterObj = {};
+    req.newQuery = { ...req.query };
+  }
+
+  if (req.query.isPassed) {
+    if (req.query.isPassed === "1" || req.query.isPassed === "true")
+      req.filterObj.isPassed = true;
+    else if (req.query.isPassed === "0" || req.query.isPassed === "false")
+      req.filterObj.isPassed = false;
+    else return next(new ApiError("Invalid query", 400));
+    //remove the key from the query
+    delete req.newQuery.isPassed;
+  }
+  if (req.query.lesson) {
+    req.filterObj.lesson = req.query.lesson;
+    delete req.newQuery.lesson;
+  }
+  if (req.query.user) {
+    req.filterObj.user = req.query.user;
+    delete req.newQuery.user;
+  }
+  req.query = req.newQuery;
+  return next();
+};
+//2
+exports.assignIds = (req, res, next) => {
+  req.body.user = req.user._id;
+  req.body.marketer = req.user.invitor || null;
+  next();
+};
+
 //----CRUD Operations
 //@access : admin
 exports.getAll = factory.getALl(Analytic);
@@ -117,7 +131,6 @@ function toISOFormat(dateString) {
 }
 //---------------------------------------------------
 
-
 exports.getAnalyticsPerformance = async (req, res, next) => {
   let { startDate, endDate } = req.query;
   const userId = req.params.id;
@@ -129,7 +142,7 @@ exports.getAnalyticsPerformance = async (req, res, next) => {
     isPassed: true,
   });
   if (analyticsCount === 0)
-    return next(new ApiError("No analytics found", 404));
+    return next(new ApiError(res.__("analytics-errors.Not-Found"), 404));
 
   const analyticsDocs = await Analytic.find({
     user: userId,
@@ -146,4 +159,3 @@ exports.getAnalyticsPerformance = async (req, res, next) => {
     analyticsDocs,
   });
 };
-
