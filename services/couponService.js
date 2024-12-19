@@ -13,7 +13,7 @@ exports.validateCoupon = async (couponName, marketerId) => {
   if (coupon.maxUsageTimes <= coupon.usedTimes) {
     throw new Error(`This coupon is expired`);
   }
-  if (coupon.marketer === marketerId)
+  if (coupon.marketer._id === marketerId)
     throw new Error(`this coupon not belong to your marketer`);
   return coupon;
 };
@@ -59,7 +59,9 @@ exports.incrementCouponUsedTimes = async (couponName) => {
 exports.getCouponDetails = async (req, res, next) => {
   try {
     const { couponName } = req.params;
-    const coupon = await Coupon.findOne({ couponName }).select('-__v -updatedAt');
+    const coupon = await Coupon.findOne({ couponName }).select(
+      "-__v -updatedAt"
+    );
     if (!coupon) {
       return next(new ApiError(res.__("coupon-errors.Not-Found"), 404));
     }
@@ -71,8 +73,8 @@ exports.getCouponDetails = async (req, res, next) => {
     }
 
     if (
-      coupon.marketer.toString() !== req.user._id.toString() &&
-      coupon.marketer.toString() !== req.user.invitor.toString()
+      coupon.marketer._id.toString() !== req.user._id.toString() &&
+      coupon.marketer._id.toString() !== req.user.invitor.toString()
     )
       return next(new ApiError(res.__("coupon-errors.Un-Authorized"), 404));
 

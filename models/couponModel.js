@@ -28,6 +28,12 @@ const couponSchema = mongoose.Schema(
   },
   { timestamps: true }
 );
+// ^find => it mean if part of of teh word contains find
+couponSchema.pre(/^find/, function (next) {
+  // this => query
+  this.populate({ path: "marketer", select: "name email profileImg" });
+  next();
+});
 
 //2- create model
 module.exports = mongoose.model("Coupon", couponSchema);
