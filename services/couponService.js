@@ -15,7 +15,7 @@ exports.validateCoupon = async (couponName, marketerId) => {
   }
   if (coupon.marketer === marketerId)
     throw new Error(`this coupon not belong to your marketer`);
-  return true;
+  return coupon;
 };
 
 //@desc get list of coupons
@@ -55,4 +55,29 @@ exports.incrementCouponUsedTimes = async (couponName) => {
   );
   return true;
 };
-// //@desc reply to Review
+
+exports.getCouponDetails = async (req, res, next) => {
+  try {
+    const { couponName } = req.params;
+    const coupon = await Coupon.findOne({ couponName }).select('-__v -updatedAt');
+    if (!coupon) {
+      return next(new ApiError(res.__("coupon-errors.Not-Found"), 404));
+    }
+    if (coupon.status !== "active") {
+      return next(new ApiError(res.__("coupon-errors.unActive"), 404));
+    }
+    if (coupon.maxUsageTimes <= coupon.usedTimes) {
+      return next(new ApiError(res.__("coupon-errors.Expired"), 404));
+    }
+
+    if (
+      coupon.marketer.toString() !== req.user._id.toString() &&
+      coupon.marketer.toString() !== req.user.invitor.toString()
+    )
+      return next(new ApiError(res.__("coupon-errors.Un-Authorized"), 404));
+
+    return res.status(200).json({ status: "success", coupon });
+  } catch (error) {
+    return res.status(500).json({ status: "error", error: error.message });
+  }
+};

@@ -10,6 +10,12 @@
     "Not-Found": "No analytics found",
     "One-Not-Found": "No analytic found for the given id"
   },
+  "coupon-errors": {
+    "Not-Found": "this coupon is not found",
+    "unActive": "this coupon has not been accepted yet",
+    "Expired": "this coupon reached it's max usage",
+    "Un-Authorized": "you are Unauthorized to use this coupon, coupon is not belong to your marketer"
+  },
   "user-errors": {
     "unSubscribe": "Unauthorized action , You are not subscribed to any package",
     "alreadyFollowing": "You are already following this user",

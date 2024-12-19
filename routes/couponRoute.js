@@ -8,6 +8,11 @@ const {
 //initialize router object
 const router = express.Router();
 
+router.get(
+  "/getCouponDetails/:couponName",
+  authServices.protect,
+  CouponService.getCouponDetails
+);
 router
   .route("/")
   .get(
