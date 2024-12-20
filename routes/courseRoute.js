@@ -39,14 +39,12 @@ router.use("/:courseId/lessons", lessonRoute);
 router.get(
   "/MyCourses/:id?", //user id
   authServices.protect,
-  authServices.allowedTo("user", "admin"),
   getMyCourses
 );
 // get course users
 router.get(
   "/courseDetails/:id",
   authServices.protect,
-  authServices.allowedTo("admin"),
   getCourseDetails
 );
 

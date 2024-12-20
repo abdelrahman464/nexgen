@@ -52,6 +52,8 @@ exports.createArticalValidator = [
     .isString()
     .withMessage('image must be a string'),
 
+  check('author').notEmpty().withMessage('Author is required').isString(),
+
   validatorMiddleware,
 ];
 
@@ -125,6 +127,12 @@ exports.updateArticalValidator = [
     .isString()
     .withMessage('image must be a string')
     .optional(),
+
+  check('author')
+    .optional()
+    .notEmpty()
+    .withMessage('Author is required')
+    .isString(),
   validatorMiddleware,
 ];
 

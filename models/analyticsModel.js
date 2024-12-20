@@ -1,20 +1,20 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const AnalyticSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
     marketer: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
     lesson: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Lesson",
+      ref: 'Lesson',
     },
     content: {
       type: String,
@@ -31,16 +31,20 @@ const AnalyticSchema = new mongoose.Schema(
     //----------
     imageCover: {
       type: String,
-      required: [true, "post image cover is required"],
+      required: [true, 'post image cover is required'],
+    },
+    author: {
+      type: String,
+      required: [true, 'author is required'],
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // ^find => it mean if part of of teh word contains find
 AnalyticSchema.pre(/^find/, function (next) {
   // this => query
-  this.populate({ path: "user", select: "name profileImg" });
+  this.populate({ path: 'user', select: 'name profileImg' });
   next();
 });
 
@@ -55,12 +59,12 @@ const setImageURL = (doc) => {
 //after initializ the doc in db
 // check if the document contains image
 // it work with findOne,findAll,update
-AnalyticSchema.post("init", (doc) => {
+AnalyticSchema.post('init', (doc) => {
   setImageURL(doc);
 });
 // it work with create
-AnalyticSchema.post("save", (doc) => {
+AnalyticSchema.post('save', (doc) => {
   setImageURL(doc);
 });
-const Analytic = mongoose.model("Analytics", AnalyticSchema);
+const Analytic = mongoose.model('Analytics', AnalyticSchema);
 module.exports = Analytic;

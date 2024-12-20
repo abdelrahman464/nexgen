@@ -99,7 +99,6 @@ exports.createFilterObj = (examType) => async (req, res, next) => {
   next();
 };
 
-
 //Basic CRUD------------------------------------------------------------
 exports.createExam = asyncHandler(async (req, res, next) => {
   const { lesson, course, model, passingScore, type } = req.body;
@@ -253,11 +252,17 @@ exports.getCourseProgress = asyncHandler(async (req, res, next) => {
     user: userId,
     course: courseId,
   });
+
   if (!courseProgress) {
     return next(new ApiError('Course progress not found', 404));
   }
 
-  res.status(200).json({ status: 'success', data: courseProgress });
+  const localizedCourseProgress =
+    CourseProgress.schema.methods.toJSONLocalizedOnly(
+      courseProgress,
+      req.locale,
+    );
+  res.status(200).json({ status: 'success', data: localizedCourseProgress });
 });
 //--------------------------------------------------
 //@route   GET /getLessonPerformance/:userId/:lessonId
@@ -759,6 +764,11 @@ exports.userScores = async (req, res, next) => {
       );
     }
 
+    const localizedCourseProgress =
+      CourseProgress.schema.methods.toJSONLocalizedOnly(
+        courseProgress,
+        req.locale,
+      );
     // Fetch all lessons associated with the course
     const allLessons = await Lesson.find(
       { course: courseId },
@@ -766,7 +776,7 @@ exports.userScores = async (req, res, next) => {
     );
 
     // Filter completed lessons and calculate total exam score
-    const completedLessons = courseProgress.progress.filter(
+    const completedLessons = localizedCourseProgress.progress.filter(
       (item) => item.status === 'Completed',
     );
     const completedLessonsCount = completedLessons.length;
@@ -801,6 +811,7 @@ exports.userScores = async (req, res, next) => {
 
       return {
         lessonId: item.lesson._id,
+        lessonTitle: item.lesson.title,
         percentage: percentage,
         attemptDate: item.attemptDate,
         modelExam: item.modelExam,
@@ -872,7 +883,7 @@ exports.userScores = async (req, res, next) => {
 
     const totalCourseExamsPercentage = (
       ((totalExamScore + finalExamScore) /
-        (totalPossibleLessonExamsGrade + finalExamGrade)) *
+        (totalPossibleLessonExamsGrade + (finalExamGrade || 0))) *
       100
     ).toFixed(2);
 
