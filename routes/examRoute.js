@@ -149,13 +149,11 @@ router.post(
 router.get(
   '/placement/:id',
   authService.protect,
-  authService.allowedTo('user', 'admin'),
   placementExam,
 );
 router.post(
   '/placement/:id/submit',
   authService.protect,
-  authService.allowedTo('user', 'admin'),
   submitCoursePlacementAnswers,
 );
 
