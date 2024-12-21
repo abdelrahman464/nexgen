@@ -1,25 +1,29 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const lessonSchema = new mongoose.Schema(
   {
     section: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Section",
+      ref: 'Section',
       required: true,
     },
     course: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Course",
+      ref: 'Course',
     },
     title: {
       type: String,
       required: true,
       i18n: true,
     },
+    description: {
+      type: String,
+      i18n: true,
+    },
     type: {
       type: String,
-      enum: ["live", "recorded"],
-      default: "recorded",
+      enum: ['live', 'recorded'],
+      default: 'recorded',
     },
     image: {
       type: String,
@@ -36,11 +40,11 @@ const lessonSchema = new mongoose.Schema(
     },
     isRequireAnalytic: Boolean,
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 lessonSchema.pre(/^find/, function (next) {
-  this.populate({ path: "course", select: "title -category" });
+  this.populate({ path: 'course', select: 'title -category' });
   next();
 });
 
@@ -53,33 +57,33 @@ const setImageURL = (doc) => {
   //return attachment base url + attachment name
   if (doc.attachments && Array.isArray(doc.attachments)) {
     doc.attachments = doc.attachments.map(
-      (file) => `${process.env.BASE_URL}/lessons/attachments/${file}`
+      (file) => `${process.env.BASE_URL}/lessons/attachments/${file}`,
     );
   }
 };
 //after initialize the doc in db
 // check if the document contains image
 // it work with findOne,findAll,update
-lessonSchema.post("init", (doc) => {
+lessonSchema.post('init', (doc) => {
   setImageURL(doc);
 });
 // it work with create
-lessonSchema.post("save", (doc) => {
+lessonSchema.post('save', (doc) => {
   setImageURL(doc);
 });
 
 // Adjust the pre('save') middleware to be defined before compiling the model
-lessonSchema.pre("save", async function (next) {
-  if (!this.isModified("order")) {
+lessonSchema.pre('save', async function (next) {
+  if (!this.isModified('order')) {
     const courseId = this.course;
     const lastLesson = await this.constructor
       .findOne({ course: courseId })
-      .sort("-order");
+      .sort('-order');
 
     this.order = lastLesson && lastLesson.order ? lastLesson.order + 1 : 1;
   }
   next();
 });
 
-const Lesson = mongoose.model("Lesson", lessonSchema);
+const Lesson = mongoose.model('Lesson', lessonSchema);
 module.exports = Lesson;

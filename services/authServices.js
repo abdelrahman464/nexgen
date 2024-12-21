@@ -297,16 +297,16 @@ exports.protect = asyncHandler(async (req, res, next) => {
     }
   }
   //5-check if user is active
-  // if (!currentUser.active) {
-  //   return next(new ApiError('You Are Not Active', 401));
-  // }
+  if (!currentUser.active) {
+    return next(new ApiError('You Are Not Active', 401));
+  }
 
-  // if (
-  //   currentUser.idVerification !== 'verified' &&
-  //   currentUser.role !== 'admin'
-  // ) {
-  //   return next(new ApiError('You Are Not Verified Your ID Document', 401));
-  // }
+  if (
+    currentUser.idVerification !== 'verified' &&
+    currentUser.role !== 'admin'
+  ) {
+    return next(new ApiError('You Are Not Verified Your ID Document', 401));
+  }
   //id verification
   //add user to request
   //to use this in authorization

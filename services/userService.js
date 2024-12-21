@@ -438,6 +438,7 @@ exports.updateLoggedUserData = async (req, res, next) => {
       phone: req.body.phone,
       profileImg: req.body.profileImg,
       coverImg: req.body.coverImg,
+      bio: req.body.bio,
     },
     {
       new: true,
