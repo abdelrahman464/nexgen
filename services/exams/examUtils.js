@@ -71,7 +71,7 @@ exports.updateUserProgress = async (
   score,
   wrongAnswers,
 ) =>
-  (await CourseProgress.findOneAndUpdate(
+  await CourseProgress.findOneAndUpdate(
     { user: userId, course: courseId },
     {
       $push: {
@@ -86,7 +86,7 @@ exports.updateUserProgress = async (
       },
     },
     { new: true, upsert: false },
-  ));
+  );
 
 // Handle success or failure response
 exports.handleExamResponse = (res, passed, score, totalScore) =>
@@ -102,8 +102,12 @@ exports.handleExamResponse = (res, passed, score, totalScore) =>
 /******************************************************************** */
 // Utility function to fetch an exam based on lesson or course and model
 /******************************************************************** */
-exports.fetchExam = async ({ id, type, model }) =>
-  await Exam.findOne({ [type]: id, model: model });
+exports.fetchExam = async ({ id, type, model }) => {
+  if (type === 'placement') {
+    return await Exam.findOne({ course: id, type, model });
+  }
+  return await Exam.findOne({ [type]: id, model });
+};
 
 // Utility function to exclude correct answers from the exam object
 exports.excludeCorrectOptions = (exam) => {

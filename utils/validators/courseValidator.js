@@ -317,22 +317,22 @@ exports.checkCourseAccess = async (user, courseId) => {
   if (!course.needAccessibleCourse) {
     return true;
   }
-  //check if user take a placment test for any course have the this course id in accessibleCourses
-  //1-get placment course that user is take its exam
-  const userPlacmentCourse = await Course.findOne({
-    _id: user.placmentExam.course,
+  //check if user take a placement test for any course have the this course id in accessibleCourses
+  //1-get placement course that user is take its exam
+  const userPlacementCourse = await Course.findOne({
+    _id: user.placementExam.course,
   });
 
   //check if user failed in placement exam
-  // if (userPlacmentCourse && user.placmentExam.status === "failed") {
+  // if (userPlacementCourse && user.placementExam.status === "failed") {
   //   return Promise.reject(
   //     new ApiError(`Access Denied: You Have Failed In Placement Exam`, 403)
   //   );
   // }
   //check if that course have the course(i want to buy) id in accessibleCourses
-  // if (userPlacmentCourse && user.placmentExam.status === "Completed") {
-  if (userPlacmentCourse) {
-    if (userPlacmentCourse.accessibleCourses.includes(courseId)) {
+  // if (userPlacementCourse && user.placementExam.status === "Completed") {
+  if (userPlacementCourse) {
+    if (userPlacementCourse.accessibleCourses.includes(courseId)) {
       return true;
     }
   }
@@ -359,7 +359,7 @@ exports.checkCourseAccess = async (user, courseId) => {
   }
 
   // message to tell user what he can do
-  if (!userPlacmentCourse || !userCourses) {
+  if (!userPlacementCourse || !userCourses) {
     return Promise.reject(
       new ApiError(
         `Access Denied: You may need to complete the basics or succeed in placement exam`,

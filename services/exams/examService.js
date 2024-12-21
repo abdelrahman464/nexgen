@@ -698,8 +698,8 @@ exports.submitCoursePlacementAnswers = async (req, res, next) => {
 
   // Check if user has already failed this exam
   if (
-    user.placmentExam.status === 'failed' &&
-    exam.model === user.placmentExam.modelExam
+    user.placementExam.status === 'failed' &&
+    exam.model === user.placementExam.modelExam
   ) {
     return next(new ApiError('You have already failed this exam.', 400));
   }
@@ -718,7 +718,7 @@ exports.submitCoursePlacementAnswers = async (req, res, next) => {
     { _id: user._id },
     {
       $set: {
-        placmentExam: {
+        placementExam: {
           exam: exam._id,
           score: examResult.score,
           status: passed ? 'Completed' : 'failed',

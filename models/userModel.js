@@ -36,7 +36,6 @@ const userSchema = new mongoose.Schema(
     idVerification: {
       type: String,
       enum: ["pending", "verified", "rejected"],
-      default: "pending",
     },
     note: {
       type: String,
@@ -90,7 +89,7 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    placmentExam: {
+    placementExam: {
       exam: {
         type: mongoose.Schema.ObjectId,
         ref: "Exam",
