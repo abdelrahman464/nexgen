@@ -10,8 +10,8 @@ const courseSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
     },
-    finalExam: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam' },
-    placmentExam: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam' },
+    // finalExam: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam' },
+    // placementExam: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam' },
     //i18n
     title: {
       type: String,
@@ -57,6 +57,10 @@ const courseSchema = new mongoose.Schema(
       set: (v) => parseFloat(v.toFixed(1)), // Rounds to 2 decimal places
     },
     coursePercentage: Number,
+    courseDuration: {
+      type: Number,
+      required: true,
+    },
     ratingsQuantity: {
       type: Number,
       default: 0,

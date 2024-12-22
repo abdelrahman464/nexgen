@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const { sendNotification } = require('../socket/index'); // Adjust the path as per your file structure
 
+
 const NotificationSchema = new mongoose.Schema(
   {
     user: {
@@ -49,10 +50,16 @@ NotificationSchema.pre(/^find/, function (next) {
   this.populate({
     path: 'post',
     select: 'content -user -package -course',
-  }).populate({
-    path: 'followedUser',
-    select: 'name email profileImg',
-  });
+  })
+    .populate({
+      path: 'followedUser',
+      select: 'name email profileImg',
+    })
+    .populate({
+      path: 'chat',
+      select: '-participants -course',
+    });
+
   next();
 });
 const setCourseImageURL = (doc) => {
