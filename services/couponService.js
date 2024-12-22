@@ -74,7 +74,7 @@ exports.getCouponDetails = async (req, res, next) => {
 
     if (
       coupon.marketer._id.toString() !== req.user._id.toString() &&
-      coupon.marketer._id.toString() !== req.user.invitor.toString()
+      coupon.marketer._id.toString() !== req.user.invitor?.toString()
     )
       return next(new ApiError(res.__("coupon-errors.Un-Authorized"), 404));
 

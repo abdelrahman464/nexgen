@@ -16,6 +16,11 @@
     "Expired": "this coupon reached it's max usage",
     "Un-Authorized": "you are Unauthorized to use this coupon, coupon is not belong to your marketer"
   },
+
+  "marketing-errors": {
+    "marketLog-Not-Found": "marketing date not found"
+  },
+
   "user-errors": {
     "unSubscribe": "Unauthorized action , You are not subscribed to any package",
     "alreadyFollowing": "You are already following this user",

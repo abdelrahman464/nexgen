@@ -1,15 +1,15 @@
-const bcrypt = require('bcryptjs');
-const mongoose = require('mongoose');
+const bcrypt = require("bcryptjs");
+const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
   {
     invitor: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
     },
     invitationKey: {
       type: String,
-      default: 'defaultKey',
+      default: "defaultKey",
     },
     startMarketing: {
       type: Boolean,
@@ -18,11 +18,11 @@ const userSchema = new mongoose.Schema(
     name: {
       type: String,
       trim: true,
-      required: [true, 'name required'],
+      required: [true, "name required"],
     },
     email: {
       type: String,
-      required: [true, 'email required'],
+      required: [true, "email required"],
       unique: true,
       lowercase: true,
     },
@@ -35,7 +35,7 @@ const userSchema = new mongoose.Schema(
     //end uploads
     idVerification: {
       type: String,
-      enum: ['pending', 'verified', 'rejected'],
+      enum: ["pending", "verified", "rejected"],
     },
     note: {
       type: String,
@@ -50,9 +50,9 @@ const userSchema = new mongoose.Schema(
         function () {
           return !this.isOAuthUser;
         },
-        'password required',
+        "password required",
       ],
-      minlength: [8, 'too short Password'],
+      minlength: [8, "too short Password"],
     },
     isOAuthUser: {
       type: Boolean,
@@ -71,8 +71,8 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['user', 'admin', 'campaign'],
-      default: 'user',
+      enum: ["user", "admin", "campaign"],
+      default: "user",
     },
     isInstructor: Boolean,
     isCustomerService: Boolean,
@@ -83,7 +83,7 @@ const userSchema = new mongoose.Schema(
     },
     treeHead: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
     },
     isTreeHead: {
       type: Boolean,
@@ -92,15 +92,15 @@ const userSchema = new mongoose.Schema(
     placementExam: {
       exam: {
         type: mongoose.Schema.ObjectId,
-        ref: 'Exam',
+        ref: "Exam",
       },
       course: {
         type: mongoose.Schema.ObjectId,
-        ref: 'Course',
+        ref: "Course",
       },
       status: {
         type: String,
-        enum: ['failed', 'Completed'],
+        enum: ["failed", "Completed"],
       },
       score: Number,
       attemptDate: Date,
@@ -111,7 +111,7 @@ const userSchema = new mongoose.Schema(
     },
     following: [
       {
-        user: { type: mongoose.Schema.ObjectId, ref: 'User' },
+        user: { type: mongoose.Schema.ObjectId, ref: "User" },
         notificationBell: {
           type: Boolean,
           default: false,
@@ -121,7 +121,7 @@ const userSchema = new mongoose.Schema(
     followers: [
       {
         type: mongoose.Schema.ObjectId,
-        ref: 'User',
+        ref: "User",
       },
     ],
     bio: {
@@ -143,9 +143,12 @@ const userSchema = new mongoose.Schema(
       monthlyStartDate: {
         type: Date, // Start date for the 30-day calculation
       },
+      isMarketer: {
+        type: Boolean,
+      },
     },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 userSchema.methods.toJSON = function () {
@@ -158,12 +161,12 @@ userSchema.methods.toJSON = function () {
 
   // Define sensitive fields
   const sensitiveFields = [
-    'passwordChangedAt',
-    'passwordResetCode',
-    'passwordResetExpires',
-    'password',
-    'emailVerificationCode',
-    'emailVerificationExpires',
+    "passwordChangedAt",
+    "passwordResetCode",
+    "passwordResetExpires",
+    "password",
+    "emailVerificationCode",
+    "emailVerificationExpires",
   ];
 
   // Remove common sensitive fields
@@ -172,9 +175,9 @@ userSchema.methods.toJSON = function () {
   return obj;
 };
 
-userSchema.pre('save', async function (next) {
+userSchema.pre("save", async function (next) {
   //if password field is not modified go to next middleware
-  if (!this.isModified('password')) return next();
+  if (!this.isModified("password")) return next();
   // Hashing user password
   this.password = await bcrypt.hash(this.password, 12);
   next();
@@ -202,13 +205,13 @@ const setProfileImageURL = (doc) => {
 //after initialize the doc in db
 // check if the document contains image
 // it work with findOne,findAll,update
-userSchema.post('init', (doc) => {
+userSchema.post("init", (doc) => {
   setProfileImageURL(doc);
 });
 // it work with create
-userSchema.post('save', (doc) => {
+userSchema.post("save", (doc) => {
   setProfileImageURL(doc);
 });
 
-const User = mongoose.model('User', userSchema);
+const User = mongoose.model("User", userSchema);
 module.exports = User;

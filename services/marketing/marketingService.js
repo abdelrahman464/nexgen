@@ -253,11 +253,12 @@ exports.getMarketLog = async (req, res, next) => {
       .populate("marketer", "name email profileImg")
       .populate("invitor", "name email profileImg")
       .populate("sales.purchaser", "name email profileImg")
+      .populate("commissions.member", "name email profileImg")
       .lean();
     // .populate("transactions.child", "name email profileImg"); //req.user._id
     //3- check existance
     if (!marketLog) {
-      throw new ApiError(res.__(`Not-Found`), 404);
+      next(new ApiError(res.__(`marketing-error.marketLog-Not-Found`), 404));
     }
     //4- calculate the commission & wallet balance
     if (marketLog.commissions?.length !== 0) {
