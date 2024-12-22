@@ -1,13 +1,4 @@
-/* eslint-disable no-restricted-syntax */
-/* eslint-disable no-await-in-loop */
-const mongoose = require("mongoose");
-const asyncHandler = require("express-async-handler");
-const ApiError = require("../utils/apiError");
-const Course = require("../models/courseModel");
-const Lessons = require("../models/lessonModel");
-const Reviews = require("../models/reviewModel");
 const Category = require("../models/categoryModel");
-
 const factory = require("./handllerFactory");
 
 //@desc get list of categories
