@@ -33,10 +33,7 @@ const AnalyticSchema = new mongoose.Schema(
       type: String,
       required: [true, 'post image cover is required'],
     },
-    author: {
-      type: String,
-      required: [true, 'author is required'],
-    },
+
   },
   { timestamps: true },
 );
