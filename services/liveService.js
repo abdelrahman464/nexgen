@@ -1,10 +1,10 @@
-const asyncHandler = require("express-async-handler");
-const Live = require("../models/liveModel");
-const User = require("../models/userModel");
-const ApiError = require("../utils/apiError");
-const UserSubscription = require("../models/userSubscriptionModel");
-const factory = require("./handllerFactory");
-const sendEmail = require("../utils/sendEmail");
+const asyncHandler = require('express-async-handler');
+const Live = require('../models/liveModel');
+const User = require('../models/userModel');
+const ApiError = require('../utils/apiError');
+const UserSubscription = require('../models/userSubscriptionModel');
+const factory = require('./handllerFactory');
+const sendEmail = require('../utils/sendEmail');
 //@desc get list of Lives
 //@route GET /api/v1/categories
 //@access public
@@ -54,20 +54,19 @@ exports.createFilterObj = asyncHandler(async (req, res, next) => {
     delete newQuery.day;
   }
 
-  if (req.user.role === "user") {
+  if (req.user.role !== 'admin') {
     // Get all packages that the user is subscribed to
     const userSubscriptions = await UserSubscription.find({
       user: req.user._id,
       endDate: { $gte: new Date() },
     });
     const packageIds = userSubscriptions.map(
-      (subscription) => subscription.package._id
+      (subscription) => subscription.package._id,
     );
 
-    filterObject.package = { $in: packageIds };
+    // Using $elemMatch to match any element in the package array
+    filterObject.package = { $elemMatch: { $in: packageIds } };
   }
-
-  // For admin, we don't add any additional filters beyond the date filters
 
   req.filterObj = filterObject;
   //reset query params
@@ -80,7 +79,7 @@ exports.SendEmailsToLiveFollowers = asyncHandler(async (req, res, next) => {
   const { id } = req.params; //live id
   const live = await Live.findById(id);
   if (!live) {
-    return next(ApiError("Live not found", 404));
+    return next(ApiError('Live not found', 404));
   }
   const subscribers = await UserSubscription.find({
     package: { $in: live.package },
@@ -99,7 +98,7 @@ exports.SendEmailsToLiveFollowers = asyncHandler(async (req, res, next) => {
       const htmlEmail = this.getHtmlTemplate(
         follower.name,
         live.title,
-        emailMessage
+        emailMessage,
       );
       await sendEmail({
         to: follower.email,
@@ -116,7 +115,7 @@ exports.SendEmailsToLiveFollowers = asyncHandler(async (req, res, next) => {
     });
   } catch (err) {
     return next(
-      new ApiError(`There is a problem with sending emails ${err}`, 500)
+      new ApiError(`There is a problem with sending emails ${err}`, 500),
     );
   }
 });
