@@ -9,8 +9,8 @@ const {
 const { isUserSubscribed } = require("../utils/public/publicValidator");
 const authServices = require("../services/authServices");
 const {
-  uploadImage,
-  resizeImage,
+  uploadMedia,
+  resize,
   filterStatus,
   assignIds,
   filterOnUserRole,
@@ -61,9 +61,9 @@ router
     authServices.protect,
     authServices.allowedTo("admin", "user"),
     isUserSubscribed,
-    uploadImage,
-    resizeImage,
-    hasInvitor,
+    uploadMedia,
+    resize,
+    // hasInvitor,
     // processPostValidator,
     assignIds,
     createOne

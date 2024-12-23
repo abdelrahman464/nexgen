@@ -24,7 +24,7 @@ exports.createOne = (Model) => async (req, res) => {
     res.status(201).json({ status: `created successfully`, data: document });
   } catch (error) {
     console.error("Error creating document:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: error.message });
   }
 };
 

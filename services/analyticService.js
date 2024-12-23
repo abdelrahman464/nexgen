@@ -1,39 +1,93 @@
 const asyncHandler = require("express-async-handler");
 const sharp = require("sharp");
 const { v4: uuidv4 } = require("uuid");
+const fs = require("fs/promises");
+const path = require("path");
 const ApiError = require("../utils/apiError");
 const Analytic = require("../models/analyticsModel");
 const factory = require("./handllerFactory");
 const { uploadMixOfFiles } = require("../middlewares/uploadImageMiddleware");
+const { passAnalyticsInCourseProgress } = require("./lessonServices");
 const _ = require("lodash");
 
-exports.uploadImage = uploadMixOfFiles([
+exports.uploadMedia = uploadMixOfFiles([
   {
-    name: "imageCover",
-    maxCount: 1,
+    name: "media",
+    maxCount: 15,
   },
 ]);
-exports.resizeImage = asyncHandler(async (req, res, next) => {
-  // Image processing for imageCover
-  if (
-    req.files.imageCover &&
-    req.files.imageCover[0].mimetype.startsWith("image/")
-  ) {
-    const imageCoverFileName = `analytic-${uuidv4()}-${Date.now()}-cover.webp`;
 
-    await sharp(req.files.imageCover[0].buffer)
-      .toFormat("webp") // Convert to WebP
-      .webp({ quality: 95 })
-      .toFile(`uploads/analytics/${imageCoverFileName}`);
+exports.resize = asyncHandler(async (req, res, next) => {
+  if (req.files && req.files.media && req.files.media.length) {
+    // Initialize an array to store the names of uploaded files
+    req.body.media = [];
 
-    // Save imageCover file name in the request body for database saving
-    req.body.imageCover = imageCoverFileName;
-  } else if (req.files.imageCover) {
-    return next(new ApiError("Image cover is not an image file", 400));
+    // Loop through all files in the 'media' array
+    // eslint-disable-next-line no-restricted-syntax
+    for (const file of req.files.media) {
+      const fileExtension = path.extname(file.originalname);
+      const newFileName = `analytic-${uuidv4()}-${Date.now()}${fileExtension}`;
+
+      // Check if the file type is allowed
+      if (
+        [
+          "image/jpeg",
+          "image/webp",
+          "image/png",
+          "image/gif",
+          "application/pdf",
+          "application/msword",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ].includes(file.mimetype)
+      ) {
+        // Save each file to the uploads directory
+        // eslint-disable-next-line no-await-in-loop
+        await fs.writeFile(
+          path.join("uploads", "analytics", newFileName),
+          file.buffer
+        );
+        req.body.media.push(newFileName); // Append the new file name to the media array
+      } else {
+        // If the file type is not allowed, you can choose to stop processing or just skip the file
+        // eslint-disable-next-line no-continue
+        continue; // Skips adding this file to the uploads, no error thrown for other files
+      }
+    }
+
+    // If no files were saved and all were skipped due to unsupported types, you may want to handle it
+    if (!req.body.media.length) {
+      return next(
+        new ApiError(
+          "Unsupported file types provided. Only images, PDF, and Word documents are allowed.",
+          400
+        )
+      );
+    }
   }
 
   next();
 });
+// exports.resizeImage = asyncHandler(async (req, res, next) => {
+//   // Image processing for imageCover
+//   if (
+//     req.files.imageCover &&
+//     req.files.imageCover[0].mimetype.startsWith("image/")
+//   ) {
+//     const imageCoverFileName = `analytic-${uuidv4()}-${Date.now()}-cover.webp`;
+
+//     await sharp(req.files.imageCover[0].buffer)
+//       .toFormat("webp") // Convert to WebP
+//       .webp({ quality: 95 })
+//       .toFile(`uploads/analytics/${imageCoverFileName}`);
+
+//     // Save imageCover file name in the request body for database saving
+//     req.body.imageCover = imageCoverFileName;
+//   } else if (req.files.imageCover) {
+//     return next(new ApiError("Image cover is not an image file", 400));
+//   }
+
+//   next();
+// });
 //----- filters
 //3
 exports.filterOnUserRole = (req, res, next) => {
@@ -99,13 +153,32 @@ exports.getOne = factory.getOne(Analytic);
 //assignIds
 exports.createOne = factory.createOne(Analytic);
 //check if the user is the owner or marketer
-exports.updateOne = factory.updateOne(Analytic);
+exports.updateOne = async (req, res, next) => {
+  try {
+    const document = await Analytic.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    if (!document) {
+      return next(
+        new ApiError(res.__("errors.Not-Found", { document: "document" }), 404)
+      );
+    }
+    if (document.lesson && req.body.isPassed === true) {
+      //update this lesson's doc in course progress
+      await passAnalyticsInCourseProgress(document.user, document.lesson);
+    }
+    return res.status(200).json({ status: "success", data: document });
+  } catch (error) {
+    console.error("Error updating document:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
 //check if the user is the owner or marketer
 exports.deleteOne = factory.deleteOne(Analytic);
 
 //-------------------------------------------------
 /**
- *
+ 
  * @param {*} analytics
  *
  * @returns {passedDocs,failedDocs} the number of passed and failed documents
