@@ -9,7 +9,7 @@ const ApiError = require('../utils/apiError');
 const sendEmail = require('../utils/sendEmail');
 const generateToken = require('../utils/generateToken');
 const { addMemberToChat } = require('./ChatServices');
-const { PDFGenerator } = require('../utils/generatePdf');
+
 // @desc    User Register,login with Google
 // @route   POST /api/v1/auth/google
 // @access  Public
@@ -223,30 +223,37 @@ exports.signup = asyncHandler(async (req, res, next) => {
 //@route POST /api/v1/auth/login
 //@access public
 exports.login = asyncHandler(async (req, res, next) => {
-  // const order = {
-  //   _id: 'ORDER123456',
-  //   user: {
-  //     name: 'John Doe',
-  //     email: 'johndoe@example.com',
-  //   },
-  //   course: {
-  //     title: 'Advanced Web Development Bootcamp',
-  //     price: 599.99,
-  //   },
-  //   package: null,
-  //   coursePackage: null,
-  //   description: 'Full-stack web development course',
-  //   totalOrderPrice: 599.99,
-  //   paymentMethodType: 'PayPal',
-  //   isPaid: true,
-  //   paidAt: new Date('2024-02-15T10:30:00Z'),
-  //   createdAt: new Date('2024-02-14T15:45:00Z'),
-  // };
+  //edit lesson title to object
+  // try {
+  //   // Find all lessons where title is a string
+  //   const lessons = await Lesson.find({
+  //     title: { $type: 'string' },
+  //   });
 
-  // const pdfPath = await PDFGenerator.generateOrderPDF(order);
-  // console.log('PDF Path:', pdfPath);
-  //1- check if password and email in the body
-  //2- check if user exist & check if password is correct
+  //   // Use updateMany to perform bulk update
+  //   const result = await Lesson.updateMany(
+  //     { _id: { $in: lessons.map((lesson) => lesson._id) } },
+  //     [
+  //       {
+  //         $set: {
+  //           title: {
+  //             en: '$title',
+  //             ar: '$title',
+  //           },
+  //         },
+  //       },
+  //     ],
+  //   );
+
+  //   console.log(`Updated ${result.modifiedCount} lessons`);
+  //   return result;
+  // } catch (error) {
+  //   console.error('Error updating lesson titles:', error);
+  //   throw error;
+  // }
+
+  // 1- check if password and email in the body
+  // 2- check if user exist & check if password is correct
   const user = await User.findOne({ email: req.body.email });
   if (!user || !(await bcrypt.compare(req.body.password, user.password))) {
     return next(new ApiError('incorrect password or email', 401));
