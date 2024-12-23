@@ -31,6 +31,7 @@ const courseProgressSchema = new mongoose.Schema(
           enum: ['failed', 'Completed'],
           default: 'Completed',
         },
+        passAnalytics: Boolean,
         examScore: { type: Number, default: 0 },
         attemptDate: { type: Date, default: Date.now },
         wrongAnswers: [

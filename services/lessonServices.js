@@ -373,12 +373,10 @@ exports.getLessonById = asyncHandler(async (req, res, next) => {
       email: req.user.email,
     });
 
-    return res
-      .status(200)
-      .json({
-        status: 'success',
-        data: { lesson: localizedLesson, videoData },
-      });
+    return res.status(200).json({
+      status: 'success',
+      data: { lesson: localizedLesson, videoData },
+    });
   } catch (err) {
     console.error(err);
     return next(new ApiError('No lesson found with that ID', 404));
@@ -390,3 +388,33 @@ exports.updateLesson = factory.updateOne(Lesson);
 
 // Delete a lesson by ID
 exports.deleteLesson = factory.deleteOne(Lesson);
+
+//function to update course progress
+async function passAnalyticsInCourseProgress(userId, lessonId) {
+  try {
+    //get lesson
+    const lesson = await Lesson.findById(lessonId);
+
+    const courseProgress = await CourseProgress.findOne({
+      user: userId,
+      course: lesson.course,
+    });
+
+    if (!courseProgress) {
+      throw new ApiError('No course progress found for this user', 404);
+    }
+
+    const lessonIndex = courseProgress.progress.findIndex(
+      (progress) => progress.lesson.toString() === lesson._id,
+    );
+
+    if (lessonIndex === -1) {
+      throw new ApiError('No lesson found in course progress', 404);
+    }
+
+    courseProgress.progress[lessonIndex].passAnalytics = true;
+    await courseProgress.save();
+  } catch (err) {
+    console.log(err);
+  }
+}
