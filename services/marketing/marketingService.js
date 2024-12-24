@@ -73,7 +73,7 @@ const giveInstructorPercentage = async (data) => {
     console.log(error.message);
   }
 };
-const updateSellerSales = async (data, profitPercentage, invoices) => {
+const updateSellerSales = async (data, profitPercentage) => {
   console.log("updating seller sales");
   //**update the sales */
   await MarketingLog.findOneAndUpdate(
@@ -90,11 +90,11 @@ const updateSellerSales = async (data, profitPercentage, invoices) => {
       $set: {
         totalSalesMoney: data.totalSalesMoney,
         profitPercentage,
-        profits: (data.amount * profitPercentage) / 100,
+        profits: (data.totalSalesMoney * profitPercentage) / 100,
       },
     }
   );
-  await addMarketerToLeaderBoard(marketerId, data.totalSalesMoney);
+  await addMarketerToLeaderBoard(data.marketerId, data.totalSalesMoney);
   console.log("updated successfully");
   return true;
   //**update the sales */
@@ -145,7 +145,7 @@ exports.calculateProfits = async (
     //4- get the invitor marketLog to update it
     const marketerMarketLog = await MarketingLog.findOne({
       marketer: user.invitor,
-    });
+    }).select("-sales -invoices -createdAt -updatedAt");
     //5-Validate the exist of invitor marketLog
     if (!marketerMarketLog) {
       console.log("seller has no marketLog");
@@ -161,13 +161,15 @@ exports.calculateProfits = async (
       totalSalesMoney:
         marketerMarketLog.totalSalesMoney + parseFloat(details.amount),
     };
+
     //7- calculate the percentage
     const profitPercentage = this.detectPercentage(
       marketerMarketLog.role,
       data.totalSalesMoney
     );
     //8- update marketLog with this sale
-    await updateSellerSales(data, profitPercentage, marketerMarketLog.invoices);
+    console.log("manga");
+    await updateSellerSales(data, profitPercentage);
     //9- update current user object in his head.transaction (not sure about this approach till now)
     if (marketerMarketLog.role !== "head" && marketerMarketLog.invitor) {
       //create or update current marketer object in his father.treeProfits
@@ -258,7 +260,9 @@ exports.getMarketLog = async (req, res, next) => {
     // .populate("transactions.child", "name email profileImg"); //req.user._id
     //3- check existance
     if (!marketLog) {
-      next(new ApiError(res.__(`marketing-error.marketLog-Not-Found`), 404));
+      return next(
+        new ApiError(res.__(`marketing-errors.marketLog-Not-Found`), 404)
+      );
     }
     //4- calculate the commission & wallet balance
     if (marketLog.commissions?.length !== 0) {
@@ -314,30 +318,34 @@ exports.getMarketLog = async (req, res, next) => {
 //@desc i will use this function when i pay to user
 //embedded function
 //function 1 -------------------------
-const createProfitsInvoice = async (marketLog) => {
+const createProfitsInvoice = async (marketLog, amount) => {
   let { totalSalesMoney, profits } = marketLog;
   const { profitPercentage, sales } = marketLog;
   //validation -----
   //1- check if he has profits to be calculated
-  const takenProfits = await this.getMonthMoney(
+  const result = await this.getMonthMoney(
     marketLog.invoices,
     new Date().getMonth()
-  ).monthProfits;
+  );
+  const takenProfits = result.monthProfits;
 
-  if (!profits || profits === 0 || profits === takenProfits)
-    throw new ApiError("No profits found to be calculated ", 404);
-
+  if (!profits || profits === 0 || profits === takenProfits) {
+    return "marketing-errors.No-Profits-Found";
+  }
   //3-calculate the available profits
   const availableProfits = profits - takenProfits;
+  if (availableProfits < amount) {
+    return "marketing-errors.balance-Not-Enough";
+  }
 
   //4- create the invoice
   const invoice = {
     totalSalesMoney: totalSalesMoney.toFixed(2),
     mySales: sales.length,
     profitPercentage,
-    profits: availableProfits,
+    profits: amount,
   };
-
+  marketLog.withdrawals += amount;
   marketLog.invoices.push(invoice);
   //6- Save the changes
   await marketLog.save();
@@ -385,84 +393,67 @@ const createWalletInvoice = async (marketLog, reqBody) => {
   return true;
 };
 //main function
-exports.createInvoice = async (req, res) => {
+exports.createInvoice = async (req, res, next) => {
   try {
     //1- Get all marketerLof data
     const marketLog = await MarketingLog.findOne({ marketer: req.params.id });
     //2- check existance
     if (!marketLog) {
-      throw new Error("No marketerLog found");
+      next(new ApiError(res.__(`marketing-error.marketLog-Not-Found`), 404));
     }
-    //3- check which type of invoice to create
-    if (req.query.invoiceType === "wallet") {
-      if (marketLog.wallet && marketLog.wallet.length === 0)
-        throw new ApiError(
-          "No wallet balance to be calculated for this user",
-          404
-        );
-      await createWalletInvoice(marketLog, req.body);
+
+    const result = await createProfitsInvoice(marketLog, req.body.amount);
+    if (typeof result === "string") {
+      return next(new ApiError(res.__(result), 404));
     }
+
     //------------------------------------------------
-    else if (req.query.invoiceType === "profit") {
-      await createProfitsInvoice(marketLog);
-    }
-    //------------------------------------------------
-    else if (req.query.invoiceType === "instructorProfits") {
-      await InstructorProfitService.createInstructorProfitsInvoice(
-        req.params.id,
-        req.body
-      );
-    }
+    // else if (req.query.invoiceType === "instructorProfits") {
+    //   await InstructorProfitService.createInstructorProfitsInvoice(
+    //     req.params.id,
+    //     req.body
+    //   );
+    // }
     //4-return the response
     return res
       .status(200)
       .json({ status: `success`, msg: `invoice created successfully` });
   } catch (error) {
     console.error("Error creating invoices:", error.message);
-    let statusCode = 500;
-    if (error instanceof ApiError) {
-      statusCode = error.statusCode;
-    }
-    return res.status(statusCode).json({
-      status: "failed",
-      msg: `Error creating invoices: ${error.message}`,
-    });
+    next(new ApiError(error.message, 500));
   }
 };
 //-----------------------------------------------------------------------------------------------//
-exports.getMarketerChildren = async (req, res) => {
-  const marketerId = req.params.id;
+exports.getMarketerChildren = async (req, res, next) => {
+  try {
+    const marketerId = req.params.id;
 
-  const teamMembers = await User.find({ invitor: marketerId })
-    .select("name email profileImg createdAt")
-    .lean();
+    const teamMembers = await User.find({ invitor: marketerId })
+      .select("name email profileImg createdAt")
+      .lean();
 
-  if (teamMembers.length === 0) {
-    return res.status(404).json({ status: "failed", msg: "no data found" });
+    if (teamMembers.length === 0) {
+      return next(
+        new ApiError(res.__(`marketing-errors.No-Team-Members`), 404)
+      );
+    }
+    //get orders for these children
+    const result = await filterTeamMembers(teamMembers);
+
+    const { totalSubscribers, teamMembers1, teamMembers2, resaleCounter } =
+      result;
+    //check filter if he want to get only the children who have sales
+    return res.status(200).json({
+      status: "success",
+      totalRegistrations: teamMembers.length,
+      totalSubscribers,
+      resaleCounter,
+      teamMembers1,
+      teamMembers2,
+    });
+  } catch (error) {
+    next(new ApiError(error.message, 500));
   }
-  //get orders for these children
-  const result = await filterTeamMembers(teamMembers);
-  if (_.isEmpty(result))
-    return res
-      .status(400)
-      .json({ status: "failed", msg: "no orders found for these teamMembers" });
-
-  const {
-    totalRegistrations,
-    totalSubscribers,
-    teamMembers1,
-    teamMembers2,
-    resaleCounter,
-  } = result;
-  //check filter if he want to get only the children who have sales
-  return res.status(200).json({
-    status: "success",
-    totalRegistrations,
-    totalSubscribers,
-    resaleCounter,
-    teamMembers1,
-    teamMembers2,
-  });
 };
 
 //---------------
@@ -532,12 +523,20 @@ exports.deleteUnUsed = async () => {
 
   console.log("Documents deleted successfully, except for specified members.");
 };
+//**
+//  */
 const filterTeamMembers = async (teamMembers) => {
   let resaleCounter = 0;
   const usersIds = teamMembers.map((user) => user._id);
   const orders = await Order.find({ user: { $in: usersIds } });
 
-  if (orders.length === 0) return {};
+  if (orders.length === 0)
+    return {
+      totalSubscribers: 0,
+      teamMembers1: [], //cause there are no orders
+      teamMembers2: teamMembers, //cause there are no orders
+      resaleCounter,
+    };
   //  1.1 - loop on orders and push each order to user.orders
   orders.map((order) => {
     if (order.isResale) resaleCounter++;
@@ -556,7 +555,6 @@ const filterTeamMembers = async (teamMembers) => {
   });
 
   return {
-    totalRegistrations: teamMembers.length,
     totalSubscribers: teamMembers1.length,
     teamMembers1,
     teamMembers2,
@@ -573,7 +571,6 @@ const filterTeamMembers = async (teamMembers) => {
 //---------------------------
 exports.modifyInvitationKeys = async (req, res) => {
   try {
-    console.log("modifyInvitationKeys");
     const { option } = req.query;
     const marketLog = await MarketingLog.findOne({
       marketer: req.params.id,

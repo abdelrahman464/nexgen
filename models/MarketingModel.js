@@ -34,6 +34,7 @@ const MarketingLogsSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    withdrawals: { type: Number, default: 0 },
     clicks: [
       {
         month: String,

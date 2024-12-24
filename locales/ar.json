@@ -19,6 +19,12 @@
     "Un-Authorized": "غير مسموح لك ب استخدام هذا الكوبون لانه ليس ملك مدربك"
   },
   "marketing-errors": {
-    "marketLog-Not-Found": "لم يتم العثور علي بيانات التسويق الخاصه بك"
+    "marketLog-Not-Found": "لم يتم العثور علي بيانات التسويق الخاصه بك",
+    "No-Profits-Found": "لا يوجد ارباح للسحب",
+    "balance-Not-Enough": "رصيدك غير كافي",
+    "No-Team-Members": "لم يتم العثور علي اعضاء في فريقك"
+  },
+  "marketing-error": {
+    "marketLog-Not-Found": "marketing-error.marketLog-Not-Found"
   }
 }

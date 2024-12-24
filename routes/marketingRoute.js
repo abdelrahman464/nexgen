@@ -54,6 +54,7 @@ router.put(
   authServices.allowedTo("user", "admin"),
   setPaymentDetails
 );
+//for testing purposes not for production
 router.put(
   "/calculateProfitsManual",
   authServices.protect,
@@ -61,11 +62,11 @@ router.put(
   calculateProfitsManual
 );
 router.put(
-  "/createInvoice/:id", //user id
+  "/withdrawMoney/:id", //marketer id
   authServices.protect,
   authServices.allowedTo("user", "admin"),
-  // checkAuthority,
-  // createInvoiceValidator,
+  checkAuthority,
+  createInvoiceValidator,
   createInvoice
 );
 

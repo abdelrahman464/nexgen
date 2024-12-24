@@ -18,7 +18,10 @@
   },
 
   "marketing-errors": {
-    "marketLog-Not-Found": "marketing date not found"
+    "marketLog-Not-Found": "marketing date not found",
+    "No-Profits-Found": "no profits to be withdrawn",
+    "balance-Not-Enough": "your balance is not enough",
+    "No-Team-Members": "No team members found"
   },
 
   "user-errors": {
