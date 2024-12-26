@@ -59,7 +59,6 @@ const courseSchema = new mongoose.Schema(
     coursePercentage: Number,
     courseDuration: {
       type: Number,
-      required: true,
     },
     ratingsQuantity: {
       type: Number,

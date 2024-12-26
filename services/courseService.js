@@ -261,9 +261,13 @@ exports.deleteCourse = asyncHandler(async (req, res, next) => {
         Lesson.deleteMany({ course: course._id }).session(session),
         Section.deleteMany({ course: course._id }).session(session),
         Review.deleteMany({ course: course._id }).session(session),
-        Post.deleteMany({ course: course._id }).session(session),
         Chat.deleteMany({ course: course._id }).session(session),
         Notification.deleteMany({ course: course._id }).session(session),
+        await Post.updateMany(
+          { course: { $in: course._id } },
+          { $pull: { course: { $in: course._id } } },
+        ).session(session),
+
         //update order description and set order course to null
         Order.updateMany(
           { course: course._id },
