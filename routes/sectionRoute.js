@@ -5,6 +5,7 @@ const {
   createSectionValidator,
   updateSectionValidator,
   deleteSectionValidator,
+  getSectionCourseIdValidator,
 } = require('../utils/validators/sectionValidator');
 const {
   getSections,
@@ -19,7 +20,9 @@ const authServices = require('../services/authServices');
 
 const router = express.Router();
 
-router.route('/:courseId/course').get(filterSectionsByCourse, getSections);
+router
+  .route('/:courseId/course')
+  .get(getSectionCourseIdValidator, filterSectionsByCourse, getSections);
 router
   .route('/')
   .get(getSections)

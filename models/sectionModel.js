@@ -6,7 +6,7 @@ const sectionSchema = mongoose.Schema(
     title: {
       type: String,
       required: [true, 'section title required'],
-      minlength: [3, 'too short category  title '],
+      minlength: [3, 'too short category title'],
       i18n: true,
     },
     course: {
