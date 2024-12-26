@@ -10,8 +10,6 @@ const sendEmail = require('../utils/sendEmail');
 const generateToken = require('../utils/generateToken');
 const { addMemberToChat } = require('./ChatServices');
 
-const Lesson = require('../models/lessonModel');
-
 // @desc    User Register,login with Google
 // @route   POST /api/v1/auth/google
 // @access  Public
@@ -227,20 +225,25 @@ exports.signup = asyncHandler(async (req, res, next) => {
 exports.login = asyncHandler(async (req, res, next) => {
   //edit lesson title to object
   // try {
-    // Find all lessons where title is a string
-    const lessons = await Lesson.find();
+  //   // Find all lessons where title is a string
+  //   const lessons = await Lesson.find({
+  //     title: { $type: 'string' },
+  //   });
 
-    // Use updateMany to perform bulk update
-    const result = await Lesson.updateMany(
-      { _id: { $in: lessons.map((lesson) => lesson._id) } },
-      [
-        {
-          $set: {
-            section:Object
-          },
-        },
-      ],
-    );
+  //   // Use updateMany to perform bulk update
+  //   const result = await Lesson.updateMany(
+  //     { _id: { $in: lessons.map((lesson) => lesson._id) } },
+  //     [
+  //       {
+  //         $set: {
+  //           title: {
+  //             en: '$title',
+  //             ar: '$title',
+  //           },
+  //         },
+  //       },
+  //     ],
+  //   );
 
   //   console.log(`Updated ${result.modifiedCount} lessons`);
   //   return result;
@@ -251,15 +254,15 @@ exports.login = asyncHandler(async (req, res, next) => {
 
   // 1- check if password and email in the body
   // 2- check if user exist & check if password is correct
-  // const user = await User.findOne({ email: req.body.email });
-  // if (!user || !(await bcrypt.compare(req.body.password, user.password))) {
-  //   return next(new ApiError('incorrect password or email', 401));
-  // }
-  // //3- generate token
-  // const token = generateToken(user._id);
+  const user = await User.findOne({ email: req.body.email });
+  if (!user || !(await bcrypt.compare(req.body.password, user.password))) {
+    return next(new ApiError('incorrect password or email', 401));
+  }
+  //3- generate token
+  const token = generateToken(user._id);
 
-  // //3- send response to client side
-  // res.status(200).json({ data: user, token });
+  //3- send response to client side
+  res.status(200).json({ data: user, token });
 });
 
 //@desc make sure user is logged in
