@@ -90,10 +90,6 @@ class PDFGenerator {
     const details = [
       { label: 'Customer Name', value: order.user.name },
       { label: 'Email', value: order.user.email },
-      {
-        label: 'Purchase Date',
-        value: moment(order.createdAt).format('MMMM Do, YYYY'),
-      },
     ];
 
     doc.moveDown(0.5);
@@ -124,18 +120,21 @@ class PDFGenerator {
 
     const items = [
       order.course
-        ? { name: order.course.title, price: order.course.price }
+        ? { name: order.course.title.en, price: order.course.price }
         : null,
       order.package
-        ? { name: order.package.name, price: order.package.price }
+        ? { name: order.package.title.en, price: order.package.price }
         : null,
       order.coursePackage
-        ? { name: order.coursePackage.title, price: order.coursePackage.price }
+        ? {
+            name: order.coursePackage.title.en,
+            price: order.coursePackage.price,
+          }
         : null,
     ].filter(Boolean);
 
     items.forEach((item) => {
-      doc.text(`- ${item.name}: $${item.price.toFixed(2)}`);
+      doc.text(`- ${item.name}: $${item.price}`);
       doc.moveDown(0.5);
     });
   }
@@ -153,7 +152,7 @@ class PDFGenerator {
     doc.moveDown(0.5);
 
     const paymentDetails = [
-      { label: 'Total Price', value: `$${order.totalOrderPrice.toFixed(2)}` },
+      { label: 'Total Price', value: `$${order.totalOrderPrice}` },
       { label: 'Payment Method', value: order.paymentMethodType },
       { label: 'Payment Status', value: order.isPaid ? 'Paid' : 'Pending' },
       {
