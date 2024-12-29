@@ -18,7 +18,7 @@ const {
   calculateScore,
   getTotalPossibleGrade,
   hasPassed,
-  updateUserProgress,
+  // updateUserProgress,
   handleExamResponse,
   getTotalGrades,
 } = require('./examUtils');
@@ -493,56 +493,79 @@ exports.submitLessonAnswers = async (req, res, next) => {
   const { id } = req.params;
   const { answers } = req.body;
   const { user } = req;
-  // Fetch the exam and lesson
-  const exam = await Exam.findOne({ _id: id, type: 'lesson' });
-  if (!exam) {
-    return next(new ApiError('Exam not found', 404));
-  }
-  const lesson = await Lesson.findById(exam.lesson);
-  if (!lesson) {
-    return next(new ApiError('Lesson not found', 404));
-  }
 
-  // Check if the user has already completed the lesson
-  const existingProgress = await CourseProgress.findOne({
-    user: user._id,
-    course: lesson.course,
-  });
-  const lastProgress =
-    existingProgress.progress[existingProgress.progress.length - 1];
+  try {
+    // Fetch the exam and lesson
+    const exam = await Exam.findOne({ _id: id, type: 'lesson' });
+    if (!exam) {
+      return next(new ApiError('Exam not found', 404));
+    }
+    const lesson = await Lesson.findById(exam.lesson);
+    if (!lesson) {
+      return next(new ApiError('Lesson not found', 404));
+    }
 
-  // If the lesson order is not correct, block the user from proceeding
-  if (lastProgress && lesson.order > lastProgress.lesson.order + 1) {
-    return next(new ApiError('Cannot take this lesson out of order', 401));
-  }
-
-  // Calculate the score and determine if passed
-  const examResult = calculateScore(exam.questions, answers);
-  const totalPossibleGrade = getTotalPossibleGrade(exam.questions);
-  const passed = hasPassed(
-    examResult.score,
-    totalPossibleGrade,
-    exam.passingScore,
-  );
-
-  if (
-    !lastProgress || // If no previous progress, allow taking the first lesson
-    (lastProgress.status === 'Completed' &&
-      lesson.order - lastProgress.lesson.order === 1) // If the last lesson was completed, allow taking the next lesson
-  ) {
-    // Update user's lesson progress
-    await updateUserProgress({
-      userId: user._id,
-      courseId: lesson.course,
-      exam,
-      passed,
-      score: examResult.score,
-      wrongAnswers: examResult.wrongAnswers,
-      isRequireAnalytic: lesson.isRequireAnalytic,
+    // Check if the user has already completed the lesson
+    const existingProgress = await CourseProgress.findOne({
+      user: user._id,
+      course: lesson.course,
     });
+
+    // Calculate the score and determine if passed
+    const examResult = calculateScore(exam.questions, answers);
+    const totalPossibleGrade = getTotalPossibleGrade(exam.questions);
+    const passed = hasPassed(
+      examResult.score,
+      totalPossibleGrade,
+      exam.passingScore,
+    );
+
+    // Create new progress entry
+    const newProgress = {
+      lesson: lesson._id,
+      modelExam: exam.model,
+      status: passed ? 'Completed' : 'failed',
+      passAnalytics: lesson.isRequireAnalytic ? false : null,
+      examScore: examResult.score,
+      attemptDate: new Date(),
+      wrongAnswers: examResult.wrongAnswers.map((wa) => ({
+        question: wa.questionId,
+        answer: wa.answer,
+      })),
+    };
+
+    // Update or create course progress
+    if (!existingProgress) {
+      await CourseProgress.create({
+        user: user._id,
+        course: lesson.course,
+        status: 'notTaken',
+        progress: [newProgress],
+        certificate: {
+          isDeserve: false,
+          isTake: false,
+        },
+      });
+    } else {
+      await CourseProgress.findByIdAndUpdate(
+        existingProgress._id,
+        {
+          $push: { progress: newProgress },
+        },
+        { new: true },
+      );
+    }
+
+    // Respond with exam results
+    return handleExamResponse(
+      res,
+      passed,
+      examResult.score,
+      totalPossibleGrade,
+    );
+  } catch (error) {
+    return next(new ApiError(error.message, 500));
   }
-  // Respond with success or failure message
-  return handleExamResponse(res, passed, examResult.score, totalPossibleGrade);
 };
 //end lesson exam logic
 ///////////////////////////////////////////////////////////////////////

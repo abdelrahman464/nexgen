@@ -62,35 +62,36 @@ exports.getTotalPossibleGrade = (questions) =>
 exports.hasPassed = (score, totalScore, passingScore) =>
   (score / totalScore) * 100 >= passingScore;
 
-// Update the user's progress for a course or lesson
-exports.updateUserProgress = async ({
-  userId,
-  courseId,
-  exam,
-  passed,
-  score,
-  wrongAnswers,
-  isRequireAnalytic = false,
-}) => {
-  const passAnalytics = isRequireAnalytic ? false : null;
-  await CourseProgress.findOneAndUpdate(
-    { user: userId, course: courseId },
-    {
-      $push: {
-        progress: {
-          lesson: exam.lesson,
-          passAnalytics,
-          modelExam: exam.model,
-          status: passed ? 'Completed' : 'failed',
-          examScore: score,
-          attemptDate: new Date(),
-          wrongAnswers,
-        },
-      },
-    },
-    { new: true, upsert: false },
-  );
-};
+// // Update the user's progress for a course or lesson
+// exports.updateUserProgress = async ({
+//   userId,
+//   courseId,
+//   exam,
+//   passed,
+//   score,
+//   wrongAnswers,
+//   isRequireAnalytic = false,
+// }) => {
+  
+//   const passAnalytics = isRequireAnalytic ? false : null;
+//   await CourseProgress.findOneAndUpdate(
+//     { user: userId, course: courseId },
+//     {
+//       $push: {
+//         progress: {
+//           lesson: exam.lesson,
+//           passAnalytics,
+//           modelExam: exam.model,
+//           status: passed ? 'Completed' : 'failed',
+//           examScore: score,
+//           attemptDate: new Date(),
+//           wrongAnswers,
+//         },
+//       },
+//     },
+//     { new: true, upsert: false },
+//   );
+// };
 // Handle success or failure response
 exports.handleExamResponse = (res, passed, score, totalScore) =>
   res.status(200).json({
