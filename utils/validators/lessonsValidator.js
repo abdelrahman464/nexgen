@@ -154,7 +154,7 @@ exports.checkCourseAccess = asyncHandler(async (req, res, next) => {
   // need to check if user have this course or not
   const courseProgress = await CourseProgress.findOne({
     user: user._id,
-    course: id,
+    course: course._id,
   });
 
   if (!courseProgress) {
@@ -162,25 +162,25 @@ exports.checkCourseAccess = asyncHandler(async (req, res, next) => {
   }
 
   //check if user have a valid subscription in package of type course
-  const userSubscriptions = await UserSubscription.find({
-    user: user._id,
-  });
-  if (!userSubscriptions) {
-    return next(new ApiError(res.__('errors.Not-Authorized'), 403));
-  }
+  // const userSubscriptions = await UserSubscription.find({
+  //   user: user._id,
+  // });
+  // if (!userSubscriptions) {
+  //   return next(new ApiError(res.__('errors.Not-Authorized'), 403));
+  // }
 
-  userSubscriptions.forEach((subscription) => {
-    if (
-      subscription.package.type === 'course' &&
-      subscription.package.course._id.toString() === course._id.toString()
-    ) {
-      if (subscription.endDate < new Date()) {
-        return next(
-          new ApiError('Your Subscription Is Expired Or Not Found', 403),
-        );
-      }
-    }
-  });
+  // userSubscriptions.forEach((subscription) => {
+  //   if (
+  //     subscription.package.type === 'course' &&
+  //     subscription.package.course._id.toString() === course._id.toString()
+  //   ) {
+  //     if (subscription.endDate < new Date()) {
+  //       return next(
+  //         new ApiError('Your Subscription Is Expired Or Not Found', 403),
+  //       );
+  //     }
+  //   }
+  // });
 
   next();
 });

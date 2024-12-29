@@ -37,12 +37,12 @@ router.get(
   getCourseProgress,
 );
 router.get(
-  '/getLessonPerformance/:userId/:lessonId',
+  '/getLessonPerformance/:lessonId/:userId',
   authService.protect,
   getLessonPerformance,
 );
 router.get(
-  '/getCoursePerformance/:userId/:courseId',
+  '/getCoursePerformance/:courseId/:userId',
   authService.protect,
   getCoursePerformance,
 );
@@ -65,8 +65,6 @@ router
 router
   .route('/userScore/:courseId/:userId')
   .get(authService.protect, authService.allowedTo('admin', 'user'), userScores);
-
-
 
 router
   .route('/courses/:courseId')
@@ -146,11 +144,7 @@ router.post(
 );
 /////////////////////////////////////////////////////////////////////////
 //  placement exam
-router.get(
-  '/placement/:id',
-  authService.protect,
-  placementExam,
-);
+router.get('/placement/:id', authService.protect, placementExam);
 router.post(
   '/placement/:id/submit',
   authService.protect,

@@ -1,4 +1,4 @@
-const express = require("express");
+const express = require('express');
 
 const {
   checkCourseIdParamValidator,
@@ -6,7 +6,7 @@ const {
   updateCourseValidator,
   // checkCourseOwnership,
   addUserToCourseValidator,
-} = require("../utils/validators/courseValidator");
+} = require('../utils/validators/courseValidator');
 const {
   convertToArray,
   createCourse,
@@ -25,100 +25,97 @@ const {
   uploadCertificateFile,
   storeCertificateFile,
   giveCertificate,
-} = require("../services/courseService");
-const authServices = require("../services/authServices");
+} = require('../services/courseService');
+const authServices = require('../services/authServices');
 // nested routes
-const reviewsRoute = require("./reviewRoute");
-const lessonRoute = require("./lessonRoute");
+const reviewsRoute = require('./reviewRoute');
+const lessonRoute = require('./lessonRoute');
 
 const router = express.Router({ mergeParams: true });
 
-router.use("/:courseId/reviews", reviewsRoute);
-router.use("/:courseId/lessons", lessonRoute);
+router.use('/:courseId/reviews', reviewsRoute);
+router.use('/:courseId/lessons', lessonRoute);
 
 router.get(
-  "/MyCourses/:id?", //user id
+  '/MyCourses/:id?', //user id
   authServices.protect,
-  getMyCourses
+  authServices.allowedTo('user'),
+  getMyCourses,
 );
 // get course users
-router.get(
-  "/courseDetails/:id",
-  authServices.protect,
-  getCourseDetails
-);
+router.get('/courseDetails/:id', authServices.protect, getCourseDetails);
 
 // Create a new course
 router.post(
-  "/",
+  '/',
   authServices.protect,
-  authServices.allowedTo("admin"),
+  authServices.allowedTo('admin'),
   uploadCourseImage,
   resizeImage,
   convertToArray,
   setCategoryIdToBody,
   createCourseValidator,
-  createCourse
+  createCourse,
 );
 
 // Get all courses
-router.get("/", getAllCourses);
+router.get('/', getAllCourses);
 
 // Get a specific course by ID
-router.get("/:id", checkCourseIdParamValidator, getCourseById);
+router.get('/:id', checkCourseIdParamValidator, getCourseById);
 
 // Update a course by ID
 router.put(
-  "/:id",
+  '/:id',
   authServices.protect,
-  authServices.allowedTo("admin"),
+  authServices.allowedTo('admin'),
   uploadCourseImage,
   resizeImage,
   convertToArray,
   updateCourseValidator,
-  updateCourse
+  updateCourse,
 );
 
 // Delete a course by ID
 router.delete(
-  "/:id",
+  '/:id',
   authServices.protect,
-  authServices.allowedTo("admin"),
+  authServices.allowedTo('admin'),
   checkCourseIdParamValidator,
-  deleteCourse
+  deleteCourse,
 );
 
 // add user to course list
 router.post(
-  "/addUserToCourse/:id", //course id
+  '/addUserToCourse/:id', //course id
   authServices.protect,
-  authServices.allowedTo("admin"),
+  authServices.allowedTo('admin'),
   addUserToCourseValidator,
-  addUserToCourse
+  addUserToCourse,
 );
 
 router.put(
-  "/assignInstructorPercentage/:id", //course id
+  '/assignInstructorPercentage/:id', //course id
   authServices.protect,
-  authServices.allowedTo("admin"),
-  assignInstructorPercentage
+  authServices.allowedTo('admin'),
+  assignInstructorPercentage,
 );
 
 router.delete(
-  "/removeInstructorPercentage/:id", //course id
+  '/removeInstructorPercentage/:id', //course id
   authServices.protect,
-  authServices.allowedTo("admin"),
-  removeInstructorPercentage
+  authServices.allowedTo('admin'),
+  removeInstructorPercentage,
 );
 
 router
-  .route("/giveCertificate/:courseId/:userId")
+  .route('/giveCertificate/:courseId/:userId')
   .put(
     authServices.protect,
-    authServices.allowedTo("admin"),
+    authServices.allowedTo('admin'),
     uploadCertificateFile,
     storeCertificateFile,
-    giveCertificate
+    giveCertificate,
   );
 
 module.exports = router;

@@ -164,9 +164,10 @@ async function createOrUpdateSubscription(userId, packageId, durationDays) {
 
 // Handler for creating a course order
 const createCourseOrderHandler = async (courseId, email, price, method) => {
-  const [course, user] = await Promise.all([
+  const [course, user, package] = await Promise.all([
     Course.findById(courseId),
     User.findOne({ email }),
+    Package.findOne({ course: courseId }),
   ]);
   if (!course || !user) throw new Error('Course or user not found');
 
@@ -183,12 +184,12 @@ const createCourseOrderHandler = async (courseId, email, price, method) => {
     await createCourseProgress(user._id, course._id);
     await addUserToGroupChatAndNotify(user._id, course._id);
 
-    if (course.subscriptionPackage) {
+    if (package.course) {
       await createOrUpdateSubscription(
         user._id,
-        course.subscriptionPackage._id,
-        5 * 30,
-      ); // 5 months
+        package._id, // package id
+        4 * 30,
+      ); // 4 months
     }
 
     await availUserToReview(user._id);
@@ -246,9 +247,9 @@ const createPackageOrderHandler = async (packageId, email, price, method) => {
     package.subscriptionDurationDays,
   );
 
-  if (package.type === 'course' && package.course) {
-    await createCourseProgress(user._id, package.course._id);
-  }
+  // if (package.type === 'course' && package.course) {
+  //   await createCourseProgress(user._id, package.course._id);
+  // }
 
   await availUserToReview(user._id);
   await calculateProfits({

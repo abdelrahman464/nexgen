@@ -727,9 +727,9 @@ exports.getMyFollowersAndFollowing = async (req, res, next) => {
 //@access private admin
 exports.actionOnIdDocument = async (req, res, next) => {
   try {
-    const { action, note } = req.body;
-    if (action !== "verified" && action !== "rejected") {
-      return next(new ApiError("Invalid action", 400));
+    const { action, note, idNumber, name } = req.body;
+    if (action !== 'verified' && action !== 'rejected') {
+      return next(new ApiError('Invalid action', 400));
     }
     // Toggle approval status of ID document
     const user = await User.findById(req.params.id);
@@ -741,8 +741,8 @@ exports.actionOnIdDocument = async (req, res, next) => {
     // Toggle the `approveIdDocument` field in one step
     const updatedUser = await User.findByIdAndUpdate(
       req.params.id,
-      { $set: { idVerification: action, note } },
-      { new: true }
+      { $set: { idVerification: action, note, idNumber, name } },
+      { new: true },
     );
 
     if (updatedUser && action === "verified") {

@@ -126,9 +126,9 @@ exports.getTotalSalesAnalytics = async (req, res) => {
       analytics: result.analytics,
     });
   } catch (error) {
-    const statusCode = error instanceof ApiError ? error.statusCode : 500;
+    // const statusCode = error instanceof ApiError ? error.statusCode : 500;
     return res
-      .status(statusCode)
+      .status(400)
       .json({ status: `failed`, error: error.message });
   }
 };

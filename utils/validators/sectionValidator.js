@@ -9,6 +9,12 @@ exports.getSectionValidator = [
   //catch error
   validatorMiddleware,
 ];
+exports.getSectionCourseIdValidator = [
+  //rules
+  check('courseId').isMongoId().withMessage('Invalid Section id format'),
+  //catch error
+  validatorMiddleware,
+];
 exports.createSectionValidator = [
   body('title').isObject().withMessage('Title must be an object.'),
 
