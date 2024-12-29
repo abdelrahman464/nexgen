@@ -1,7 +1,9 @@
 const express = require("express");
 const authServices = require("../services/authServices");
 const marketingAnalyticsService = require("../services/marketing/marketingAnalyticsService");
-
+const {
+  getItemAnalyticsValidator,
+} = require("../utils/validators/marketingAnalyticsValidator");
 const router = express.Router();
 
 router.get(
@@ -14,6 +16,8 @@ router.get(
   "/item/:id?", //item id
   authServices.protect,
   authServices.allowedTo("admin"),
+  //validation layer for startDate and endDate
+  getItemAnalyticsValidator,
   marketingAnalyticsService.getItemAnalytics
 );
 router.get(
