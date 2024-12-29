@@ -255,16 +255,16 @@ function toISOFormat(dateString) {
 //clicks
 exports.incrementSignUpClicks = async (req, res) => {
   try {
-    const marketerId = req.params.id;
+    const marketerId = req.params.marketerId;
     const invitationKey = req.query.invitationKey || "defaultKey";
 
     const month = new Date().getMonth() + 1;
     const year = new Date().getFullYear();
 
-    const invitationLinkAnalyticsDoc = await InvitationLinkAnalytics.findOne({
+    const invitationKeysAnalyticsDoc = await InvitationLinkAnalytics.findOne({
       marketer: marketerId,
     });
-    if (!invitationLinkAnalyticsDoc) {
+    if (!invitationKeysAnalyticsDoc) {
       //create new document
       await InvitationLinkAnalytics.create({
         marketer: marketerId,
@@ -275,62 +275,73 @@ exports.incrementSignUpClicks = async (req, res) => {
     } else {
       //increment the count
       let flag = false;
-      invitationLinkAnalyticsDoc.clicksDetails.forEach((click) => {
+      //check if the invitationKey already exists in the document =
+      invitationKeysAnalyticsDoc.clicksDetails.forEach((click) => {
         if (click.invitationKey === invitationKey) {
           click.clicks += 1;
           flag = true;
         }
       });
       if (!flag) {
-        invitationLinkAnalyticsDoc.clicksDetails.push({
+        invitationKeysAnalyticsDoc.clicksDetails.push({
           invitationKey,
           clicks: 1,
         });
       }
-      await invitationLinkAnalyticsDoc.save();
+      await invitationKeysAnalyticsDoc.save();
     }
-    return res
-      .status(200)
-      .json({ status: "success", invitationLinkAnalyticsDoc });
+    return res.status(200).json({
+      status: "success",
+      msg: "clicks incremented successfully",
+    });
   } catch (err) {
     res.status(500).json({ status: "failed", error: err.message });
   }
 };
 //------------------------------------------------
+/**
+ * @notes :  if month and year not provided => get current month and year
+ */
 exports.getInvitationsAnalytics = async (req, res, next) => {
   try {
     const { marketerId } = req.params;
-    const invitationKey = req.query.invitationKey;
     const month = req.query.month || new Date().getMonth() + 1;
     const year = req.query.year || new Date().getFullYear();
 
-    const clicks = await InvitationLinkAnalytics.findOne({
+    const clicksDetails = await InvitationLinkAnalytics.findOne({
       marketer: marketerId,
       month,
       year,
-    }).lean();
-    if (invitationKey) {
-      clicks.clicksDetails = clicks.clicksDetails?.find(
-        (click) => click.invitationKey === invitationKey
-      );
-    }
+    })
+      .select("-__v")
+      .lean();
     //get registration count
     const startOfMonth = new Date(year, month - 1, 1); // Adjust month - 1 for JavaScript Date
     const startOfNextMonth = new Date(year, month, 1); // Automatically handles transitions to the next year
 
-    const registeredUsers = await getUsersByFilter({
-      invitor: marketerId,
-      invitationKey,
-      createdAt: {
-        $gte: startOfMonth,
-        $lt: startOfNextMonth,
+    const registeredUsers = await getUsersByFilter(
+      {
+        invitor: marketerId,
+        createdAt: {
+          $gte: startOfMonth,
+          $lt: startOfNextMonth,
+        },
       },
+      "_id invitationKey name email profileImg createdAt"
+    );
+    //assign users to their invitationKey
+    const invitationKeys = {};
+    registeredUsers.forEach((user) => {
+      if (user.invitationKey in invitationKeys) {
+        invitationKeys[user.invitationKey].push(user);
+      } else {
+        invitationKeys[user.invitationKey] = [user];
+      }
     });
     return res.status(200).json({
       status: "success",
-      registeredUsersCounter: registeredUsers.length,
-      registeredUsers,
-      clicks,
+      registeredUsersCounter: invitationKeys,
+      clicksDetails,
     });
   } catch (error) {
     console.log(error.message);

@@ -438,7 +438,7 @@ exports.getMarketerChildren = async (req, res, next) => {
       );
     }
     //get orders for these children
-    const result = await filterTeamMembers(teamMembers);
+    const result = await filterTeamMembers(teamMembers, req.locale);
 
     const { totalSubscribers, teamMembers1, teamMembers2, resaleCounter } =
       result;
@@ -525,7 +525,7 @@ exports.deleteUnUsed = async () => {
 };
 //**
 //  */
-const filterTeamMembers = async (teamMembers) => {
+const filterTeamMembers = async (teamMembers, lang) => {
   let resaleCounter = 0;
   const usersIds = teamMembers.map((user) => user._id);
   const orders = await Order.find({ user: { $in: usersIds } });
@@ -537,8 +537,13 @@ const filterTeamMembers = async (teamMembers) => {
       teamMembers2: teamMembers, //cause there are no orders
       resaleCounter,
     };
+
+  const localizedOrders = Order.schema.methods.toJSONLocalizedOnly(
+    orders,
+    lang
+  );
   //  1.1 - loop on orders and push each order to user.orders
-  orders.map((order) => {
+  localizedOrders.map((order) => {
     if (order.isResale) resaleCounter++;
     teamMembers.map((member) => {
       if (member._id.toString() === order.user._id.toString()) {
