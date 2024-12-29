@@ -511,6 +511,9 @@ exports.submitLessonAnswers = async (req, res, next) => {
       course: lesson.course,
     });
 
+    //get last progress
+    // const lastProgress =existingProgress.progress[existingProgress.progress.length - 1];
+
     // Calculate the score and determine if passed
     const examResult = calculateScore(exam.questions, answers);
     const totalPossibleGrade = getTotalPossibleGrade(exam.questions);
@@ -534,27 +537,15 @@ exports.submitLessonAnswers = async (req, res, next) => {
       })),
     };
 
-    // Update or create course progress
-    if (!existingProgress) {
-      await CourseProgress.create({
-        user: user._id,
-        course: lesson.course,
-        status: 'notTaken',
-        progress: [newProgress],
-        certificate: {
-          isDeserve: false,
-          isTake: false,
-        },
-      });
-    } else {
-      await CourseProgress.findByIdAndUpdate(
-        existingProgress._id,
-        {
-          $push: { progress: newProgress },
-        },
-        { new: true },
-      );
-    }
+    // Update course progress
+
+    await CourseProgress.findByIdAndUpdate(
+      existingProgress._id,
+      {
+        $push: { progress: newProgress },
+      },
+      { new: true },
+    );
 
     // Respond with exam results
     return handleExamResponse(
