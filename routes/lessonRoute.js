@@ -33,7 +33,7 @@ router.get(
   getCourseLessons,
 );
 router.get(
-  '/sectionLessons/:id/:sectionId',
+  '/sectionLessons/:id',
   authServices.protect,
   authServices.allowedTo('user', 'admin'),
   checkMongoId("id"),
