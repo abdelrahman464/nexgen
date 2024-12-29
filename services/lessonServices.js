@@ -8,6 +8,7 @@ const crypto = require('crypto');
 const ApiError = require('../utils/apiError');
 const factory = require('./handllerFactory');
 const Lesson = require('../models/lessonModel');
+const Section = require('../models/sectionModel');
 const CourseProgress = require('../models/courseProgressModel');
 const { uploadMixOfFiles } = require('../middlewares/uploadImageMiddleware');
 const ApiFeatures = require('../utils/apiFeatures');
@@ -222,44 +223,49 @@ exports.getSectionLessons = async (req, res, next) => {
     nextPage = currentPage + 1;
   }
   if (lessons.length === 0)
-    return next(new ApiError('No lessons found for this course', 404));
+    return next(new ApiError('No lessons found for this section', 404));
 
-  // Define a variable to hold the modified lessons with restricted access as needed
   let accessibleLessons = [...lessons];
 
   if (req.user.role !== 'admin') {
     const userCourseProgress = await CourseProgress.findOne({
       user: req.user._id,
       course: req.params.id,
-    }).populate('progress.lesson');
+    });
 
-    if (!userCourseProgress || userCourseProgress.progress.length === 0) {
-      // If no progress, user should only access the first lesson
-      accessibleLessons = lessons.map((lesson, index) => {
-        if (index > 0) lesson.videoUrl = undefined;
-        return lesson;
-      });
-    } else {
-      // Find the last lesson in progress
-      const lastLessonProgress =
-        userCourseProgress.progress[userCourseProgress.progress.length - 1];
+    // By default, only first lesson (order=1) is accessible
+    let maxAccessibleOrder = 1;
 
-      //------------
-      let currentLessonOrder = lastLessonProgress.lesson.order;
-      if (
-        lastLessonProgress.status === 'Completed' &&
-        (!('isPassed' in lastLessonProgress) || lastLessonProgress.isPassed)
-      ) {
-        currentLessonOrder += 1;
+    if (userCourseProgress && userCourseProgress.progress.length > 0) {
+      // Get all lesson ids from the current section
+      const sectionLessonIds = lessons.map((lesson) => lesson._id.toString());
+
+      // Filter progress to only include passed lessons from this section
+      const passedLessons = userCourseProgress.progress.filter(
+        (progress) =>
+          progress.lesson &&
+          sectionLessonIds.includes(progress.lesson._id.toString()) &&
+          progress.status === 'Completed' &&
+          progress.passAnalytics === true,
+      );
+
+      if (passedLessons.length > 0) {
+        // Find the highest order among passed lessons
+        const highestPassedOrder = Math.max(
+          ...passedLessons.map((progress) => progress.lesson.order),
+        );
+        // Make next lesson accessible
+        maxAccessibleOrder = highestPassedOrder + 1;
       }
-      //---------------
-
-      // Update accessibleLessons based on currentLessonOrder
-      accessibleLessons = lessons.map((lesson) => {
-        if (lesson.order > currentLessonOrder) lesson.videoUrl = undefined;
-        return lesson;
-      });
     }
+
+    // Update lesson accessibility
+    accessibleLessons = lessons.map((lesson) => {
+      if (lesson.order > maxAccessibleOrder) {
+        lesson.videoUrl = undefined;
+      }
+      return lesson;
+    });
   }
 
   return res.status(200).json({
@@ -274,7 +280,6 @@ exports.getSectionLessons = async (req, res, next) => {
     data: accessibleLessons,
   });
 };
-
 // exports.getCourseLessons = async (req, res,next) => {
 //   const lessons = await Lesson.find({ course: req.params.id }).sort({
 //     order: 1,
@@ -369,7 +374,7 @@ exports.getLessonById = asyncHandler(async (req, res, next) => {
       req.locale,
     );
     if (req.user.role !== 'admin') {
-       videoData = await getVideoData(lesson.videoUrl, {
+      videoData = await getVideoData(lesson.videoUrl, {
         _id: req.user._id,
         email: req.user.email,
       });
@@ -379,7 +384,7 @@ exports.getLessonById = asyncHandler(async (req, res, next) => {
       status: 'success',
       data: {
         lesson: localizedLesson,
-        videoData
+        videoData,
       },
     });
   } catch (err) {
