@@ -7,6 +7,7 @@
   },
   "analytics-errors": {
     "hasNoInvitor": "Unauthorized action ,You have no invitor",
+    "Un-Authorized-Invitor": "Unauthorized action ,You are not his invitor",
     "Not-Found": "No analytics found",
     "One-Not-Found": "No analytic found for the given id"
   },
