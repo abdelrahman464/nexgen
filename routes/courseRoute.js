@@ -16,6 +16,7 @@ const {
   updateCourse,
   addUserToCourse,
   getCourseDetails,
+  // getCourseUsers,
   getMyCourses,
   setCategoryIdToBody,
   uploadCourseImage,
@@ -39,11 +40,11 @@ router.use('/:courseId/lessons', lessonRoute);
 router.get(
   '/MyCourses/:id?', //user id
   authServices.protect,
-  authServices.allowedTo('user'),
   getMyCourses,
 );
 // get course users
 router.get('/courseDetails/:id', authServices.protect, getCourseDetails);
+// router.get('/courseUsers/:id', authServices.protect, getCourseUsers);
 
 // Create a new course
 router.post(

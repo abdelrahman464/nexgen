@@ -192,10 +192,12 @@ exports.getCourseLessons = async (req, res, next) => {
 };
 
 //@desc get lessons of a section
-//@route GET /api/v1/lessons/sectionLessons/:id/:sectionId
+//@route GET /api/v1/lessons/sectionLessons/:id
 //@access Private
 exports.getSectionLessons = async (req, res, next) => {
-  const lessons = await Lesson.find({ course: req.params.id });
+  const lessons = await Lesson.find({ course: req.params.id }).sort({
+    order: 1,
+  });
   const localizedLessons = Lesson.schema.methods.toJSONLocalizedOnly(
     lessons,
     req.locale,
@@ -252,6 +254,42 @@ exports.getSectionLessons = async (req, res, next) => {
   const orderedLessons = [];
   localizedSections.forEach((section) => {
     const sectionLessons = accessibleLessons.filter(
+      (lesson) => lesson.section.toString() === section._id.toString(),
+    );
+    orderedLessons.push({
+      section: section.title,
+      lessons: sectionLessons,
+    });
+  });
+
+  return res.status(200).json({
+    data: orderedLessons,
+  });
+};
+
+//@desc get lessons of a section
+//@route GET /api/v1/lessons/sectionLessons/:id/public
+//@access Private
+exports.getSectionLessonsInPublic = async (req, res, next) => {
+  const lessons = await Lesson.find({ course: req.params.id }).sort({
+    order: 1,
+  });
+  const localizedLessons = Lesson.schema.methods.toJSONLocalizedOnly(
+    lessons,
+    req.locale,
+  );
+
+  //get all section in that course
+  const sections = await Section.find({ course: req.params.id });
+  const localizedSections = Section.schema.methods.toJSONLocalizedOnly(
+    sections,
+    req.locale,
+  );
+
+  //order lessons by section
+  const orderedLessons = [];
+  localizedSections.forEach((section) => {
+    const sectionLessons = localizedLessons.filter(
       (lesson) => lesson.section.toString() === section._id.toString(),
     );
     orderedLessons.push({

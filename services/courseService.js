@@ -351,115 +351,365 @@ exports.getCourseDetails = asyncHandler(async (req, res, next) => {
     return next(new ApiError(`Invalid course ID: ${courseId}`, 400));
   }
 
-  // Fetch the course details
-  const course = await Course.findById(courseId).populate('category', 'title');
+  // Fetch course details and user progress in parallel
+  const [course, usersProgressAggregation] = await Promise.all([
+    Course.findById(courseId).populate('category', 'title'),
+    CourseProgress.aggregate([
+      { $match: { course: mongoose.Types.ObjectId(courseId) } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'userDetails',
+        },
+      },
+      { $unwind: '$userDetails' },
+      {
+        $lookup: {
+          from: 'exams',
+          let: { courseId: '$course', modelExam: '$modelExam' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$course', '$$courseId'] },
+                    { $eq: ['$type', 'course'] },
+                    { $eq: ['$model', '$$modelExam'] },
+                  ],
+                },
+              },
+            },
+          ],
+          as: 'finalExam',
+        },
+      },
+      { $unwind: { path: '$finalExam', preserveNullAndEmptyArrays: true } },
+      {
+        $addFields: {
+          finalExamGrade: {
+            $cond: [
+              { $in: ['$status', ['Completed', 'failed']] },
+              { $sum: '$finalExam.questions.grade' },
+              0,
+            ],
+          },
+          userTotalExamScore: {
+            $sum: '$progress.examScore',
+          },
+        },
+      },
+      {
+        $project: {
+          _id: '$userDetails._id',
+          name: '$userDetails.name',
+          email: '$userDetails.email',
+          profileImg: {
+            $cond: [
+              { $ne: ['$userDetails.profileImg', null] },
+              {
+                $concat: [
+                  process.env.BASE_URL,
+                  '/users/',
+                  '$userDetails.profileImg',
+                ],
+              },
+              null,
+            ],
+          },
+          totalCourseExamsPercentage: {
+            $cond: {
+              if: {
+                $eq: [
+                  {
+                    $add: [
+                      { $sum: '$progress.possibleGrade' },
+                      '$finalExamGrade',
+                    ],
+                  },
+                  0,
+                ],
+              },
+              then: 0,
+              else: {
+                $multiply: [
+                  {
+                    $divide: [
+                      {
+                        $add: [
+                          '$userTotalExamScore',
+                          { $ifNull: ['$score', 0] },
+                        ],
+                      },
+                      {
+                        $add: [
+                          { $sum: '$progress.possibleGrade' },
+                          '$finalExamGrade',
+                        ],
+                      },
+                    ],
+                  },
+                  100,
+                ],
+              },
+            },
+          },
+          status: 1,
+          score: 1,
+          attemptDate: 1,
+          certificate: 1,
+        },
+      },
+      { $sort: { totalCourseExamsPercentage: -1 } },
+    ]),
+  ]);
+
   if (!course) {
     return next(new ApiError(`No course found for this id ${courseId}`, 404));
   }
+
+  // Get localized course details
   const localizedCourse = Course.schema.methods.toJSONLocalizedOnly(
     course,
     req.locale,
   );
 
-  // Fetch all users and their progress in this course
-  const usersProgress = await CourseProgress.find({ course: courseId })
-    .populate({
-      path: 'user',
-      select: 'name email profileImg',
-    })
-    .lean();
-
-  // Helper function to construct the full URL for profileImg
-  const getProfileImgUrl = (profileImg) => {
-    if (!profileImg) return null;
-    return `${process.env.BASE_URL}/users/${profileImg}`;
-  };
-
-  // Aggregate stats across all users
-  let usersCompletedCourse = 0;
-  let usersFailedCourse = 0;
-  let usersNotTakenCourse = 0;
-  let totalCertificatesDeserved = 0;
-  let totalCertificatesTaken = 0;
-
-  // Process each user's progress for the course
-  const users = await Promise.all(
-    usersProgress.map(async (progress) => {
-      // Track status and certificates
-      // eslint-disable-next-line no-plusplus
-      if (progress.status === 'Completed') usersCompletedCourse++; // eslint-disable-next-line no-plusplus
-      if (progress.status === 'failed') usersFailedCourse++; // eslint-disable-next-line no-plusplus
-      if (progress.status === 'notTaken') usersNotTakenCourse++; // eslint-disable-next-line no-plusplus
-      if (progress.certificate.isDeserve) totalCertificatesDeserved++; // eslint-disable-next-line no-plusplus
-      if (progress.certificate.isTake) totalCertificatesTaken++;
-
-      // Track exam stats
-      const userTotalExamScore = progress.progress.reduce(
-        (total, item) => total + (item.examScore || 0),
-        0,
-      );
-
-      // Fetch final exam score and grade if applicable
-      let finalExamGrade = 0;
-      let finalExamScore = 0;
-      if (progress.status === 'Completed' || progress.status === 'failed') {
-        const finalExam = await Exam.findOne({
-          course: courseId,
-          type: 'course',
-          model: progress.modelExam,
-        });
-        finalExamGrade = getTotalPossibleGrade(finalExam.questions) || 0;
-        finalExamScore = progress.score || 0;
-      }
-
-      const possibleLessonExamsGrades = await getTotalGrades(progress.progress);
-      const totalPossibleLessonExamsGrade =
-        possibleLessonExamsGrades.reduce(
-          (total, item) => total + item.grade,
-          0,
-        ) || 0;
-
-      const totalCourseExamsPercentage = (
-        ((userTotalExamScore + finalExamScore) /
-          (totalPossibleLessonExamsGrade + finalExamGrade)) *
-        100
-      ).toFixed(2);
-
-      return {
-        id: progress.user._id,
-        name: progress.user.name,
-        email: progress.user.email,
-        profileImg: getProfileImgUrl(progress.user.profileImg) || undefined,
-        totalCourseExamsPercentage: parseFloat(totalCourseExamsPercentage), // Convert to float for sorting
-        status: progress.status,
-        score: progress.score,
-        attemptDate: progress.attemptDate,
-        certificate: progress.certificate,
-      };
-    }),
-  );
-
-  // Sort users by totalCourseExamsPercentage in descending order
-  users.sort(
-    (a, b) => b.totalCourseExamsPercentage - a.totalCourseExamsPercentage,
-  );
+  // Get overall statistics using aggregation
+  const stats = await CourseProgress.aggregate([
+    { $match: { course: mongoose.Types.ObjectId(courseId) } },
+    {
+      $group: {
+        _id: null,
+        totalUsers: { $sum: 1 },
+        usersCompletedCourse: {
+          $sum: { $cond: [{ $eq: ['$status', 'Completed'] }, 1, 0] },
+        },
+        usersFailedCourse: {
+          $sum: { $cond: [{ $eq: ['$status', 'failed'] }, 1, 0] },
+        },
+        usersNotTakenCourse: {
+          $sum: { $cond: [{ $eq: ['$status', 'notTaken'] }, 1, 0] },
+        },
+        totalCertificatesDeserved: {
+          $sum: { $cond: ['$certificate.isDeserve', 1, 0] },
+        },
+        totalCertificatesTaken: {
+          $sum: { $cond: ['$certificate.isTake', 1, 0] },
+        },
+      },
+    },
+  ]);
 
   return res.status(200).json({
     status: 'success',
     data: {
       courseDetails: localizedCourse,
-      users,
-      stats: {
-        totalUsers: users.length,
-        usersCompletedCourse,
-        usersFailedCourse,
-        usersNotTakenCourse,
-        totalCertificatesDeserved,
-        totalCertificatesTaken,
+      users: usersProgressAggregation,
+      stats: stats[0] || {
+        totalUsers: 0,
+        usersCompletedCourse: 0,
+        usersFailedCourse: 0,
+        usersNotTakenCourse: 0,
+        totalCertificatesDeserved: 0,
+        totalCertificatesTaken: 0,
       },
     },
   });
 });
+
+// exports.getCourseDetails = asyncHandler(async (req, res, next) => {
+//   const courseId = req.params.id;
+
+//   // Validate courseId
+//   if (!mongoose.Types.ObjectId.isValid(courseId)) {
+//     return next(new ApiError(`Invalid course ID: ${courseId}`, 400));
+//   }
+
+//   // Fetch course details and stats in parallel
+//   const [course, stats] = await Promise.all([
+//     Course.findById(courseId)
+//       .populate('category', 'title')
+//       .populate('instructor', 'name email profileImg'),
+//     CourseProgress.aggregate([
+//       { $match: { course: mongoose.Types.ObjectId(courseId) } },
+//       {
+//         $group: {
+//           _id: null,
+//           totalUsers: { $sum: 1 },
+//           usersCompletedCourse: {
+//             $sum: { $cond: [{ $eq: ['$status', 'Completed'] }, 1, 0] },
+//           },
+//           usersFailedCourse: {
+//             $sum: { $cond: [{ $eq: ['$status', 'failed'] }, 1, 0] },
+//           },
+//           usersNotTakenCourse: {
+//             $sum: { $cond: [{ $eq: ['$status', 'notTaken'] }, 1, 0] },
+//           },
+//           totalCertificatesDeserved: {
+//             $sum: { $cond: ['$certificate.isDeserve', 1, 0] },
+//           },
+//           totalCertificatesTaken: {
+//             $sum: { $cond: ['$certificate.isTake', 1, 0] },
+//           },
+//         },
+//       },
+//     ]),
+//   ]);
+
+//   if (!course) {
+//     return next(new ApiError(`No course found for this id ${courseId}`, 404));
+//   }
+
+//   // Get localized course details
+//   const localizedCourse = Course.schema.methods.toJSONLocalizedOnly(
+//     course,
+//     req.locale,
+//   );
+
+//   return res.status(200).json({
+//     status: 'success',
+//     data: {
+//       courseDetails: localizedCourse,
+//       stats: stats[0] || {
+//         totalUsers: 0,
+//         usersCompletedCourse: 0,
+//         usersFailedCourse: 0,
+//         usersNotTakenCourse: 0,
+//         totalCertificatesDeserved: 0,
+//         totalCertificatesTaken: 0,
+//       },
+//     },
+//   });
+// });
+
+// exports.getCourseUsers = asyncHandler(async (req, res, next) => {
+//   const courseId = req.params.id;
+
+//   // Validate courseId
+//   if (!mongoose.Types.ObjectId.isValid(courseId)) {
+//     return next(new ApiError(`Invalid course ID: ${courseId}`, 400));
+//   }
+
+//   const pipeline = [
+//     { $match: { course: mongoose.Types.ObjectId(courseId) } },
+//     {
+//       $lookup: {
+//         from: 'users',
+//         localField: 'user',
+//         foreignField: '_id',
+//         as: 'userDetails',
+//       },
+//     },
+//     { $unwind: '$userDetails' },
+//     {
+//       $lookup: {
+//         from: 'lessons',
+//         localField: 'progress.lesson',
+//         foreignField: '_id',
+//         as: 'lessonDetails',
+//       },
+//     },
+//     {
+//       $addFields: {
+//         // Calculate total earned points from progress
+//         totalEarnedPoints: {
+//           $sum: {
+//             $map: {
+//               input: '$progress',
+//               as: 'prog',
+//               in: {
+//                 $cond: [
+//                   { $eq: ['$$prog.examScore', null] },
+//                   0,
+//                   '$$prog.examScore',
+//                 ],
+//               },
+//             },
+//           },
+//         },
+//         // Calculate total possible points (100 points per lesson)
+//         totalPossiblePoints: {
+//           $multiply: [{ $size: '$progress' }, 100],
+//         },
+//       },
+//     },
+//     {
+//       $project: {
+//         _id: '$userDetails._id',
+//         name: '$userDetails.name',
+//         email: '$userDetails.email',
+//         profileImg: {
+//           $cond: [
+//             { $ne: ['$userDetails.profileImg', null] },
+//             {
+//               $concat: [
+//                 process.env.BASE_URL,
+//                 '/users/',
+//                 '$userDetails.profileImg',
+//               ],
+//             },
+//             null,
+//           ],
+//         },
+//         totalCourseExamsPercentage: {
+//           $cond: {
+//             if: { $eq: ['$totalPossiblePoints', 0] },
+//             then: 0,
+//             else: {
+//               $min: [
+//                 100,
+//                 {
+//                   $multiply: [
+//                     {
+//                       $divide: ['$totalEarnedPoints', '$totalPossiblePoints'],
+//                     },
+//                     100,
+//                   ],
+//                 },
+//               ],
+//             },
+//           },
+//         },
+//         status: 1,
+//         certificate: {
+//           isDeserve: { $ifNull: ['$certificate.isDeserve', false] },
+//           isTake: { $ifNull: ['$certificate.isTake', false] },
+//           file: {
+//             $cond: [
+//               { $ne: ['$certificate.file', null] },
+//               {
+//                 $concat: [
+//                   process.env.BASE_URL,
+//                   '/certificate/',
+//                   '$certificate.file',
+//                 ],
+//               },
+//               null,
+//             ],
+//           },
+//         },
+//       },
+//     },
+//     {
+//       $addFields: {
+//         totalCourseExamsPercentage: {
+//           $round: ['$totalCourseExamsPercentage', 2],
+//         },
+//       },
+//     },
+//     { $sort: { totalCourseExamsPercentage: -1 } },
+//     { $limit: 5 },
+//   ];
+
+//   const users = await CourseProgress.aggregate(pipeline);
+
+//   return res.status(200).json({
+//     status: 'success',
+//     results: users.length,
+//     data: users,
+//   });
+// });
 
 exports.giveCertificate = asyncHandler(async (req, res, next) => {
   const { userId, courseId } = req.params;
@@ -488,6 +738,7 @@ exports.giveCertificate = asyncHandler(async (req, res, next) => {
       en: 'You have received a certificate',
       ar: 'لقد تلقيت شهادة',
     },
+    file,
     type: 'certificate',
     course: courseId,
   });

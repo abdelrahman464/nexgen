@@ -425,6 +425,24 @@ const getCourseExam = async (req) => {
     user: user._id,
     course: params.id,
   });
+  //get last progress
+  const lastProgress = examResult.progress[examResult.progress.length - 1];
+  if (lastProgress.status !== 'Completed')
+    throw new ApiError(
+      'You must complete all lessons before taking the exam',
+      401,
+    );
+  //get last lesson in that course
+  const lastLesson = await Lesson.findOne({ course: params.id }).sort({
+    order: -1,
+  });
+
+  if (lastLesson._id.toString() !== lastProgress.lesson._id.toString()) {
+    throw new ApiError(
+      'You must complete all lessons before taking the exam',
+      401,
+    );
+  }
 
   if (!examResult)
     throw new ApiError('You must start the course before taking the exam', 401);

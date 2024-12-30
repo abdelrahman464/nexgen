@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 const { sendNotification } = require('../socket/index'); // Adjust the path as per your file structure
 
-
 const NotificationSchema = new mongoose.Schema(
   {
     user: {
@@ -30,7 +29,7 @@ const NotificationSchema = new mongoose.Schema(
       required: [true, 'Message required'],
       i18n: true,
     },
-    file: String, //add pdf path that have order details -> with {type = order }
+    file: String, //add pdf path that have order details -> with {type = order ,type =certificate}
     read: {
       type: Boolean,
       default: false,
@@ -64,8 +63,9 @@ NotificationSchema.pre(/^find/, function (next) {
 });
 const setCourseImageURL = (doc) => {
   //return image base url + iamge name
+  const folder = doc.type === 'order' ? 'orders' : 'certificate';
   if (doc.file) {
-    const fileUrl = `${process.env.BASE_URL}/orders/${doc.file}`;
+    const fileUrl = `${process.env.BASE_URL}/${folder}/${doc.file}`;
     doc.file = fileUrl;
   }
 };
