@@ -20,6 +20,7 @@ const {
   resizeFiles,
   setCourseIdToBody,
   getSectionLessons,
+  getSectionLessonsInPublic,
 } = require('../services/lessonServices');
 
 const router = express.Router({ mergeParams: true });
@@ -28,18 +29,19 @@ router.get(
   '/courseLessons/:id',
   authServices.protect,
   authServices.allowedTo('user', 'admin'),
-  checkMongoId("id"),
+  checkMongoId('id'),
   checkCourseAccess,
   getCourseLessons,
 );
 router.get(
-  '/sectionLessons/:id/:sectionId',
+  '/sectionLessons/:id',
   authServices.protect,
   authServices.allowedTo('user', 'admin'),
-  checkMongoId("id"),
+  checkMongoId('id'),
   checkCourseAccess,
   getSectionLessons,
 );
+router.get('/sectionLessons/:id/public', getSectionLessonsInPublic);
 // Get all lessons
 router.get(
   '/',
@@ -53,7 +55,7 @@ router.get(
   '/:id',
   authServices.protect,
   authServices.allowedTo('user', 'admin'),
-  checkMongoId("id"),
+  checkMongoId('id'),
   checkLessonAccess,
   getLessonById,
 );
@@ -76,7 +78,7 @@ router.put(
   authServices.allowedTo('admin'),
   uploadFiles,
   resizeFiles,
-  checkMongoId("id"),
+  checkMongoId('id'),
   updateLessonValidator,
   updateLesson,
 );
@@ -86,7 +88,7 @@ router.delete(
   '/:id',
   authServices.protect,
   authServices.allowedTo('admin'),
-  checkMongoId("id"),
+  checkMongoId('id'),
   deleteLesson,
 );
 

@@ -192,92 +192,114 @@ exports.getCourseLessons = async (req, res, next) => {
 };
 
 //@desc get lessons of a section
-//@route GET /api/v1/lessons/sectionLessons/:id/:sectionId
+//@route GET /api/v1/lessons/sectionLessons/:id
 //@access Private
 exports.getSectionLessons = async (req, res, next) => {
-  const query = Lesson.find({ section: req.params.sectionId }).sort({
+  const lessons = await Lesson.find({ course: req.params.id }).sort({
     order: 1,
   });
-  const documentsCount = await Lesson.countDocuments({
-    section: req.params.sectionId,
-  });
-
-  const apiFeatures = new ApiFeatures(query, req.query)
-    .filter()
-    .search('Lesson')
-    .sort()
-    .limitFields();
-
-  const results = await apiFeatures.paginate();
-  const lessons = Lesson.schema.methods.toJSONLocalizedOnly(
-    results,
+  const localizedLessons = Lesson.schema.methods.toJSONLocalizedOnly(
+    lessons,
     req.locale,
   );
 
-  const currentPage = parseInt(req.query.page, 10) || 1;
-  const limit = parseInt(req.query.limit, 10) || 50;
-  const numberOfPages = Math.ceil(documentsCount / limit);
-  let nextPage = null;
+  if (localizedLessons.length === 0)
+    return next(new ApiError('No lessons found for this course', 404));
 
-  if (currentPage < numberOfPages) {
-    nextPage = currentPage + 1;
-  }
-  if (lessons.length === 0)
-    return next(new ApiError('No lessons found for this section', 404));
-
-  let accessibleLessons = [...lessons];
+  // Define a variable to hold the modified lessons with restricted access as needed
+  let accessibleLessons = [...localizedLessons];
 
   if (req.user.role !== 'admin') {
     const userCourseProgress = await CourseProgress.findOne({
       user: req.user._id,
       course: req.params.id,
-    });
+    }).populate('progress.lesson');
 
-    // By default, only first lesson (order=1) is accessible
-    let maxAccessibleOrder = 1;
+    if (!userCourseProgress || userCourseProgress.progress.length === 0) {
+      // If no progress, user should only access the first lesson
+      accessibleLessons = localizedLessons.map((lesson, index) => {
+        if (index > 0) lesson.videoUrl = undefined;
+        return lesson;
+      });
+    } else {
+      // Find the last lesson in progress
+      const lastLessonProgress =
+        userCourseProgress.progress[userCourseProgress.progress.length - 1];
 
-    if (userCourseProgress && userCourseProgress.progress.length > 0) {
-      // Get all lesson ids from the current section
-      const sectionLessonIds = lessons.map((lesson) => lesson._id.toString());
-
-      // Filter progress to only include passed lessons from this section
-      const passedLessons = userCourseProgress.progress.filter(
-        (progress) =>
-          progress.lesson &&
-          sectionLessonIds.includes(progress.lesson._id.toString()) &&
-          progress.status === 'Completed' &&
-          progress.passAnalytics === true,
-      );
-
-      if (passedLessons.length > 0) {
-        // Find the highest order among passed lessons
-        const highestPassedOrder = Math.max(
-          ...passedLessons.map((progress) => progress.lesson.order),
-        );
-        // Make next lesson accessible
-        maxAccessibleOrder = highestPassedOrder + 1;
+      //------------
+      let currentLessonOrder = lastLessonProgress.lesson.order;
+      if (
+        lastLessonProgress.status === 'Completed' &&
+        (!('isPassed' in lastLessonProgress) || lastLessonProgress.isPassed)
+      ) {
+        currentLessonOrder += 1;
       }
+      //---------------
+      // Update accessibleLessons based on currentLessonOrder
+      accessibleLessons = localizedLessons.map((lesson) => {
+        if (lesson.order > currentLessonOrder) lesson.videoUrl = undefined;
+        return lesson;
+      });
     }
-
-    // Update lesson accessibility
-    accessibleLessons = lessons.map((lesson) => {
-      if (lesson.order > maxAccessibleOrder) {
-        lesson.videoUrl = undefined;
-      }
-      return lesson;
-    });
   }
 
+  //get all section in that course
+  const sections = await Section.find({ course: req.params.id });
+  const localizedSections = Section.schema.methods.toJSONLocalizedOnly(
+    sections,
+    req.locale,
+  );
+
+  //order lessons by section
+  const orderedLessons = [];
+  localizedSections.forEach((section) => {
+    const sectionLessons = accessibleLessons.filter(
+      (lesson) => lesson.section.toString() === section._id.toString(),
+    );
+    orderedLessons.push({
+      section: section.title,
+      lessons: sectionLessons,
+    });
+  });
+
   return res.status(200).json({
-    results: results.length,
-    paginationResult: {
-      totalCount: documentsCount,
-      currentPage,
-      limit,
-      numberOfPages,
-      nextPage,
-    },
-    data: accessibleLessons,
+    data: orderedLessons,
+  });
+};
+
+//@desc get lessons of a section
+//@route GET /api/v1/lessons/sectionLessons/:id/public
+//@access Private
+exports.getSectionLessonsInPublic = async (req, res, next) => {
+  const lessons = await Lesson.find({ course: req.params.id }).sort({
+    order: 1,
+  });
+  const localizedLessons = Lesson.schema.methods.toJSONLocalizedOnly(
+    lessons,
+    req.locale,
+  );
+
+  //get all section in that course
+  const sections = await Section.find({ course: req.params.id });
+  const localizedSections = Section.schema.methods.toJSONLocalizedOnly(
+    sections,
+    req.locale,
+  );
+
+  //order lessons by section
+  const orderedLessons = [];
+  localizedSections.forEach((section) => {
+    const sectionLessons = localizedLessons.filter(
+      (lesson) => lesson.section.toString() === section._id.toString(),
+    );
+    orderedLessons.push({
+      section: section.title,
+      lessons: sectionLessons,
+    });
+  });
+
+  return res.status(200).json({
+    data: orderedLessons,
   });
 };
 // exports.getCourseLessons = async (req, res,next) => {
