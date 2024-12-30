@@ -253,6 +253,8 @@ exports.createPost = asyncHandler(async (req, res, next) => {
     sharedTo,
   });
 
+  // Populate the user field
+  await post.populate('user', 'name email');
   // Create notifications for users
   if (users.length !== 0)
     await Promise.all(
