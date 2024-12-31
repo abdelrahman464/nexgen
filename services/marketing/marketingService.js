@@ -23,9 +23,9 @@ exports.startMarketing = async (req, res) => {
         .json({ status: "faild", msg: `you already started marketing` });
     }
     //2- check user role to determine his role in marketLog
-    let role = "customer";
+    let role = "marketer";
     if (req.user.role === "admin") {
-      role = "marketer";
+      role = "head";
     } else if (req.user.role === "instructor") {
       role = "instructor";
     }

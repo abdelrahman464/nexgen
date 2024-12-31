@@ -5,6 +5,7 @@ const fs = require("fs/promises");
 const path = require("path");
 const ApiError = require("../utils/apiError");
 const Analytic = require("../models/analyticsModel");
+const CourseProgress = require("../models/courseProgressModel");
 const factory = require("./handllerFactory");
 const { uploadMixOfFiles } = require("../middlewares/uploadImageMiddleware");
 const { passAnalyticsInCourseProgress } = require("./lessonServices");
@@ -151,7 +152,27 @@ exports.getAll = factory.getALl(Analytic);
 //@access : admin || owner || marketer
 exports.getOne = factory.getOne(Analytic);
 //assignIds
-exports.createOne = factory.createOne(Analytic);
+exports.createOne = async (req, res, next) => {
+  if (req.body.lesson) {
+    const userCourseProgress = await CourseProgress.findOne({
+      user: req.user._id,
+      course: req.body.course,
+    }).populate("progress.lesson");
+    //update it's course progress object
+    let flag = false;
+    if (userCourseProgress && userCourseProgress.progress.length !== 0) {
+      userCourseProgress.progress.map((obj) => {
+        if (obj.lesson._id?.toString() === req.body.lesson.toString()) {
+          obj.passAnalytics = true;
+          flag = true;
+        }
+      });
+    }
+    if (flag) await userCourseProgress.save();
+  }
+
+  return factory.createOne(Analytic)(req, res, next);
+};
 //check if the user is the owner or marketer
 exports.updateOne = async (req, res, next) => {
   try {

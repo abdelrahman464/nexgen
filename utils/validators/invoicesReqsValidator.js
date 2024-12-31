@@ -18,8 +18,8 @@ exports.updateInvoiceStatusValidator = [
   check("status")
     .notEmpty()
     .withMessage("status is required")
-    .isIn(["unpaid", "paid", "rejected"])
-    .withMessage("Invalid Status : only unpaid, paid or rejected allowed"),
+    .isIn(["pending", "paid", "rejected"])
+    .withMessage("Invalid Status : only pending, paid or rejected allowed"),
   validatorMiddleware,
 ];
 //2
@@ -33,7 +33,7 @@ exports.checkStatusValidator = [
     ),
   check("status")
     .optional()
-    .isIn(["unpaid", "paid", "rejected"])
-    .withMessage("Invalid Status : only unpaid, paid or rejected allowed"),
+    .isIn(["pending", "paid", "rejected"])
+    .withMessage("Invalid Status : only pending, paid or rejected allowed"),
   validatorMiddleware,
 ];
