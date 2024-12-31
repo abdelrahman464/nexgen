@@ -65,7 +65,7 @@ const getWalletInvoices = async (status) => {
 exports.getAllRequestedInvoices = async (req, res) => {
   try {
     //status => unpaid or paid or rejected
-    const status = req.params.status ? req.params.status : "unpaid";
+    const status = req.params.status ? req.params.status : "pending";
     let result;
     if (req.query.invoiceType === "wallet") {
       result = await getWalletInvoices(status);

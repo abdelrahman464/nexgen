@@ -1,25 +1,25 @@
-const sharp = require('sharp');
-const fs = require('fs');
-const path = require('path');
-const asyncHandler = require('express-async-handler');
-const { v4: uuidv4 } = require('uuid');
-const axios = require('axios');
-const crypto = require('crypto');
-const ApiError = require('../utils/apiError');
-const factory = require('./handllerFactory');
-const Lesson = require('../models/lessonModel');
-const Section = require('../models/sectionModel');
-const CourseProgress = require('../models/courseProgressModel');
-const { uploadMixOfFiles } = require('../middlewares/uploadImageMiddleware');
-const ApiFeatures = require('../utils/apiFeatures');
+const sharp = require("sharp");
+const fs = require("fs");
+const path = require("path");
+const asyncHandler = require("express-async-handler");
+const { v4: uuidv4 } = require("uuid");
+const axios = require("axios");
+const crypto = require("crypto");
+const ApiError = require("../utils/apiError");
+const factory = require("./handllerFactory");
+const Lesson = require("../models/lessonModel");
+const Section = require("../models/sectionModel");
+const CourseProgress = require("../models/courseProgressModel");
+const { uploadMixOfFiles } = require("../middlewares/uploadImageMiddleware");
+const ApiFeatures = require("../utils/apiFeatures");
 
 exports.uploadFiles = uploadMixOfFiles([
   {
-    name: 'image',
+    name: "image",
     maxCount: 1,
   },
   {
-    name: 'attachments',
+    name: "attachments",
     maxCount: 10,
   },
 ]);
@@ -40,31 +40,31 @@ exports.resizeFiles = asyncHandler(async (req, res, next) => {
 
         // Check if the file is an image or PDF
         if (
-          !mimeType.startsWith('image/') &&
-          !mimeType.startsWith('application/pdf')
+          !mimeType.startsWith("image/") &&
+          !mimeType.startsWith("application/pdf")
         ) {
           throw new ApiError(
             `File ${index + 1} is not an image or PDF file.`,
-            400,
+            400
           );
         }
 
-        const extension = mimeType.split('/')[1];
+        const extension = mimeType.split("/")[1];
         const fileName = `lesson-attachment-${uuidv4()}-${Date.now()}-${index + 1}.${extension}`;
         const filePath = path.join(
-          'uploads',
-          'lessons',
-          'attachments',
-          fileName,
+          "uploads",
+          "lessons",
+          "attachments",
+          fileName
         );
 
         ensureDirectoryExistence(filePath);
 
         try {
-          if (mimeType.startsWith('image/')) {
+          if (mimeType.startsWith("image/")) {
             // Process image files with sharp
             await sharp(file.buffer).webp({ quality: 95 }).toFile(filePath);
-          } else if (mimeType.startsWith('application/pdf')) {
+          } else if (mimeType.startsWith("application/pdf")) {
             // Save PDF files as-is
             fs.writeFileSync(filePath, file.buffer);
           }
@@ -75,7 +75,7 @@ exports.resizeFiles = asyncHandler(async (req, res, next) => {
           console.error(`Error processing file ${index + 1}: ${error.message}`);
           throw new ApiError(`Error processing file ${index + 1}.`, 500);
         }
-      },
+      }
     );
 
     try {
@@ -86,8 +86,8 @@ exports.resizeFiles = asyncHandler(async (req, res, next) => {
     }
   }
   if (req.files && req.files.image) {
-    if (!req.files.image[0].mimetype.startsWith('image/')) {
-      return next(new ApiError('lesson image is not an image file', 400));
+    if (!req.files.image[0].mimetype.startsWith("image/")) {
+      return next(new ApiError("lesson image is not an image file", 400));
     }
 
     const imageFileName = `lesson-${uuidv4()}-${Date.now()}-image.webp`;
@@ -120,14 +120,14 @@ exports.getCourseLessons = async (req, res, next) => {
 
   const apiFeatures = new ApiFeatures(query, req.query)
     .filter()
-    .search('Lesson')
+    .search("Lesson")
     .sort()
     .limitFields();
 
   const results = await apiFeatures.paginate();
   const lessons = Lesson.schema.methods.toJSONLocalizedOnly(
     results,
-    req.locale,
+    req.locale
   );
 
   const currentPage = parseInt(req.query.page, 10) || 1;
@@ -139,16 +139,16 @@ exports.getCourseLessons = async (req, res, next) => {
     nextPage = currentPage + 1;
   }
   if (lessons.length === 0)
-    return next(new ApiError('No lessons found for this course', 404));
+    return next(new ApiError("No lessons found for this course", 404));
 
   // Define a variable to hold the modified lessons with restricted access as needed
   let accessibleLessons = [...lessons];
 
-  if (req.user.role !== 'admin') {
+  if (req.user.role !== "admin") {
     const userCourseProgress = await CourseProgress.findOne({
       user: req.user._id,
       course: req.params.id,
-    }).populate('progress.lesson');
+    }).populate("progress.lesson");
 
     if (!userCourseProgress || userCourseProgress.progress.length === 0) {
       // If no progress, user should only access the first lesson
@@ -164,8 +164,8 @@ exports.getCourseLessons = async (req, res, next) => {
       //------------
       let currentLessonOrder = lastLessonProgress.lesson.order;
       if (
-        lastLessonProgress.status === 'Completed' &&
-        (!('isPassed' in lastLessonProgress) || lastLessonProgress.isPassed)
+        lastLessonProgress.status === "Completed" &&
+        (!("passAnalytics" in lastLessonProgress) || lastLessonProgress.passAnalytics)
       ) {
         currentLessonOrder += 1;
       }
@@ -200,20 +200,20 @@ exports.getSectionLessons = async (req, res, next) => {
   });
   const localizedLessons = Lesson.schema.methods.toJSONLocalizedOnly(
     lessons,
-    req.locale,
+    req.locale
   );
 
   if (localizedLessons.length === 0)
-    return next(new ApiError('No lessons found for this course', 404));
+    return next(new ApiError("No lessons found for this course", 404));
 
   // Define a variable to hold the modified lessons with restricted access as needed
   let accessibleLessons = [...localizedLessons];
 
-  if (req.user.role !== 'admin') {
+  if (req.user.role !== "admin") {
     const userCourseProgress = await CourseProgress.findOne({
       user: req.user._id,
       course: req.params.id,
-    }).populate('progress.lesson');
+    }).populate("progress.lesson");
 
     if (!userCourseProgress || userCourseProgress.progress.length === 0) {
       // If no progress, user should only access the first lesson
@@ -229,8 +229,9 @@ exports.getSectionLessons = async (req, res, next) => {
       //------------
       let currentLessonOrder = lastLessonProgress.lesson.order;
       if (
-        lastLessonProgress.status === 'Completed' &&
-        (!('isPassed' in lastLessonProgress) || lastLessonProgress.isPassed)
+        lastLessonProgress.status === "Completed" &&
+        (!("passAnalytics" in lastLessonProgress) ||
+          lastLessonProgress.passAnalytics)
       ) {
         currentLessonOrder += 1;
       }
@@ -247,14 +248,14 @@ exports.getSectionLessons = async (req, res, next) => {
   const sections = await Section.find({ course: req.params.id });
   const localizedSections = Section.schema.methods.toJSONLocalizedOnly(
     sections,
-    req.locale,
+    req.locale
   );
 
   //order lessons by section
   const orderedLessons = [];
   localizedSections.forEach((section) => {
     const sectionLessons = accessibleLessons.filter(
-      (lesson) => lesson.section.toString() === section._id.toString(),
+      (lesson) => lesson.section.toString() === section._id.toString()
     );
     orderedLessons.push({
       section: section.title,
@@ -276,21 +277,21 @@ exports.getSectionLessonsInPublic = async (req, res, next) => {
   });
   const localizedLessons = Lesson.schema.methods.toJSONLocalizedOnly(
     lessons,
-    req.locale,
+    req.locale
   );
 
   //get all section in that course
   const sections = await Section.find({ course: req.params.id });
   const localizedSections = Section.schema.methods.toJSONLocalizedOnly(
     sections,
-    req.locale,
+    req.locale
   );
 
   //order lessons by section
   const orderedLessons = [];
   localizedSections.forEach((section) => {
     const sectionLessons = localizedLessons.filter(
-      (lesson) => lesson.section.toString() === section._id.toString(),
+      (lesson) => lesson.section.toString() === section._id.toString()
     );
     orderedLessons.push({
       section: section.title,
@@ -354,14 +355,14 @@ async function getVideoData(videoId, user) {
     userId: user._id,
     annotate: JSON.stringify([
       {
-        type: 'rtext',
+        type: "rtext",
         text: `${user._id} - ${user.email}`,
-        alpha: '0.60',
-        color: '0xFF0000',
-        size: '15',
-        interval: '3000',
-        x: '10',
-        y: '10',
+        alpha: "0.60",
+        color: "0xFF0000",
+        size: "15",
+        interval: "3000",
+        x: "10",
+        y: "10",
       },
     ]),
   };
@@ -370,13 +371,13 @@ async function getVideoData(videoId, user) {
     const response = await axios.post(url, payload, {
       headers: {
         authorization: `Apisecret ${process.env.VDOCIPHER_SECRET_KEY}`,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
+        "Content-Type": "application/json",
+        Accept: "application/json",
       },
     });
     return response.data;
   } catch (error) {
-    console.error('Error fetching video data');
+    console.error("Error fetching video data");
     // throw error;
   }
 }
@@ -388,14 +389,14 @@ exports.getLessonById = asyncHandler(async (req, res, next) => {
     const lesson = await Lesson.findById(id);
     if (!lesson) {
       // If no lesson is found with the given ID, send a 404 response
-      return next(new ApiError('No lesson found with that ID', 404));
+      return next(new ApiError("No lesson found with that ID", 404));
     }
 
     const localizedLesson = Lesson.schema.methods.toJSONLocalizedOnly(
       lesson,
-      req.locale,
+      req.locale
     );
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== "admin") {
       videoData = await getVideoData(lesson.videoUrl, {
         _id: req.user._id,
         email: req.user.email,
@@ -403,7 +404,7 @@ exports.getLessonById = asyncHandler(async (req, res, next) => {
     }
 
     return res.status(200).json({
-      status: 'success',
+      status: "success",
       data: {
         lesson: localizedLesson,
         videoData,
@@ -411,7 +412,7 @@ exports.getLessonById = asyncHandler(async (req, res, next) => {
     });
   } catch (err) {
     console.error(err);
-    return next(new ApiError('No lesson found with that ID', 404));
+    return next(new ApiError("No lesson found with that ID", 404));
   }
 });
 

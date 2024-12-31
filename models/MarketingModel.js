@@ -101,8 +101,8 @@ const MarketingLogsSchema = new mongoose.Schema(
         },
         status: {
           type: String,
-          Enum: ["unpaid", "paid", "rejected"],
-          default: "unpaid",
+          Enum: ["pending", "paid", "rejected"],
+          default: "pending",
         },
         paidAt: {
           type: Date,
@@ -118,8 +118,8 @@ const MarketingLogsSchema = new mongoose.Schema(
         },
         status: {
           type: String,
-          Enum: ["unpaid", "paid", "rejected"],
-          default: "unpaid",
+          Enum: ["pending", "paid", "rejected"],
+          default: "pending",
         },
         paidAt: {
           type: Date,
