@@ -7,7 +7,7 @@ const Course = require('../../models/courseModel');
 const Lesson = require('../../models/lessonModel');
 const CourseProgress = require('../../models/courseProgressModel');
 const Section = require('../../models/sectionModel');
-const UserSubscription = require('../../models/userSubscriptionModel');
+// const UserSubscription = require('../../models/userSubscriptionModel');
 
 exports.createLessonValidator = [
   check('section')
@@ -185,6 +185,37 @@ exports.checkCourseAccess = asyncHandler(async (req, res, next) => {
   next();
 });
 
+//check if user take two lesson in progress
+// if the last two lessons were completed in one day, prevent taking another lesson on the same day
+//use in get single lesson and get lesson exam
+exports.isUserExceedingDailyLessonLimit = (progress) => {
+  const completedLessons = progress
+    .filter((p) => p.status === 'Completed') // Ensure this matches the actual status value in your data
+    .sort((a, b) => new Date(b.attemptDate) - new Date(a.attemptDate)); // Sort by attemptDate in descending order
+
+  if (completedLessons.length < 2) {
+    return false;
+  }
+
+  const isSameDay = (date1, date2) => {
+    const d1 = new Date(date1).toISOString().slice(0, 10);
+    const d2 = new Date(date2).toISOString().slice(0, 10);
+    return d1 === d2;
+  };
+
+  const now = new Date().toISOString().slice(0, 10);
+  const lastAttemptDate = completedLessons[0].attemptDate
+    .toISOString()
+    .slice(0, 10);
+  const secondLastAttemptDate = completedLessons[1].attemptDate
+    .toISOString()
+    .slice(0, 10);
+
+  return (
+    isSameDay(now, lastAttemptDate) && isSameDay(now, secondLastAttemptDate)
+  );
+};
+
 exports.checkLessonAccess = asyncHandler(async (req, res, next) => {
   const { id } = req.params; // lessonId
   const { user } = req;
@@ -206,24 +237,37 @@ exports.checkLessonAccess = asyncHandler(async (req, res, next) => {
     return next(new ApiError("You don't have access to this course", 403));
   }
 
-  //check if user have a valid subscription in package of type course
-  const userSubscriptions = await UserSubscription.find({
-    user: user._id,
-  });
-  if (!userSubscriptions) {
-    return next(new ApiError(res.__('errors.Not-Authorized'), 403));
+  //check if user take two lesson in progress
+  // if the last two lessons were completed in one day, prevent taking another lesson on the same day
+  if (this.isUserExceedingDailyLessonLimit(courseProgress.progress)) {
+    return next(
+      new ApiError(
+        `Dear student, the course is available to you for a lifetime, so there's no need to rush! 🕰️
+         You can only take two lessons per day to ensure your full focus and comprehension of the content. 📚✨
+         Enjoy your educational journey! 🚀🎓`,
+        403,
+      ),
+    );
   }
 
-  userSubscriptions.forEach((subscription) => {
-    if (
-      subscription.package.type === 'course' &&
-      subscription.package.course.toString() === lesson.course.toString()
-    ) {
-      if (subscription.endDate < new Date()) {
-        return next(new ApiError(res.__('errors.Not-Authorized'), 403));
-      }
-    }
-  });
+  //check if user have a valid subscription in package of type course
+  // const userSubscriptions = await UserSubscription.find({
+  //   user: user._id,
+  // });
+  // if (!userSubscriptions) {
+  //   return next(new ApiError(res.__('errors.Not-Authorized'), 403));
+  // }
+
+  // userSubscriptions.forEach((subscription) => {
+  //   if (
+  //     subscription.package.type === 'course' &&
+  //     subscription.package.course.toString() === lesson.course.toString()
+  //   ) {
+  //     if (subscription.endDate < new Date()) {
+  //       return next(new ApiError(res.__('errors.Not-Authorized'), 403));
+  //     }
+  //   }
+  // });
 
   next();
 });
@@ -247,38 +291,15 @@ exports.checkLessonExamAccess = async (req, res, next) => {
 
   // if user takes two exams in one day then prevent him to take more exams
   // if the last two exams were completed in one day, prevent taking another exam on the same day
-  const progress = courseProgress.progress
-    .filter((p) => p.status === 'passed') // Ensure this matches the actual status value in your data
-    .sort((a, b) => new Date(b.attemptDate) - new Date(a.attemptDate)); // Sort by attemptDate in descending order
-
-  if (progress.length >= 2) {
-    const lastAttemptDate = progress[0].attemptDate;
-    const secondLastAttemptDate = progress[1].attemptDate;
-
-    const isSameDay = (date1, date2) => {
-      const d1 = new Date(date1).toISOString().slice(0, 10);
-      const d2 = new Date(date2).toISOString().slice(0, 10);
-      return d1 === d2;
-    };
-
-    const now = new Date();
-    const currentDate = now.toISOString().slice(0, 10);
-    const lastAttemptDateString = lastAttemptDate.toISOString().slice(0, 10);
-    const secondLastAttemptDateString = secondLastAttemptDate
-      .toISOString()
-      .slice(0, 10);
-
-    if (
-      isSameDay(currentDate, lastAttemptDateString) &&
-      isSameDay(currentDate, secondLastAttemptDateString)
-    ) {
-      return next(
-        new ApiError(
-          'You have reached the limit of 2 exams completed in one day',
-          403,
-        ),
-      );
-    }
+  if (this.isUserExceedingDailyLessonLimit(courseProgress.progress)) {
+    return next(
+      new ApiError(
+        `Dear student, the course is available to you for a lifetime, so there's no need to rush! 🕰️
+         You can only take two exams per day to ensure your full focus and comprehension of the content. 📚✨
+         Enjoy your educational journey! 🚀🎓`,
+        403,
+      ),
+    );
   }
 
   req.lesson = lesson;
