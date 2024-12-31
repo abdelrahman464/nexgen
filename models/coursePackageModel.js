@@ -22,6 +22,7 @@ const coursePackageSchema = new mongoose.Schema(
       trim: true,
       max: [200000, 'Too long Package price'],
     },
+    type: String,
     priceAfterDiscount: {
       type: Number,
     },

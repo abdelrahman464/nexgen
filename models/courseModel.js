@@ -23,6 +23,7 @@ const courseSchema = new mongoose.Schema(
       required: true,
       i18n: true,
     },
+    type: String,
     highlights: [
       {
         type: Object,

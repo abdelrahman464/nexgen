@@ -137,6 +137,24 @@ async function addUserToGroupChatAndNotify(userId, courseId) {
     });
   }
 }
+//Utility to kick user from group chat
+async function kickUserFromGroupChat(userId, courseId) {
+  const chat = await Chat.findOneAndUpdate(
+    { course: courseId, isGroupChat: true },
+    { $pull: { participants: { user: userId } } },
+    { new: true },
+  );
+  if (chat) {
+    await Notification.create({
+      user: userId,
+      message: {
+        en: `You have been removed from the group ${chat.groupName}`,
+        ar: `تمت ازالتك من المجموعة ${chat.groupName}`,
+      },
+      type: 'system',
+    });
+  }
+}
 
 // Utility to create or update subscription for a user and package
 async function createOrUpdateSubscription(userId, packageId, durationDays) {
