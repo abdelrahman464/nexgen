@@ -5,6 +5,7 @@ const InvitationLinkAnalytics = require("../../models/invitationLinkAnalyticsMod
 const ApiError = require("../../utils/apiError");
 const { getUsersByFilter } = require("../../services/userService");
 const _ = require("lodash");
+const MarketingLog = require("../../models/MarketingModel");
 //@desc > detect type of each order's item and return it's title
 const getItemDetails = (order, lang) => {
   let itemTitle;
@@ -127,9 +128,7 @@ exports.getTotalSalesAnalytics = async (req, res) => {
     });
   } catch (error) {
     // const statusCode = error instanceof ApiError ? error.statusCode : 500;
-    return res
-      .status(400)
-      .json({ status: `failed`, error: error.message });
+    return res.status(400).json({ status: `failed`, error: error.message });
   }
 };
 //--------------------------------------------------------------------------
@@ -192,6 +191,7 @@ exports.getItemAnalytics = async (req, res, next) => {
     //response
     return res.status(200).json({
       status: `success`,
+      givenPeriodOrders,
       givenPeriodSales,
       givenPeriodStudents: givenPeriodOrders.length,
       oppositePeriodSales,
@@ -255,8 +255,13 @@ function toISOFormat(dateString) {
 //clicks
 exports.incrementSignUpClicks = async (req, res) => {
   try {
-    const marketerId = req.params.marketerId;
-    const invitationKey = req.query.invitationKey || "defaultKey";
+    const invitationKey = req.params.invitationKey;
+    const marketerId = await this.getMarketerFromInvitationKey(invitationKey);
+    if (!marketerId)
+      return res.status(404).json({
+        status: "failed",
+        msg: "this invitationkey belongs to no marketer",
+      });
 
     const month = new Date().getMonth() + 1;
     const year = new Date().getFullYear();
@@ -347,4 +352,12 @@ exports.getInvitationsAnalytics = async (req, res, next) => {
     console.log(error.message);
     next(new ApiError(500, error.message));
   }
+};
+//---------------------------------------------------
+exports.getMarketerFromInvitationKey = async (invitationKey) => {
+  const marketer = await MarketingLog.findOne({
+    invitationKeys: invitationKey, // Matches the invitationKey in the array
+  }).select("_id marketer");
+  if (!marketer) return false;
+  return marketer.marketer;
 };

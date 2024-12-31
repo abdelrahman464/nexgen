@@ -28,7 +28,7 @@ router.get(
   marketingAnalyticsService.getInvitationsAnalytics
 );
 router.put(
-  "/incrementSignUpClicks/:marketerId", //marketing id
+  "/incrementSignUpClicks/:invitationKey", //marketing id
   marketingAnalyticsService.incrementSignUpClicks
 );
 
