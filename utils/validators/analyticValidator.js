@@ -70,6 +70,13 @@ exports.analyticPerformanceValidator = [
 ];
 //------------------------------------------------
 exports.isRequestFromHisTrainer = async (req, res, next) => {
+  const userId = req.params.id;
+  if (
+    req.user.role === "admin" ||
+    req.user._id.toString() === userId.toString()
+  )
+    return next();
+
   const user = await getUserAsDoc(
     {
       _id: req.params.id,
@@ -80,9 +87,13 @@ exports.isRequestFromHisTrainer = async (req, res, next) => {
     const doc = "user";
     return next(new ApiError(res.__("errors.Not-Found", { doc }), 401));
   }
-  if (user.invitor.toString() !== req.user._id.toString()) {
-    console.log("user.invitor", user.invitor);
-    return next(new ApiError(res.__("errors.Not-Authorized"), 401));
-  }
+  if (!user.invitor)
+    return next(new ApiError(res.__("analytics-errors.hasNoInvitor"), 401));
+
+  if (user.invitor.toString() !== req.user._id.toString())
+    return next(
+      new ApiError(res.__("analytics-errors.Un-Authorized-Invitor"), 401)
+    );
+
   return next();
 };

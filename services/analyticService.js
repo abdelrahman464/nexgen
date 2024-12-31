@@ -210,12 +210,10 @@ exports.getAnalyticsPerformance = async (req, res, next) => {
   startDate = toISOFormat(startDate);
   endDate = toISOFormat(endDate);
 
-  const analyticsCount = await Analytic.count({
+  const passedAnalyticsCount = await Analytic.count({
     user: userId,
     isPassed: true,
   });
-  if (analyticsCount === 0)
-    return next(new ApiError(res.__("analytics-errors.Not-Found"), 404));
 
   const analyticsDocs = await Analytic.find({
     user: userId,
@@ -224,8 +222,10 @@ exports.getAnalyticsPerformance = async (req, res, next) => {
 
   const result = filterAnalyticsDocs(analyticsDocs, startDate, endDate);
   //get analytics with the same period
+  const analyticsCount = analyticsDocs.length;
   return res.status(200).json({
     status: "success",
+    passedAnalyticsCount,
     totalAnalytics: analyticsCount,
     passedDocs: result.passedDocs,
     failedDocs: result.failedDocs,
