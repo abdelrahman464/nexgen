@@ -1,23 +1,21 @@
-const Coupon = require("../models/couponModel");
-const factory = require("./handllerFactory");
-const ApiError = require("../utils/apiError");
+const Coupon = require('../models/couponModel');
+const factory = require('./handllerFactory');
+const ApiError = require('../utils/apiError');
 
 exports.validateCoupon = async (couponName, marketerId) => {
   const coupon = await Coupon.findOne({ couponName });
   if (!coupon) {
-    throw new Error(`This coupon doesn't exist`);
+    return 'coupon-errors.Not-Found';
   }
-  if (coupon.status === "rejected") {
-    throw new Error(`This coupon is not valid`);
+  if (coupon.status === 'rejected') {
+    return 'coupon-errors.unActive';
   }
   if (coupon.maxUsageTimes <= coupon.usedTimes) {
-    throw new Error(`This coupon is expired`);
+    return 'coupon-errors.Expired';
   }
-  if (coupon.marketer._id === marketerId)
-    throw new Error(`this coupon not belong to your marketer`);
+  if (coupon.marketer._id !== marketerId) return 'coupon-errors.Un-Authorized';
   return coupon;
 };
-
 //@desc get list of coupons
 //@route GET /api/v1/coupons
 //@access public
@@ -51,7 +49,7 @@ exports.incrementCouponUsedTimes = async (couponName) => {
   await Coupon.findOneAndUpdate(
     { couponName },
     { $inc: { usedTimes: 1 } },
-    { new: true }
+    { new: true },
   );
   return true;
 };
@@ -60,26 +58,26 @@ exports.getCouponDetails = async (req, res, next) => {
   try {
     const { couponName } = req.params;
     const coupon = await Coupon.findOne({ couponName }).select(
-      "-__v -updatedAt"
+      '-__v -updatedAt',
     );
     if (!coupon) {
-      return next(new ApiError(res.__("coupon-errors.Not-Found"), 404));
+      return next(new ApiError(res.__('coupon-errors.Not-Found'), 404));
     }
-    if (coupon.status !== "active") {
-      return next(new ApiError(res.__("coupon-errors.unActive"), 404));
+    if (coupon.status !== 'active') {
+      return next(new ApiError(res.__('coupon-errors.unActive'), 404));
     }
     if (coupon.maxUsageTimes <= coupon.usedTimes) {
-      return next(new ApiError(res.__("coupon-errors.Expired"), 404));
+      return next(new ApiError(res.__('coupon-errors.Expired'), 404));
     }
 
     if (
       coupon.marketer._id.toString() !== req.user._id.toString() &&
       coupon.marketer._id.toString() !== req.user.invitor?.toString()
     )
-      return next(new ApiError(res.__("coupon-errors.Un-Authorized"), 404));
+      return next(new ApiError(res.__('coupon-errors.Un-Authorized'), 404));
 
-    return res.status(200).json({ status: "success", coupon });
+    return res.status(200).json({ status: 'success', coupon });
   } catch (error) {
-    return res.status(500).json({ status: "error", error: error.message });
+    return res.status(500).json({ status: 'error', error: error.message });
   }
 };

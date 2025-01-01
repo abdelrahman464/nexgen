@@ -1,24 +1,26 @@
-const crypto = require("crypto");
-const axios = require("axios");
-const asyncHandler = require("express-async-handler");
-const ApiError = require("../../utils/apiError");
-const Order = require("../../models/orderModel");
-const Course = require("../../models/courseModel");
-const Package = require("../../models/packageModel");
-const CoursePackage = require("../../models/coursePackageModel");
-const UserSubscription = require("../../models/userSubscriptionModel");
-const User = require("../../models/userModel");
-const Chat = require("../../models/ChatModel");
-const Notification = require("../../models/notificationModel");
-const CourseProgress = require("../../models/courseProgressModel");
-const { checkCourseAccess } = require("../../utils/validators/courseValidator");
-const { calculateProfits } = require("../marketing/marketingService");
-const { availUserToReview } = require("../userService");
+const crypto = require('crypto');
+const axios = require('axios');
+const asyncHandler = require('express-async-handler');
+const ApiError = require('../../utils/apiError');
+const Order = require('../../models/orderModel');
+const Course = require('../../models/courseModel');
+const Package = require('../../models/packageModel');
+const CoursePackage = require('../../models/coursePackageModel');
+const UserSubscription = require('../../models/userSubscriptionModel');
+const User = require('../../models/userModel');
+const Chat = require('../../models/ChatModel');
+const Notification = require('../../models/notificationModel');
+const CourseProgress = require('../../models/courseProgressModel');
+const { checkCourseAccess } = require('../../utils/validators/courseValidator');
+const { calculateProfits } = require('../marketing/marketingService');
+const { availUserToReview } = require('../userService');
 const {
   createCourseOrderHandler,
   createPackageOrderHandler,
   createCoursePackageOrderHandler,
-} = require("./OrderService");
+} = require('./OrderService');
+
+const { validateCoupon } = require('../couponService');
 
 const createLahzaTransaction = async (email, first_name, amount, metadata) => {
   const data = {
@@ -26,31 +28,31 @@ const createLahzaTransaction = async (email, first_name, amount, metadata) => {
     first_name,
     amount,
     metadata,
-    currency: "USD",
+    currency: 'USD',
   };
 
   const jsonData = JSON.stringify(data);
 
   try {
     const response = await axios.post(
-      "https://api.lahza.io/transaction/initialize",
+      'https://api.lahza.io/transaction/initialize',
       jsonData,
       {
         headers: {
           authorization: `Bearer ${process.env.LAHZA_SECRET_KEY}`,
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
-      }
+      },
     );
 
-    console.log("Lahza response:", response.data);
+    console.log('Lahza response:', response.data);
     return response.data.data.authorization_url;
   } catch (error) {
     console.error(
-      "Error creating transaction:",
-      error.response?.data || error.message
+      'Error creating transaction:',
+      error.response?.data || error.message,
     );
-    throw new Error("Failed to create transaction");
+    throw new Error('Failed to create transaction');
   }
 };
 //Once the user completes the payment, Lahza will redirect them to your callback URL with a reference parameter. Verify this transaction with Lahza’s API.
@@ -62,16 +64,16 @@ const verifyLahzaTransaction = async (reference) => {
         headers: {
           Authorization: `Bearer ${process.env.LAHZA_SECRET_KEY}`,
         },
-      }
+      },
     );
 
-    return response.data.data.status === "success";
+    return response.data.data.status === 'success';
   } catch (error) {
     console.error(
-      "Error verifying transaction:",
-      error.response?.data || error.message
+      'Error verifying transaction:',
+      error.response?.data || error.message,
     );
-    throw new Error("Failed to verify transaction");
+    throw new Error('Failed to verify transaction');
   }
 };
 //handler for verification
@@ -87,37 +89,49 @@ exports.LahzaPaymentCallback = async (req, res, next) => {
       res.redirect(`https://nexgen-academy.com/${req.locale}/error-page`);
     }
   } catch (error) {
-    res.status(500).json({ error: "Verification process failed" });
+    res.status(500).json({ error: 'Verification process failed' });
   }
 };
 
 exports.courseCheckoutSessionLahza = asyncHandler(async (req, res, next) => {
   const { courseId } = req.params;
   const { user } = req;
+
   const course = await Course.findById(courseId);
 
   if (!course) {
     return next(new ApiError("There's no course", 404));
   }
 
+  // Check if user can buy this course or not
+  await checkCourseAccess(user, courseId);
+
   const existOrder = await Order.findOne({
     user: user._id,
     course: course._id,
   });
   if (existOrder) {
-    return next(new ApiError("You already bought this course", 400));
+    return next(new ApiError('You already bought this course', 400));
   }
 
-  const coursePrice = course.priceAfterDiscount || course.price;
-  const totalOrderPrice = Math.ceil(coursePrice * 100);
+  let totalOrderPrice = course.priceAfterDiscount || course.price;
+  //check if there is coupon
+  if (req.body.couponName) {
+    const coupon = await validateCoupon(req.body.couponName, user.invitor);
 
-  // Check if user can buy this course or not
-  await checkCourseAccess(user, courseId);
+    if (typeof coupon === 'string') {
+      return next(new ApiError(res.__(coupon), 400));
+    }
+    totalOrderPrice =
+      totalOrderPrice - (totalOrderPrice * coupon.discount) / 100;
+  }
 
+  totalOrderPrice = Math.ceil(totalOrderPrice * 100);
   const metadata = {
     id: courseId,
     email: user.email,
-    type: "course",
+    type: 'course',
+    couponName: req.body.couponName || null,
   };
 
   try {
@@ -125,16 +139,16 @@ exports.courseCheckoutSessionLahza = asyncHandler(async (req, res, next) => {
       user.email,
       user.name,
       totalOrderPrice.toString(),
-      metadata
+      metadata,
     );
 
     res.status(200).json({
-      status: "success",
+      status: 'success',
       redirectUrl: order,
     });
   } catch (err) {
     return next(
-      new ApiError(`Lahza order creation failed: ${err.message}`, 500)
+      new ApiError(`Lahza order creation failed: ${err.message}`, 500),
     );
   }
 });
@@ -149,14 +163,27 @@ exports.coursePackageCheckoutSessionLahza = asyncHandler(
       return next(new ApiError("There's no course Package", 404));
     }
 
-    const coursePackagePrice =
+    let totalOrderPrice =
       coursePackage.priceAfterDiscount || coursePackage.price;
-    const totalOrderPrice = Math.ceil(coursePackagePrice * 100);
+
+    //check if there is coupon
+    if (req.body.couponName) {
+      const coupon = await validateCoupon(req.body.couponName, user.invitor);
+
+      if (typeof coupon === 'string') {
+        return next(new ApiError(res.__(coupon), 400));
+      }
+      totalOrderPrice =
+        totalOrderPrice - (totalOrderPrice * coupon.discount) / 100;
+    }
+
+    totalOrderPrice = Math.ceil(totalOrderPrice * 100);
 
     const metadata = {
       id: coursePackageId,
       email: user.email,
-      type: "coursePackage",
+      type: 'coursePackage',
+      couponName: req.body.couponName || null,
     };
 
     try {
@@ -164,19 +191,19 @@ exports.coursePackageCheckoutSessionLahza = asyncHandler(
         user.email,
         user.name,
         totalOrderPrice.toString(),
-        metadata
+        metadata,
       );
 
       res.status(200).json({
-        status: "success",
+        status: 'success',
         redirectUrl: order,
       });
     } catch (err) {
       return next(
-        new ApiError(`Lahza order creation failed: ${err.message}`, 500)
+        new ApiError(`Lahza order creation failed: ${err.message}`, 500),
       );
     }
-  }
+  },
 );
 
 // // Package Checkout Session using lahza
@@ -188,13 +215,27 @@ exports.packageCheckoutSessionLahza = asyncHandler(async (req, res, next) => {
     return next(new ApiError("There's no Package", 404));
   }
 
-  const packagePrice = package.priceAfterDiscount || package.price;
-  const totalOrderPrice = Math.ceil(packagePrice * 100);
+  let totalOrderPrice = (packagePrice =
+    package.priceAfterDiscount || package.price);
+
+  //check if there is coupon
+  if (req.body.couponName) {
+    const coupon = await validateCoupon(req.body.couponName, user.invitor);
+
+    if (typeof coupon === 'string') {
+      return next(new ApiError(res.__(coupon), 400));
+    }
+    totalOrderPrice =
+      totalOrderPrice - (totalOrderPrice * coupon.discount) / 100;
+  }
+
+  totalOrderPrice = Math.ceil(totalOrderPrice * 100);
 
   const metadata = {
     id: packageId,
     email: user.email,
-    type: "package",
+    type: 'package',
+    couponName: req.body.couponName || null,
   };
 
   try {
@@ -202,16 +243,16 @@ exports.packageCheckoutSessionLahza = asyncHandler(async (req, res, next) => {
       user.email,
       user.name,
       totalOrderPrice.toString(),
-      metadata
+      metadata,
     );
 
     res.status(200).json({
-      status: "success",
+      status: 'success',
       redirectUrl: order,
     });
   } catch (err) {
     return next(
-      new ApiError(`Lahza order creation failed: ${err.message}`, 500)
+      new ApiError(`Lahza order creation failed: ${err.message}`, 500),
     );
   }
 });
@@ -221,7 +262,7 @@ exports.lahzaWebhook = async (req, res, next) => {
   const event = req.body;
 
   // Confirm the event type
-  if (event.event === "charge.success") {
+  if (event.event === 'charge.success') {
     // Access transaction details, including metadata
     const transactionReference = event.data.reference;
     const metadata = event.data.metadata;
@@ -231,28 +272,37 @@ exports.lahzaWebhook = async (req, res, next) => {
     const id = metadata.id;
     const type = metadata.type;
     const email = metadata.email;
+    const couponName = metadata.couponName;
+
+    const paymentDetails = {
+      id,
+      email,
+      price,
+      method: 'lahza',
+      couponName,
+    };
 
     switch (type) {
-      case "course":
-        await createCourseOrderHandler(id, email, price, "lahza");
+      case 'course':
+        await createCourseOrderHandler(paymentDetails);
         break;
-      case "package":
-        await createPackageOrderHandler(id, email, price, "lahza");
+      case 'package':
+        await createPackageOrderHandler(paymentDetails);
         break;
-      case "coursePackage":
-        await createCoursePackageOrderHandler(id, email, price, "lahza");
+      case 'coursePackage':
+        await createCoursePackageOrderHandler(paymentDetails);
         break;
       default:
         console.error(`Unknown type: ${type}`);
         return res.redirect(
-          "https://nexgen-academy.com/${req.locale}/error-page"
+          'https://nexgen-academy.com/${req.locale}/error-page',
         );
     }
 
     // Acknowledge receipt of the webhook
     res.sendStatus(200);
-  } else if (event.event === "charge.failed") {
-    console.log("Payment failed:", event.data.reference);
+  } else if (event.event === 'charge.failed') {
+    console.log('Payment failed:', event.data.reference);
     res.sendStatus(200);
   } else {
     // Handle other event types if necessary
