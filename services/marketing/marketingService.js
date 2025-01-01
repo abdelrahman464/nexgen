@@ -16,39 +16,34 @@ const _ = require("lodash");
 //@access public
 exports.startMarketing = async (req, res) => {
   try {
+    const userId = req.params.userId;
+    const role = req.body.role || "marketer";
+    const isMarketer = await MarketingLog.exists({ marketer: userId });
+    //check existance
     //1- check if user already started marketing
-    if (req.user.startMarketing) {
+    if (isMarketer) {
       return res
         .status(400)
-        .json({ status: "faild", msg: `you already started marketing` });
+        .json({ status: "failed", msg: `this user already a marketer` });
     }
-    //2- check user role to determine his role in marketLog
-    let role = "marketer";
-    if (req.user.role === "admin") {
-      role = "head";
-    } else if (req.user.role === "instructor") {
-      role = "instructor";
-    }
+    const invitor = await User.findOne({ _id: req.user._id }).select("invitor");
     //3-perform query to create marketing log
     await MarketingLog.create({
-      marketer: req.user._id,
-      invitor: req.user.invitor,
+      marketer: userId,
+      invitor: invitor.invitor,
       role,
     });
     //4-update user startMarketing field
-    await User.findOneAndUpdate(
-      { _id: req.user._id },
-      { startMarketing: true }
-    );
+    await User.findOneAndUpdate({ _id: userId }, { isMarketer: true });
     //5-create group chat
-    await createMarketerGroupChat(req.user);
+    // await createMarketerGroupChat(user);
     //6-return response
     return res.status(200).json({
       msg: "success",
-      message: `you has started marketing successfully`,
+      message: `this user has started marketing successfully`,
     });
   } catch (error) {
-    return res.status(400).json({ error });
+    return res.status(400).json({ status: "failed", error: error.message });
   }
 };
 //--------------------------------------New One

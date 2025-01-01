@@ -71,7 +71,7 @@ router.put(
 );
 
 router.put(
-  "/startMarketing",
+  "/startMarketing/:userId",
   authServices.protect,
   authServices.allowedTo("user", "admin"),
   startMarketing
