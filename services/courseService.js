@@ -183,7 +183,8 @@ exports.getMyCourses = asyncHandler(async (req, res, next) => {
         if (item.status === 'Completed') {
           completedLessonsCount += 1;
           totalExamScore += item.examScore;
-          attemptedLessonIds.add(item.lesson._id.toString());
+          if (item.lesson) attemptedLessonIds.add(item.lesson._id.toString());
+          // attemptedLessonIds.add(item.lesson._id.toString());
         }
       });
 
