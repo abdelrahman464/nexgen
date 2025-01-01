@@ -80,6 +80,8 @@ exports.courseCheckoutSessionPlisio = asyncHandler(async (req, res, next) => {
   if (!course) {
     return next(new ApiError("There's no course", 404));
   }
+  // Check if user can buy this course or not
+  await checkCourseAccess(user, courseId);
 
   const existOrder = await Order.findOne({
     user: user._id,
@@ -90,13 +92,20 @@ exports.courseCheckoutSessionPlisio = asyncHandler(async (req, res, next) => {
   }
 
   const coursePrice = course.priceAfterDiscount || course.price;
-  const totalOrderPrice = coursePrice.toFixed(2);
+  let totalOrderPrice = coursePrice.toFixed(2);
 
-  // Check if user can buy this course or not
-  await checkCourseAccess(user, courseId);
+  if (req.body.couponName) {
+    const coupon = await validateCoupon(req.body.couponName, user.invitor);
+
+    if (typeof coupon === 'string') {
+      return next(new ApiError(res.__(coupon), 400));
+    }
+    totalOrderPrice =
+      totalOrderPrice - (totalOrderPrice * coupon.discount) / 100;
+  }
 
   const options = {
-    id: `${courseId}|${user.email}`,
+    id: `${courseId}|${user.email}|${req.body.couponName || null}`,
     userEmail: user.email,
     amount: totalOrderPrice,
     type: 'course',
@@ -133,8 +142,18 @@ exports.coursePackageCheckoutSessionPlisio = asyncHandler(
       coursePackage.priceAfterDiscount || coursePackage.price;
     const totalOrderPrice = coursePackagePrice.toFixed(2);
 
+    if (req.body.couponName) {
+      const coupon = await validateCoupon(req.body.couponName, user.invitor);
+
+      if (typeof coupon === 'string') {
+        return next(new ApiError(res.__(coupon), 400));
+      }
+      totalOrderPrice =
+        totalOrderPrice - (totalOrderPrice * coupon.discount) / 100;
+    }
+
     const options = {
-      id: `${coursePackageId}|${user.email}`,
+      id: `${coursePackageId}|${user.email}|${req.body.couponName || null}`,
       userEmail: user.email,
       amount: totalOrderPrice,
       type: 'coursePackage',
@@ -170,8 +189,18 @@ exports.packageCheckoutSessionPlisio = asyncHandler(async (req, res, next) => {
   const packagePrice = package.priceAfterDiscount || package.price;
   const totalOrderPrice = packagePrice.toFixed(2);
 
+  if (req.body.couponName) {
+    const coupon = await validateCoupon(req.body.couponName, user.invitor);
+
+    if (typeof coupon === 'string') {
+      return next(new ApiError(res.__(coupon), 400));
+    }
+    totalOrderPrice =
+      totalOrderPrice - (totalOrderPrice * coupon.discount) / 100;
+  }
+
   const options = {
-    id: `${packageId}|${user.email}`,
+    id: `${packageId}|${user.email}|${req.body.couponName || null}`,
     userEmail: user.email,
     amount: totalOrderPrice,
     type: 'package',
@@ -258,19 +287,7 @@ exports.plisioWebhook = asyncHandler(async (req, res) => {
       txn_id: transactionId,
     } = req.body;
     //order_description = itemId|userEmail
-    const [itemId, userEmail] = order_description.split('|');
-
-    // Log important transaction details
-    console.log('Processing Plisio webhook:', {
-      status,
-      orderNumber,
-      amount,
-      currency,
-      itemId,
-      userEmail,
-      itemType,
-      transactionId,
-    });
+    const [itemId, userEmail, couponName] = order_description.split('|');
 
     // Validate required fields
     if (!itemId || !itemType || !amount) {
@@ -282,6 +299,14 @@ exports.plisioWebhook = asyncHandler(async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    const paymentDetails = {
+      id: itemId,
+      email: userEmail,
+      price: amount,
+      method: 'plisio',
+      couponName,
+    };
+
     // Handle different payment statuses
     switch (status) {
       case 'completed':
@@ -292,30 +317,15 @@ exports.plisioWebhook = asyncHandler(async (req, res) => {
           // Process based on order type
           switch (itemType.toLowerCase()) {
             case 'course':
-              await createCourseOrderHandler(
-                itemId,
-                userEmail,
-                price,
-                'plisio',
-              );
+              await createCourseOrderHandler(paymentDetails);
               break;
 
             case 'package':
-              await createPackageOrderHandler(
-                itemId,
-                userEmail,
-                price,
-                'plisio',
-              );
+              await createPackageOrderHandler(paymentDetails);
               break;
 
             case 'coursepackage':
-              await createCoursePackageOrderHandler(
-                itemId,
-                userEmail,
-                price,
-                'plisio',
-              );
+              await createCoursePackageOrderHandler(paymentDetails);
               break;
 
             default:

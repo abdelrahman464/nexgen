@@ -9,10 +9,12 @@ const User = require('../../models/userModel');
 const Chat = require('../../models/ChatModel');
 const Notification = require('../../models/notificationModel');
 const CourseProgress = require('../../models/courseProgressModel');
+
 const { calculateProfits } = require('../marketing/marketingService');
 const { availUserToReview } = require('../userService');
 const { sendEmail } = require('../../utils/sendEmail');
 const { PDFGenerator } = require('../../utils/generatePdf');
+const { incrementCouponUsedTimes } = require('../couponService');
 
 const filterOrders = async (req, res, next) => {
   const filterObject = {};
@@ -72,7 +74,8 @@ const checkExistingPaidOrder = async (userId) => {
   return false;
 };
 
-async function createOrder(userId, itemId, price, method, itemType) {
+async function createOrder(orderDetails) {
+  const { userId, itemId, price, method, itemType, couponName } = orderDetails;
   //to avoid duplication of orders
   let order;
   let flag = false;
@@ -95,6 +98,7 @@ async function createOrder(userId, itemId, price, method, itemType) {
       paymentMethodType: method,
       paidAt: Date.now(),
       isResale: isResale,
+      coupon: couponName,
     });
     flag = true;
   }
@@ -181,15 +185,25 @@ async function createOrUpdateSubscription(userId, packageId, durationDays) {
 }
 
 // Handler for creating a course order
-const createCourseOrderHandler = async (courseId, email, price, method) => {
+const createCourseOrderHandler = async (paymentDetails) => {
+  const { id, email, price, method, couponName } = paymentDetails;
+
   const [course, user, package] = await Promise.all([
-    Course.findById(courseId),
+    Course.findById(id),
     User.findOne({ email }),
-    Package.findOne({ course: courseId }),
+    Package.findOne({ course: id }),
   ]);
   if (!course || !user) throw new Error('Course or user not found');
+  const orderDetails = {
+    userId: user._id,
+    itemId: course._id,
+    price,
+    method,
+    itemType: 'course',
+    couponName,
+  };
+  let order = await createOrder(orderDetails);
 
-  let order = await createOrder(user._id, course._id, price, method, 'course');
   if (order) {
     // Populate the necessary fields
     order = await order.populate([
@@ -198,6 +212,11 @@ const createCourseOrderHandler = async (courseId, email, price, method) => {
       { path: 'coursePackage', select: 'title' },
       { path: 'package', select: 'title' },
     ]);
+
+    //increment usedTimes of coupon after successful payment
+    if (couponName) {
+      await incrementCouponUsedTimes(couponName);
+    }
 
     await createCourseProgress(user._id, course._id);
     await addUserToGroupChatAndNotify(user._id, course._id);
@@ -251,72 +270,134 @@ const createCourseOrderHandler = async (courseId, email, price, method) => {
 };
 
 // Handler for creating a package order
-const createPackageOrderHandler = async (packageId, email, price, method) => {
+const createPackageOrderHandler = async (paymentDetails) => {
+  const { id, email, price, method, couponName } = paymentDetails;
   const [package, user] = await Promise.all([
-    Package.findById(packageId),
+    Package.findById(id),
     User.findOne({ email }),
   ]);
   if (!package || !user) throw new Error('Package or user not found');
 
-  await createOrder(user._id, package._id, price, method, 'package');
-  await createOrUpdateSubscription(
-    user._id,
-    package._id,
-    package.subscriptionDurationDays,
-  );
+  const orderDetails = {
+    userId: user._id,
+    itemId: package._id,
+    price,
+    method,
+    itemType: 'package',
+    couponName,
+  };
 
-  // if (package.type === 'course' && package.course) {
-  //   await createCourseProgress(user._id, package.course._id);
-  // }
+  let order = await createOrder(orderDetails);
+  if (order) {
+    // Populate the necessary fields
+    order = await order.populate([
+      { path: 'user', select: '_id name phone email' },
+      { path: 'course', select: 'title -category' },
+      { path: 'coursePackage', select: 'title' },
+      { path: 'package', select: 'title' },
+    ]);
+    //increment usedTimes of coupon after successful payment
+    if (couponName) {
+      await incrementCouponUsedTimes(couponName);
+    }
+    await createOrUpdateSubscription(
+      user._id,
+      package._id,
+      package.subscriptionDurationDays,
+    );
 
-  await availUserToReview(user._id);
-  await calculateProfits({
-    email: user.email,
-    amount: price,
-    item: `Package: ${package.title}`,
-  });
+    // if (package.type === 'course' && package.course) {
+    //   await createCourseProgress(user._id, package.course._id);
+    // }
+
+    await availUserToReview(user._id);
+    await calculateProfits({
+      email: user.email,
+      amount: price,
+      item: `Package: ${package.title}`,
+    });
+
+    // Generate the PDF
+    let pdfPath = await PDFGenerator.generateOrderPDF(order);
+    pdfPath = pdfPath.replace('uploads/orders/', '');
+    await Notification.create({
+      user: user._id,
+      message: {
+        en: `You have successfully purchased the service ${package.title.en} click here to download the invoice`,
+        ar: `لقد قمت بشراء الخدمه ${package.title.ar} بنجاح اضغط هنا لتحميل الفاتورة`,
+      },
+      file: pdfPath,
+      type: 'order',
+    });
+  }
 };
 
 // Handler for creating a course package order
-const createCoursePackageOrderHandler = async (
-  coursePackageId,
-  email,
-  price,
-  method,
-) => {
+const createCoursePackageOrderHandler = async (paymentDetails) => {
+  const { id, email, price, method, couponName } = paymentDetails;
   const [coursePackage, user] = await Promise.all([
-    CoursePackage.findById(coursePackageId),
+    CoursePackage.findById(id),
     User.findOne({ email }),
   ]);
   if (!coursePackage || !user)
     throw new Error('CoursePackage or user not found');
 
-  await createOrder(
-    user._id,
-    coursePackage._id,
+  const orderDetails = {
+    userId: user._id,
+    itemId: coursePackage._id,
     price,
     method,
-    'coursePackage',
-  );
+    itemType: 'coursePackage',
+    couponName,
+  };
 
-  await Promise.all(
-    coursePackage.courses.map(async (courseId) => {
-      await createCourseProgress(user._id, courseId);
-      await addUserToGroupChatAndNotify(user._id, courseId);
+  let order = await createOrder(orderDetails);
 
-      const package = await Package.findOne({ course: courseId });
-      if (package) {
-        await createOrUpdateSubscription(user._id, package._id, 4 * 30); // 4 months
-      }
-    }),
-  );
+  if (order) {
+    // Populate the necessary fields
+    order = await order.populate([
+      { path: 'user', select: '_id name phone email' },
+      { path: 'course', select: 'title -category' },
+      { path: 'coursePackage', select: 'title' },
+      { path: 'package', select: 'title' },
+    ]);
 
-  await availUserToReview(user._id);
-  await calculateProfits({
-    email: user.email,
-    amount: price,
-    item: `Course Package: ${coursePackage.title}`,
-  });
+    //increment usedTimes of coupon after successful payment
+    if (couponName) {
+      await incrementCouponUsedTimes(couponName);
+    }
+
+    await Promise.all(
+      coursePackage.courses.map(async (courseId) => {
+        await createCourseProgress(user._id, courseId);
+        await addUserToGroupChatAndNotify(user._id, courseId);
+
+        const package = await Package.findOne({ course: courseId });
+        if (package) {
+          await createOrUpdateSubscription(user._id, package._id, 5 * 30); // 5 months
+        }
+      }),
+    );
+
+    await availUserToReview(user._id);
+    await calculateProfits({
+      email: user.email,
+      amount: price,
+      item: `Course Package: ${coursePackage.title}`,
+    });
+    // Generate the PDF
+    let pdfPath = await PDFGenerator.generateOrderPDF(order);
+    pdfPath = pdfPath.replace('uploads/orders/', '');
+    await Notification.create({
+      user: user._id,
+      message: {
+        en: `You have successfully purchased the Package ${coursePackage.title.en} click here to download the invoice`,
+        ar: `لقد قمت بشراء الباقه ${coursePackage.title.ar} بنجاح اضغط هنا لتحميل الفاتورة`,
+      },
+      file: pdfPath,
+      type: 'order',
+    });
+  }
 };
 
 // Get order statistics

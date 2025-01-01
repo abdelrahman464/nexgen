@@ -136,9 +136,9 @@ router.put(
 );
 router.put(
   '/lahza/packageCheckout/:packageId',
-  checkExistingPaidOrder,
   authServices.protect,
   authServices.allowedTo('user', 'admin'),
+  checkExistingPaidOrder,
   packageCheckoutSessionLahza,
 );
 router.post(
