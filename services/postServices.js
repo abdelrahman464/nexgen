@@ -122,6 +122,7 @@ exports.createFilterObjHomePosts = async (req, res, next) => {
       const user = await User.findById(req.user._id).select('following');
       //2-get usersIds from user.following
       const usersIds = user.following.map((object) => object.user);
+      console.log(usersIds);
       //3-filter posts to get posts of these users
       filterObject = {
         sharedTo: 'profile',

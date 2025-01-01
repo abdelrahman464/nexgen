@@ -315,7 +315,7 @@ exports.getUser = async (req, res, next) => {
       user = await User.findById(req.params.id);
     } else {
       user = await User.findById(req.params.id).select(
-        "name email profileImg coverImg role timeSpent isInstructor isCustomerService startMarketing idNumber phone country idVerification note"
+        "name email profileImg authToReview coverImg role timeSpent isInstructor isCustomerService startMarketing idNumber phone country idVerification note"
       );
     }
     if (!user) {

@@ -27,7 +27,6 @@ router
   .route("/")
   .get(
     authServices.protect,
-    authServices.allowedTo("user", "admin"),
     createFilterObjHomePosts,
     getPosts
   )
