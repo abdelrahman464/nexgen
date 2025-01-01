@@ -73,17 +73,17 @@ lessonSchema.post("save", (doc) => {
 });
 
 // Adjust the pre('save') middleware to be defined before compiling the model
-lessonSchema.pre("save", async function (next) {
-  if (!this.isModified("order")) {
-    const courseId = this.course;
-    const lastLesson = await this.constructor
-      .findOne({ course: courseId })
-      .sort("-order");
+// lessonSchema.pre("save", async function (next) {
+//   if (!this.isModified("order")) {
+//     const courseId = this.course;
+//     const lastLesson = await this.constructor
+//       .findOne({ course: courseId })
+//       .sort("-order");
 
-    this.order = lastLesson && lastLesson.order ? lastLesson.order + 1 : 1;
-  }
-  next();
-});
+//     this.order = lastLesson && lastLesson.order ? lastLesson.order + 1 : 1;
+//   }
+//   next();
+// });
 
 const Lesson = mongoose.model("Lesson", lessonSchema);
 module.exports = Lesson;
