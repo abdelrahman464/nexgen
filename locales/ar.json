@@ -27,5 +27,8 @@
   },
   "marketing-error": {
     "marketLog-Not-Found": "marketing-error.marketLog-Not-Found"
+  },
+  "lives-errors": {
+    "No-Subscription": "ليس لديك اي اشتراكات"
   }
 }
