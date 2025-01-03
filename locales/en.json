@@ -24,7 +24,7 @@
     "balance-Not-Enough": "your balance is not enough",
     "No-Team-Members": "No team members found"
   },
-
+ 
   "user-errors": {
     "unSubscribe": "Unauthorized action , You are not subscribed to any package",
     "alreadyFollowing": "You are already following this user",

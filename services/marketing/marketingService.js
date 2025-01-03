@@ -8,6 +8,7 @@ const { createMarketerGroupChat } = require("../ChatServices");
 const { addMarketerToLeaderBoard } = require("../leaderBoardService");
 const InstructorProfitService = require("../instructorProfitsService");
 const ApiError = require("../../utils/apiError");
+const { addMemberToChat } = require("../ChatServices");
 const _ = require("lodash");
 //when creating invoice check the date if same month   update invoice  if not create new one
 
@@ -26,17 +27,19 @@ exports.startMarketing = async (req, res) => {
         .status(400)
         .json({ status: "failed", msg: `this user already a marketer` });
     }
-    const invitor = await User.findOne({ _id: req.user._id }).select("invitor");
+    const user = await User.findOne({ _id: req.user._id }).select(
+      "_id name invitor"
+    );
     //3-perform query to create marketing log
     await MarketingLog.create({
       marketer: userId,
-      invitor: invitor.invitor,
+      invitor: user.invitor,
       role,
     });
     //4-update user startMarketing field
     await User.findOneAndUpdate({ _id: userId }, { isMarketer: true });
     //5-create group chat
-    // await createMarketerGroupChat(user);
+    await createMarketerGroupChat(user);
     //6-return response
     return res.status(200).json({
       msg: "success",
@@ -136,7 +139,7 @@ exports.calculateProfits = async (
       console.log("user has no valid invitor");
       throw new Error("user has no valid invitor");
     }
-
+    await addMemberToChat(user._id, user.invitor);
     //4- get the invitor marketLog to update it
     const marketerMarketLog = await MarketingLog.findOne({
       marketer: user.invitor,

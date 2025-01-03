@@ -1,31 +1,31 @@
-const asyncHandler = require('express-async-handler');
-const sharp = require('sharp');
-const { v4: uuidv4 } = require('uuid');
-const mongoose = require('mongoose');
-const Chat = require('../models/ChatModel');
-const User = require('../models/userModel');
-const Message = require('../models/MessageModel');
-const Notification = require('../models/notificationModel');
-const ApiError = require('../utils/apiError');
-const { uploadSingleFile } = require('../middlewares/uploadImageMiddleware');
+const asyncHandler = require("express-async-handler");
+const sharp = require("sharp");
+const { v4: uuidv4 } = require("uuid");
+const mongoose = require("mongoose");
+const Chat = require("../models/ChatModel");
+const User = require("../models/userModel");
+const Message = require("../models/MessageModel");
+const Notification = require("../models/notificationModel");
+const ApiError = require("../utils/apiError");
+const { uploadSingleFile } = require("../middlewares/uploadImageMiddleware");
 //upload Singel image
-exports.uploadImage = uploadSingleFile('image');
+exports.uploadImage = uploadSingleFile("image");
 //image processing
 exports.resizeImage = asyncHandler(async (req, res, next) => {
   const { file } = req; // Access the uploaded file
   if (file) {
     const fileExtension = file.originalname.substring(
-      file.originalname.lastIndexOf('.'),
+      file.originalname.lastIndexOf(".")
     ); // Extract file extension
     const newFileName = `GroupImage-${uuidv4()}-${Date.now()}${fileExtension}`; // Generate new file name
 
     // Check if the file is an image for the profile picture
-    if (file.mimetype.startsWith('image/')) {
+    if (file.mimetype.startsWith("image/")) {
       // Process and save the image file using sharp for resizing, conversion, etc.
       const filePath = `uploads/chats/${newFileName}`;
 
       await sharp(file.buffer)
-        .toFormat('webp') // Convert to WebP
+        .toFormat("webp") // Convert to WebP
         .webp({ quality: 97 })
         .toFile(filePath);
 
@@ -34,9 +34,9 @@ exports.resizeImage = asyncHandler(async (req, res, next) => {
     } else {
       return next(
         new ApiError(
-          'Unsupported file type. Only images are allowed for Group Iamge.',
-          400,
-        ),
+          "Unsupported file type. Only images are allowed for Group Iamge.",
+          400
+        )
       );
     }
   }
@@ -53,15 +53,15 @@ exports.createChat = asyncHandler(async (req, res, next) => {
     // Check if a chat already exists between sender and receiver
     const existingChat = await Chat.findOne({
       $and: [
-        { 'participants.user': senderId },
-        { 'participants.user': receiverId },
+        { "participants.user": senderId },
+        { "participants.user": receiverId },
       ],
       isGroupChat: false,
     });
 
     if (existingChat) {
       return res.status(200).json({
-        message: 'Chat already exists between these users',
+        message: "Chat already exists between these users",
         data: existingChat,
       });
     }
@@ -79,7 +79,7 @@ exports.createChat = asyncHandler(async (req, res, next) => {
       user: receiverId,
       message: `${req.user.name} has started a chat with you`,
       chat: newChat._id,
-      type: 'chat',
+      type: "chat",
     });
 
     res.status(201).json({ data: newChat });
@@ -96,31 +96,31 @@ exports.getMyChats = async (req, res, next) => {
     const baseUrl = process.env.BASE_URL; // Set your domain URL here
     const chats = await Chat.aggregate([
       {
-        $match: { 'participants.user': mongoose.Types.ObjectId(req.user._id) },
+        $match: { "participants.user": mongoose.Types.ObjectId(req.user._id) },
       },
       {
         $lookup: {
-          from: 'messages',
-          let: { chatId: '$_id' },
+          from: "messages",
+          let: { chatId: "$_id" },
           pipeline: [
-            { $match: { $expr: { $eq: ['$chat', '$$chatId'] } } },
+            { $match: { $expr: { $eq: ["$chat", "$$chatId"] } } },
             { $sort: { createdAt: -1 } },
             { $limit: 1 },
             {
               $lookup: {
-                from: 'users',
-                localField: 'sender',
-                foreignField: '_id',
-                as: 'senderDetails',
+                from: "users",
+                localField: "sender",
+                foreignField: "_id",
+                as: "senderDetails",
               },
             },
             {
               $addFields: {
                 media: {
                   $map: {
-                    input: '$media',
-                    as: 'file',
-                    in: { $concat: [baseUrl, '/messages/', '$$file'] }, // Adjust the path as necessary
+                    input: "$media",
+                    as: "file",
+                    in: { $concat: [baseUrl, "/messages/", "$$file"] }, // Adjust the path as necessary
                   },
                 },
               },
@@ -131,33 +131,33 @@ exports.getMyChats = async (req, res, next) => {
                 media: 1,
                 createdAt: 1,
                 sender: 1,
-                senderDetails: { $arrayElemAt: ['$senderDetails', 0] },
+                senderDetails: { $arrayElemAt: ["$senderDetails", 0] },
               },
             },
           ],
-          as: 'lastMessage',
+          as: "lastMessage",
         },
       },
-      { $unwind: '$participants' },
+      { $unwind: "$participants" },
       {
         $lookup: {
-          from: 'users',
-          localField: 'participants.user',
-          foreignField: '_id',
-          as: 'participants.userDetails',
+          from: "users",
+          localField: "participants.user",
+          foreignField: "_id",
+          as: "participants.userDetails",
         },
       },
-      { $unwind: '$participants.userDetails' },
+      { $unwind: "$participants.userDetails" },
       {
         $addFields: {
-          'participants.userDetails.profileImg': {
+          "participants.userDetails.profileImg": {
             $cond: {
-              if: '$participants.userDetails.profileImg',
+              if: "$participants.userDetails.profileImg",
               then: {
                 $concat: [
                   baseUrl,
-                  '/users/',
-                  '$participants.userDetails.profileImg',
+                  "/users/",
+                  "$participants.userDetails.profileImg",
                 ],
               },
               else: null,
@@ -167,25 +167,25 @@ exports.getMyChats = async (req, res, next) => {
       },
       {
         $group: {
-          _id: '$_id',
-          participants: { $push: '$participants' },
-          root: { $mergeObjects: '$$ROOT' },
+          _id: "$_id",
+          participants: { $push: "$participants" },
+          root: { $mergeObjects: "$$ROOT" },
         },
       },
       {
         $replaceRoot: {
           newRoot: {
-            $mergeObjects: ['$root', '$$ROOT'],
+            $mergeObjects: ["$root", "$$ROOT"],
           },
         },
       },
-      { $sort: { 'lastMessage.createdAt': -1 } },
+      { $sort: { "lastMessage.createdAt": -1 } },
       {
         $addFields: {
           image: {
             $cond: {
-              if: '$image',
-              then: { $concat: [baseUrl, '/chats/', '$image'] }, // Adjust the path as necessary
+              if: "$image",
+              then: { $concat: [baseUrl, "/chats/", "$image"] }, // Adjust the path as necessary
               else: null,
             },
           },
@@ -206,15 +206,15 @@ exports.getMyChats = async (req, res, next) => {
     ]);
 
     res.status(200).json({
-      status: 'success',
+      status: "success",
       results: chats.length,
       data: chats,
     });
   } catch (error) {
-    console.error('Error fetching chats:', error);
+    console.error("Error fetching chats:", error);
     res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch chats',
+      status: "error",
+      message: "Failed to fetch chats",
     });
   }
 };
@@ -229,7 +229,7 @@ exports.createGroupChat = asyncHandler(async (req, res, next) => {
 
   // Ensure the creator is not duplicated in participantIds array
   const filteredParticipantIds = participantIds.filter(
-    (participant) => participant !== groupCreatorId,
+    (participant) => participant !== groupCreatorId
   );
 
   // Create the new group chat
@@ -260,7 +260,7 @@ exports.createGroupChat = asyncHandler(async (req, res, next) => {
       },
       chat: newGroupChat._id,
       image,
-      type: 'chat',
+      type: "chat",
     });
   });
 
@@ -277,7 +277,7 @@ exports.createMarketerGroupChat = asyncHandler(async (marketer) => {
 
   // Create the new group chat
   await Chat.create({
-    type: 'marketingTeam',
+    type: "marketingTeam",
     participants: [{ user: groupCreatorId, isAdmin: true }],
     isGroupChat: true,
     creator: marketer._id,
@@ -290,23 +290,23 @@ exports.createMarketerGroupChat = asyncHandler(async (marketer) => {
 //@desc Add a participant to his marketer chat
 //@access internal-use ,
 //@time to trigger : when a new user is created and have a marketer
-exports.addMemberToChat = asyncHandler(async (user, marketer) => {
+exports.addMemberToChat = asyncHandler(async (userId, marketerId) => {
   // Update the chat document to add the new participant with their role
   const thisChat = await Chat.findOneAndUpdate(
-    { creator: marketer, type: 'marketingTeam' },
-    { $push: { participants: { user } } },
-    { new: true },
+    { creator: marketerId, type: "marketingTeam" },
+    { $addToSet: { participants: { user: userId } } }, // Replaced $push with $addToSet
+    { new: true }
   );
 
   if (thisChat) {
     await Notification.create({
-      user: user,
+      user: userId,
       message: {
-        en: 'you have been to a group chat with your marketer',
-        ar: 'تمت اضافتك الى محادثة جماعية مع مسوقك',
+        en: "you have been to a group chat with your marketer",
+        ar: "تمت اضافتك الى محادثة جماعية مع مسوقك",
       },
       chat: thisChat._id,
-      type: 'chat',
+      type: "chat",
     });
   }
   return true;
@@ -323,7 +323,7 @@ exports.addParticipantToChat = asyncHandler(async (req, res, next) => {
   // Check if user exists
   const existingUser = await User.findOne({ email: userEmail });
   if (!existingUser) {
-    return next(new ApiError('User not found', 404));
+    return next(new ApiError("User not found", 404));
   }
 
   const userToAdd = existingUser._id;
@@ -331,38 +331,38 @@ exports.addParticipantToChat = asyncHandler(async (req, res, next) => {
   const chat = await Chat.findById(chatId);
 
   if (!chat) {
-    return next(new ApiError('Chat not found', 404));
+    return next(new ApiError("Chat not found", 404));
   }
   if (!chat.isGroupChat) {
-    return next(new ApiError('This is not a group chat', 400));
+    return next(new ApiError("This is not a group chat", 400));
   }
 
   // Find the logged-in user in the chat to verify admin privileges
   const loggedUser = chat.participants.find(
     (participant) =>
-      participant.user && String(participant.user._id) === String(loggedUserId),
+      participant.user && String(participant.user._id) === String(loggedUserId)
   );
 
   if (!loggedUser || !loggedUser.isAdmin) {
     return next(
-      new ApiError('Unauthorized: You are not an admin in this group', 403),
+      new ApiError("Unauthorized: You are not an admin in this group", 403)
     );
   }
 
   // Check if the user is already a participant in the chat
   const existingParticipant = chat.participants.find(
-    (participant) => String(participant.user) === String(userToAdd),
+    (participant) => String(participant.user) === String(userToAdd)
   );
 
   if (existingParticipant) {
-    return next(new ApiError('User is already a participant in the chat', 400));
+    return next(new ApiError("User is already a participant in the chat", 400));
   }
 
   // Update the chat document to add the new participant with their role
   const updatedChat = await Chat.findByIdAndUpdate(
     chatId,
     { $push: { participants: { user: userToAdd, isAdmin } } },
-    { new: true }, // To return the modified document
+    { new: true } // To return the modified document
   );
 
   if (updatedChat) {
@@ -373,11 +373,11 @@ exports.addParticipantToChat = asyncHandler(async (req, res, next) => {
         ar: `${req.user.name} قام بإضافتك إلى محادثة جماعية`,
       },
       chat: updatedChat._id,
-      type: 'chat',
+      type: "chat",
     });
   }
 
-  res.status(200).json({ message: 'User added successfully' });
+  res.status(200).json({ message: "User added successfully" });
 });
 
 //@desc Remove a participant from a chat
@@ -391,7 +391,7 @@ exports.removeParticipantFromChat = asyncHandler(async (req, res, next) => {
   // Check if user exists
   const existingUser = await User.findOne({ email: userEmail });
   if (!existingUser) {
-    return next(new ApiError('User not found', 404));
+    return next(new ApiError("User not found", 404));
   }
 
   const userToRemove = existingUser._id;
@@ -399,36 +399,36 @@ exports.removeParticipantFromChat = asyncHandler(async (req, res, next) => {
   const chat = await Chat.findById(chatId);
 
   if (!chat) {
-    return next(new ApiError('Chat not found', 404));
+    return next(new ApiError("Chat not found", 404));
   }
 
   // Find the logged-in user in the chat to verify admin privileges
   const loggedUser = chat.participants.find(
     (participant) =>
-      participant.user && String(participant.user._id) === String(loggedUserId),
+      participant.user && String(participant.user._id) === String(loggedUserId)
   );
 
   if (!loggedUser || !loggedUser.isAdmin) {
     return next(
-      new ApiError('Unauthorized: You are not an admin in this group', 403),
+      new ApiError("Unauthorized: You are not an admin in this group", 403)
     );
   }
 
   // Find the index of the participant in the chat
   const participantIndex = chat.participants.findIndex(
     (participant) =>
-      participant.user && String(participant.user._id) === String(userToRemove),
+      participant.user && String(participant.user._id) === String(userToRemove)
   );
 
   if (participantIndex === -1) {
-    return next(new ApiError('Participant not found in the chat', 400));
+    return next(new ApiError("Participant not found in the chat", 400));
   }
 
   // Update the chat document to remove the participant
   const updatedChat = await Chat.findByIdAndUpdate(
     chatId,
     { $pull: { participants: { user: userToRemove } } },
-    { new: true }, // To return the modified document
+    { new: true } // To return the modified document
   );
 
   if (updatedChat) {
@@ -439,11 +439,11 @@ exports.removeParticipantFromChat = asyncHandler(async (req, res, next) => {
         ar: `${req.user.name} قام بإزالتك من محادثة جماعية`,
       },
       chat: updatedChat._id,
-      type: 'chat',
+      type: "chat",
     });
   }
 
-  res.status(200).json({ message: 'User removed successfully' });
+  res.status(200).json({ message: "User removed successfully" });
 });
 
 //@desc Update participant role in a chat
@@ -457,36 +457,36 @@ exports.updateParticipantRoleInChat = asyncHandler(async (req, res, next) => {
   // Check if user exists
   const existingUser = await User.findOne({ email: userEmail });
   if (!existingUser) {
-    return next(new ApiError('User not found', 404));
+    return next(new ApiError("User not found", 404));
   }
 
   const userToUpdate = existingUser._id;
 
   const chat = await Chat.findById(chatId);
   if (!chat) {
-    return next(new ApiError('Chat not found', 404));
+    return next(new ApiError("Chat not found", 404));
   }
 
   // Find the logged-in user in the chat to verify admin privileges
   const loggedUser = chat.participants.find(
     (participant) =>
-      participant.user && String(participant.user._id) === String(loggedUserId),
+      participant.user && String(participant.user._id) === String(loggedUserId)
   );
 
   if (!loggedUser || !loggedUser.isAdmin) {
     return next(
-      new ApiError('Unauthorized: You are not an admin in this group', 403),
+      new ApiError("Unauthorized: You are not an admin in this group", 403)
     );
   }
 
   // Find the participant to update their role
   const participantToUpdate = chat.participants.find(
     (participant) =>
-      participant.user && String(participant.user._id) === String(userToUpdate),
+      participant.user && String(participant.user._id) === String(userToUpdate)
   );
 
   if (!participantToUpdate) {
-    return next(new ApiError('Participant not found in the chat', 404));
+    return next(new ApiError("Participant not found in the chat", 404));
   }
 
   // Check if the user ID from body matches the creator of the chat
@@ -494,14 +494,14 @@ exports.updateParticipantRoleInChat = asyncHandler(async (req, res, next) => {
 
   if (String(creatorOfChat) === String(userToUpdate)) {
     return next(
-      new ApiError("Unauthorized: Cannot update the creator's role", 403),
+      new ApiError("Unauthorized: Cannot update the creator's role", 403)
     );
   }
 
   // Update the participant's role directly in the database
   const thisChat = await Chat.updateOne(
-    { _id: chatId, 'participants.user': userToUpdate },
-    { $set: { 'participants.$.isAdmin': isAdmin } },
+    { _id: chatId, "participants.user": userToUpdate },
+    { $set: { "participants.$.isAdmin": isAdmin } }
   );
 
   if (thisChat) {
@@ -509,18 +509,18 @@ exports.updateParticipantRoleInChat = asyncHandler(async (req, res, next) => {
       user: userToUpdate,
       message: {
         en: `${req.user.name} has updated your role in a group chat to ${
-          isAdmin ? 'admin' : 'participant'
+          isAdmin ? "admin" : "participant"
         }`,
         ar: `${req.user.name} قام بتحديث دورك في محادثة جماعية إلى ${
-          isAdmin ? 'مشرف' : 'عضو'
+          isAdmin ? "مشرف" : "عضو"
         }`,
       },
       chat: chat._id,
-      type: 'chat',
+      type: "chat",
     });
   }
 
-  res.status(200).json({ data: 'User role updated successfully' });
+  res.status(200).json({ data: "User role updated successfully" });
 });
 
 //@desc Get details of a specific chat including participants' details
@@ -537,27 +537,27 @@ exports.getChatDetails = asyncHandler(async (req, res, next) => {
       },
       {
         $lookup: {
-          from: 'messages',
-          let: { chatId: '$_id' },
+          from: "messages",
+          let: { chatId: "$_id" },
           pipeline: [
-            { $match: { $expr: { $eq: ['$chat', '$$chatId'] } } },
+            { $match: { $expr: { $eq: ["$chat", "$$chatId"] } } },
             { $sort: { createdAt: -1 } },
             { $limit: 1 },
             {
               $lookup: {
-                from: 'users',
-                localField: 'sender',
-                foreignField: '_id',
-                as: 'senderDetails',
+                from: "users",
+                localField: "sender",
+                foreignField: "_id",
+                as: "senderDetails",
               },
             },
             {
               $addFields: {
                 media: {
                   $map: {
-                    input: '$media',
-                    as: 'file',
-                    in: { $concat: [baseUrl, '/messages/', '$$file'] },
+                    input: "$media",
+                    as: "file",
+                    in: { $concat: [baseUrl, "/messages/", "$$file"] },
                   },
                 },
               },
@@ -568,33 +568,33 @@ exports.getChatDetails = asyncHandler(async (req, res, next) => {
                 media: 1,
                 createdAt: 1,
                 sender: 1,
-                senderDetails: { $arrayElemAt: ['$senderDetails', 0] },
+                senderDetails: { $arrayElemAt: ["$senderDetails", 0] },
               },
             },
           ],
-          as: 'lastMessage',
+          as: "lastMessage",
         },
       },
-      { $unwind: '$participants' },
+      { $unwind: "$participants" },
       {
         $lookup: {
-          from: 'users',
-          localField: 'participants.user',
-          foreignField: '_id',
-          as: 'participants.userDetails',
+          from: "users",
+          localField: "participants.user",
+          foreignField: "_id",
+          as: "participants.userDetails",
         },
       },
-      { $unwind: '$participants.userDetails' },
+      { $unwind: "$participants.userDetails" },
       {
         $addFields: {
-          'participants.userDetails.profileImg': {
+          "participants.userDetails.profileImg": {
             $cond: {
-              if: '$participants.userDetails.profileImg',
+              if: "$participants.userDetails.profileImg",
               then: {
                 $concat: [
                   baseUrl,
-                  '/users/',
-                  '$participants.userDetails.profileImg',
+                  "/users/",
+                  "$participants.userDetails.profileImg",
                 ],
               },
               else: null,
@@ -604,15 +604,15 @@ exports.getChatDetails = asyncHandler(async (req, res, next) => {
       },
       {
         $group: {
-          _id: '$_id',
-          participants: { $push: '$participants' },
-          root: { $mergeObjects: '$$ROOT' },
+          _id: "$_id",
+          participants: { $push: "$participants" },
+          root: { $mergeObjects: "$$ROOT" },
         },
       },
       {
         $replaceRoot: {
           newRoot: {
-            $mergeObjects: ['$root', '$$ROOT'],
+            $mergeObjects: ["$root", "$$ROOT"],
           },
         },
       },
@@ -620,8 +620,8 @@ exports.getChatDetails = asyncHandler(async (req, res, next) => {
         $addFields: {
           image: {
             $cond: {
-              if: '$image',
-              then: { $concat: [baseUrl, '/chats/', '$image'] },
+              if: "$image",
+              then: { $concat: [baseUrl, "/chats/", "$image"] },
               else: null,
             },
           },
@@ -642,19 +642,19 @@ exports.getChatDetails = asyncHandler(async (req, res, next) => {
     ]);
 
     if (!chat || chat.length === 0) {
-      return res.status(404).json({ error: 'Chat not found' });
+      return res.status(404).json({ error: "Chat not found" });
     }
 
     res.status(200).json({
-      status: 'success',
+      status: "success",
       results: 1,
       data: chat[0],
     });
   } catch (error) {
-    console.error('Error fetching chat details:', error);
+    console.error("Error fetching chat details:", error);
     res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch chat details',
+      status: "error",
+      message: "Failed to fetch chat details",
     });
   }
 });
@@ -670,25 +670,25 @@ exports.updateGroupChat = asyncHandler(async (req, res, next) => {
   // Check if the logged-in user is an admin in the group
   const chat = await Chat.findOne({
     _id: chatId,
-    'participants.user': user,
-    'participants.isAdmin': true,
+    "participants.user": user,
+    "participants.isAdmin": true,
     isGroupChat: true,
   });
 
   if (!chat) {
     return next(
-      new ApiError('Unauthorized: You are not an admin in this Group', 403),
+      new ApiError("Unauthorized: You are not an admin in this Group", 403)
     );
   }
 
   const updatedChat = await Chat.findByIdAndUpdate(
     chatId,
     { groupName, description, image },
-    { new: true, runValidators: true },
+    { new: true, runValidators: true }
   );
 
   if (!updatedChat) {
-    return next(new ApiError('Chat not found', 404));
+    return next(new ApiError("Chat not found", 404));
   }
 
   res.status(200).json({ data: updatedChat });
@@ -702,13 +702,13 @@ exports.deleteChat = asyncHandler(async (req, res, next) => {
     await mongoose.connection.transaction(async (session) => {
       // Find and delete the course
       const chat = await Chat.findByIdAndDelete(req.params.chatId).session(
-        session,
+        session
       );
 
       // Check if course exists
       if (!chat) {
         return next(
-          new ApiError(`chat not found for this id ${req.params.chatId}`, 404),
+          new ApiError(`chat not found for this id ${req.params.chatId}`, 404)
         );
       }
 
@@ -723,19 +723,19 @@ exports.deleteChat = asyncHandler(async (req, res, next) => {
     res.status(204).send();
   } catch (error) {
     // Handle any transaction-related errors
-    console.error('Transaction error:', error);
+    console.error("Transaction error:", error);
     if (error instanceof ApiError) {
       // Forward specific ApiError instances
       return next(error);
     }
     // Handle other errors with a generic message
-    return next(new ApiError('Error during chat deletion', 500));
+    return next(new ApiError("Error during chat deletion", 500));
   }
 });
 //filter to get my chats
 exports.createFilterObj = (req, res, next) => {
   const filterObject = {
-    'participants.user': req.user._id,
+    "participants.user": req.user._id,
   };
   req.filterObj = filterObject;
   next();
@@ -751,10 +751,10 @@ exports.findChat = asyncHandler(async (req, res, next) => {
   const chat = await Chat.findOne({
     $and: [
       {
-        'participants.user': loggedUserId,
+        "participants.user": loggedUserId,
       },
       {
-        'participants.user': secondPersonId,
+        "participants.user": secondPersonId,
       },
       {
         isGroupChat: false, // Ensuring it's not a group chat
@@ -762,7 +762,7 @@ exports.findChat = asyncHandler(async (req, res, next) => {
     ],
   });
   if (!chat) {
-    return next(new ApiError('Chat not found', 404));
+    return next(new ApiError("Chat not found", 404));
   }
   res.status(200).json({ data: chat });
 });
@@ -776,20 +776,20 @@ exports.pinMessageInChat = asyncHandler(async (req, res, next) => {
   const chat = await Chat.findById(chatId);
 
   if (!chat) {
-    return next(new ApiError('Chat not found', 404));
+    return next(new ApiError("Chat not found", 404));
   }
 
   // Check if the message exists in the chat
   const isMessageInChat = chat.pinnedMessages.includes(messageId);
   if (isMessageInChat) {
-    return next(new ApiError('Message is already pinned in the chat', 400));
+    return next(new ApiError("Message is already pinned in the chat", 400));
   }
 
   // Update the chat document to add the message to the pinnedMessages array
   await Chat.findByIdAndUpdate(
     chatId,
     { $push: { pinnedMessages: messageId } },
-    { new: true }, // To return the modified document
+    { new: true } // To return the modified document
   );
 
   // Fetch the updated chat document after pinning the message
@@ -806,20 +806,20 @@ exports.unpinMessageInChat = asyncHandler(async (req, res, next) => {
   const chat = await Chat.findById(chatId);
 
   if (!chat) {
-    return next(new ApiError('Chat not found', 404));
+    return next(new ApiError("Chat not found", 404));
   }
 
   // Check if the message exists in the pinned messages of the chat
   const messageIndex = chat.pinnedMessages.indexOf(messageId);
   if (messageIndex === -1) {
-    return next(new ApiError('Message is not pinned in the chat', 400));
+    return next(new ApiError("Message is not pinned in the chat", 400));
   }
 
   // Update the chat document to remove the message from the pinnedMessages array
   await Chat.findByIdAndUpdate(
     chatId,
     { $pull: { pinnedMessages: messageId } },
-    { new: true }, // To return the modified document
+    { new: true } // To return the modified document
   );
 
   // Fetch the updated chat document after unpinning the message
@@ -837,13 +837,13 @@ exports.archiveChat = asyncHandler(async (req, res, next) => {
   const chat = await Chat.findByIdAndUpdate(
     chatId,
     { $set: { archived: true } },
-    { new: true }, // To return the modified document
+    { new: true } // To return the modified document
   );
   if (!chat) {
-    return next(new ApiError('Chat not found', 404));
+    return next(new ApiError("Chat not found", 404));
   }
 
-  res.status(200).json({ message: 'archived' });
+  res.status(200).json({ message: "archived" });
 });
 //@desc Unarchive a chat
 //@route PUT /api/v1/chat/:chatId/unarchive
@@ -854,14 +854,14 @@ exports.unarchiveChat = asyncHandler(async (req, res, next) => {
   const chat = await Chat.findByIdAndUpdate(
     chatId,
     { $set: { archived: false } },
-    { new: true },
+    { new: true }
   );
 
   if (!chat) {
-    return next(new ApiError('Chat not found', 404));
+    return next(new ApiError("Chat not found", 404));
   }
 
-  res.status(200).json({ message: 'unarchived' });
+  res.status(200).json({ message: "unarchived" });
 });
 
 //@desc get all chat
@@ -873,8 +873,8 @@ exports.getAllChats = async (req, res, next) => {
     res.status(200).json({ data: chats });
   } catch (error) {
     res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch chats',
+      status: "error",
+      message: "Failed to fetch chats",
     });
   }
 };
@@ -890,7 +890,7 @@ exports.customerService = async (req, res, next) => {
   const customerServiceUsers = await User.find({ isCustomerService: true });
 
   if (customerServiceUsers.length === 0) {
-    return next(new ApiError('No customer service users available', 404));
+    return next(new ApiError("No customer service users available", 404));
   }
 
   // Select a random customer service representative
@@ -907,8 +907,8 @@ exports.customerService = async (req, res, next) => {
     ],
     isGroupChat: true,
     creator: randomCustomerServiceUser._id,
-    groupName: 'Customer Support',
-    description: 'Chat with customer support',
+    groupName: "Customer Support",
+    description: "Chat with customer support",
   });
 
   // Create a new message within the chat
