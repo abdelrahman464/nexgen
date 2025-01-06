@@ -16,7 +16,7 @@ const {
   updateUser,
   deleteUser,
   changeUserPassword,
-  getLoggedUserData,
+
   updateLoggedUserPassword,
   updateLoggedUserData,
   unActiveUser,
@@ -39,7 +39,7 @@ const {
 
 const router = express.Router();
 
-router.get('/getMe', authServices.protect, getLoggedUserData, getUser);
+router.get('/getMe', getUser);
 router.get(
   '/adminAndInstructor',
   authServices.protect,

@@ -584,16 +584,23 @@ exports.getCourseDetails = asyncHandler(async (req, res, next) => {
 //   });
 // });
 
+
+
 // exports.getCourseUsers = asyncHandler(async (req, res, next) => {
 //   const courseId = req.params.id;
+//   const limit = req.query.limit || 3;
 
-//   // Validate courseId
 //   if (!mongoose.Types.ObjectId.isValid(courseId)) {
 //     return next(new ApiError(`Invalid course ID: ${courseId}`, 400));
 //   }
 
 //   const pipeline = [
-//     { $match: { course: mongoose.Types.ObjectId(courseId) } },
+//     {
+//       $match: {
+//         course: mongoose.Types.ObjectId(courseId),
+//         status: 'Completed',
+//       },
+//     },
 //     {
 //       $lookup: {
 //         from: 'users',
@@ -603,37 +610,140 @@ exports.getCourseDetails = asyncHandler(async (req, res, next) => {
 //       },
 //     },
 //     { $unwind: '$userDetails' },
+//     // Get lesson details with their exams
 //     {
 //       $lookup: {
 //         from: 'lessons',
-//         localField: 'progress.lesson',
-//         foreignField: '_id',
-//         as: 'lessonDetails',
-//       },
+//         let: { courseId: '$course' },
+//         pipeline: [
+//           {
+//             $match: {
+//               $expr: { $eq: ['$course', '$$courseId'] }
+//             }
+//           }
+//         ],
+//         as: 'allLessons'
+//       }
+//     },
+//     {
+//       $lookup: {
+//         from: 'lessons',
+//         let: { progressArray: '$progress' },
+//         pipeline: [
+//           {
+//             $match: {
+//               $expr: {
+//                 $in: ['$_id', {
+//                   $map: {
+//                     input: '$$progressArray',
+//                     as: 'prog',
+//                     in: '$$prog.lesson'
+//                   }
+//                 }]
+//               }
+//             }
+//           },
+//           {
+//             $lookup: {
+//               from: 'exams',
+//               localField: '_id',
+//               foreignField: 'lesson',
+//               as: 'lessonExam'
+//             }
+//           }
+//         ],
+//         as: 'lessonDetails'
+//       }
+//     },
+//     // Get final exam
+//     {
+//       $lookup: {
+//         from: 'exams',
+//         let: { courseId: '$course', modelExam: '$modelExam' },
+//         pipeline: [
+//           {
+//             $match: {
+//               $expr: {
+//                 $and: [
+//                   { $eq: ['$course', '$$courseId'] },
+//                   {
+//                     $or: [
+//                       { $eq: ['$model', '$$modelExam'] },
+//                       { $eq: ['$$modelExam', null] }
+//                     ]
+//                   }
+//                 ]
+//               }
+//             }
+//           }
+//         ],
+//         as: 'finalExam'
+//       }
+//     },
+//     { $unwind: { path: '$finalExam', preserveNullAndEmptyArrays: true } },
+//     // Calculate scores and grades
+//     {
+//       $addFields: {
+//         completedLessons: {
+//           $filter: {
+//             input: '$progress',
+//             as: 'prog',
+//             cond: { $eq: ['$$prog.status', 'Completed'] }
+//           }
+//         },
+//         finalExamScore: { $ifNull: ['$score', 0] },
+//         totalLessons: { $size: '$allLessons' }
+//       }
 //     },
 //     {
 //       $addFields: {
-//         // Calculate total earned points from progress
-//         totalEarnedPoints: {
+//         // Total exam score from completed lessons
+//         totalExamScore: {
 //           $sum: {
 //             $map: {
-//               input: '$progress',
+//               input: '$completedLessons',
 //               as: 'prog',
-//               in: {
-//                 $cond: [
-//                   { $eq: ['$$prog.examScore', null] },
-//                   0,
-//                   '$$prog.examScore',
-//                 ],
-//               },
-//             },
-//           },
+//               in: { $ifNull: ['$$prog.examScore', 0] }
+//             }
+//           }
 //         },
-//         // Calculate total possible points (100 points per lesson)
-//         totalPossiblePoints: {
-//           $multiply: [{ $size: '$progress' }, 100],
+//         // Calculate total possible lesson grades
+//         totalPossibleLessonGrade: {
+//           $reduce: {
+//             input: '$lessonDetails',
+//             initialValue: 0,
+//             in: {
+//               $add: [
+//                 '$$value',
+//                 {
+//                   $sum: {
+//                     $map: {
+//                       input: { $ifNull: [{ $arrayElemAt: ['$$this.lessonExam.questions', 0] }, []] },
+//                       as: 'question',
+//                       in: { $ifNull: ['$$question.grade', 0] }
+//                     }
+//                   }
+//                 }
+//               ]
+//             }
+//           }
 //         },
-//       },
+//         // Calculate final exam possible grade
+//         finalExamGrade: {
+//           $sum: {
+//             $map: {
+//               input: { $ifNull: ['$finalExam.questions', []] },
+//               as: 'question',
+//               in: { $ifNull: ['$$question.grade', 0] }
+//             }
+//           }
+//         }
+//       }
+//     },
+//     {
+//       $addFields: {
+//         completedLessonsCount: { $size: '$completedLessons' }
+//       }
 //     },
 //     {
 //       $project: {
@@ -654,23 +764,29 @@ exports.getCourseDetails = asyncHandler(async (req, res, next) => {
 //           ],
 //         },
 //         totalCourseExamsPercentage: {
-//           $cond: {
-//             if: { $eq: ['$totalPossiblePoints', 0] },
-//             then: 0,
-//             else: {
-//               $min: [
-//                 100,
-//                 {
-//                   $multiply: [
-//                     {
-//                       $divide: ['$totalEarnedPoints', '$totalPossiblePoints'],
-//                     },
-//                     100,
-//                   ],
-//                 },
-//               ],
+//           $let: {
+//             vars: {
+//               totalEarnedScore: { $add: ['$totalExamScore', '$finalExamScore'] },
+//               totalPossibleGrade: { $add: ['$totalPossibleLessonGrade', { $ifNull: ['$finalExamGrade', 0] }] }
 //             },
-//           },
+//             in: {
+//               $cond: {
+//                 if: { $eq: ['$$totalPossibleGrade', 0] },
+//                 then: 0,
+//                 else: {
+//                   $min: [
+//                     100,
+//                     {
+//                       $multiply: [
+//                         { $divide: ['$$totalEarnedScore', '$$totalPossibleGrade'] },
+//                         100
+//                       ]
+//                     }
+//                   ]
+//                 }
+//               }
+//             }
+//           }
 //         },
 //         status: 1,
 //         certificate: {
@@ -700,7 +816,7 @@ exports.getCourseDetails = asyncHandler(async (req, res, next) => {
 //       },
 //     },
 //     { $sort: { totalCourseExamsPercentage: -1 } },
-//     { $limit: 5 },
+//     { $limit: Number(limit) },
 //   ];
 
 //   const users = await CourseProgress.aggregate(pipeline);

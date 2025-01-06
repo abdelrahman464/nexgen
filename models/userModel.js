@@ -143,9 +143,10 @@ const userSchema = new mongoose.Schema(
       monthlyStartDate: {
         type: Date, // Start date for the 30-day calculation
       },
-      isMarketer: {
-        type: Boolean,
-      },
+      
+    },
+    isMarketer: {
+      type: Boolean,
     },
   },
   { timestamps: true }
