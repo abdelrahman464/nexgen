@@ -13,7 +13,7 @@ exports.validateCoupon = async (couponName, marketerId) => {
   if (coupon.maxUsageTimes <= coupon.usedTimes) {
     return "coupon-errors.Expired";
   }
-  if (coupon.marketer._id.toString() !== marketerId.toString())
+  if (coupon.marketer?._id.toString() !== marketerId?.toString())
     return "coupon-errors.Un-Authorized";
   return coupon;
 };

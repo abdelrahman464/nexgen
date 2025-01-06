@@ -150,7 +150,6 @@ exports.checkCourseAccess = asyncHandler(async (req, res, next) => {
   if (!course) {
     return next(new ApiError(res.__('errors.Not-Found'), 403));
   }
-
   // need to check if user have this course or not
   const courseProgress = await CourseProgress.findOne({
     user: user._id,
