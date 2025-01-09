@@ -11,10 +11,6 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "defaultKey",
     },
-    startMarketing: {
-      type: Boolean,
-      default: false,
-    },
     name: {
       type: String,
       trim: true,

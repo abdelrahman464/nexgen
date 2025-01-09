@@ -29,6 +29,7 @@ router.get(
   '/google/callback',
   passport.authenticate('google', { session: false }), // Disable sessions
   (req, res) => {
+    
     // Assuming your strategy attaches the JWT to the user object
     if (req.user && req.user.token) {
       // Redirect the user or send the token directly
