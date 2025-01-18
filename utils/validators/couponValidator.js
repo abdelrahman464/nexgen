@@ -89,3 +89,12 @@ exports.updateCouponValidator = [
   //catch error and return it as a response
   validatorMiddleware,
 ];
+
+exports.canPerformCouponAction = async (req, res, next) => {
+  if (req.user.role !== "admin" && !req.user.isMarketer) {
+    return next(
+      new ApiError("You are not allowed to perform this action", 403)
+    );
+  }
+  return next();
+};

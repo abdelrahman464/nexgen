@@ -98,6 +98,11 @@ const getCurrentMonthSalesMoney = (orders) =>
 //the coming functions are for page1 => analytics
 exports.getTotalSalesAnalytics = async (req, res) => {
   try {
+    if (req.user.role === "user" && !req.user.isMarketer) {
+      return next(
+        new ApiError("you are not allowed to access this route", 403)
+      );
+    }
     const lang = req.locale;
     const marketerId = req.params.id || req.user._id;
     //get his users
@@ -137,6 +142,11 @@ exports.getTotalSalesAnalytics = async (req, res) => {
  */
 exports.getItemAnalytics = async (req, res, next) => {
   try {
+    if (req.user.role === "user" && !req.user.isMarketer) {
+      return next(
+        new ApiError("you are not allowed to access this route", 403)
+      );
+    }
     const startDate = toISOFormat(req.query.startDate); //ISO date format
     const endDate = toISOFormat(req.query.endDate); //ISO date format
 

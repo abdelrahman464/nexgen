@@ -460,7 +460,7 @@ exports.detectPercentage = (role, totalSalesMoney) => {
   if (role === "head") {
     if (totalSalesMoney < 1000) percentage = 20;
     else if (totalSalesMoney >= 1000 && totalSalesMoney < 2000) percentage = 30;
-    else if (totalSalesMoney >= 2000 && totalSalesMoney < 4000) percentage = 40;
+    else if (totalSalesMoney >= 2000 && totalSalesMoney < 3000) percentage = 40;
     else percentage = 50;
   } else if (role === "marketer") {
     if (totalSalesMoney < 1000) percentage = 15;

@@ -77,14 +77,6 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-    treeHead: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
-    isTreeHead: {
-      type: Boolean,
-      default: false,
-    },
     placementExam: {
       exam: {
         type: mongoose.Schema.ObjectId,

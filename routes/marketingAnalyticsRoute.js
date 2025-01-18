@@ -9,13 +9,13 @@ const router = express.Router();
 router.get(
   "/total/:id?", //marketing id
   authServices.protect,
-  authServices.allowedTo("admin"),
+  authServices.allowedTo('user',"admin"),
   marketingAnalyticsService.getTotalSalesAnalytics
 );
 router.get(
   "/item/:id?", //item id
   authServices.protect,
-  authServices.allowedTo("admin"),
+  authServices.allowedTo("user","admin"),
   //validation layer for startDate and endDate
   getItemAnalyticsValidator,
   marketingAnalyticsService.getItemAnalytics

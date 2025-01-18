@@ -305,7 +305,9 @@ exports.getSectionLessonsInPublic = async (req, res, next) => {
   );
 
   //get all section in that course
-  const sections = await Section.find({ course: req.params.id });
+  const sections = await Section.find({ course: req.params.id }).sort({
+    order: 1,
+  });
   const localizedSections = Section.schema.methods.toJSONLocalizedOnly(
     sections,
     req.locale

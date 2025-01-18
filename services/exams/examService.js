@@ -390,7 +390,8 @@ exports.checkCourseQuestionsStatus = async (courseExamResult) => {
 
 //Lesson Exam Logic
 const getLessonExam = async (lesson, courseProgress, user) => {
-  await checkUserProgress(user, lesson.course, lesson.order);
+  //NOTE !!! : i commented it because dawwod deleted some lessons , so last lessonProgress may be for deleted lesson and cause error
+  // await checkUserProgress(user, lesson.course, lesson.order);
 
   // Determine exam model based on user's previous progress
   const lastProgress =
@@ -828,11 +829,19 @@ exports.userScores = async (req, res, next) => {
       { course: courseId },
       "_id title order"
     );
-
+    const completedLessons = [];
+    const seenIds = new Set();
     // Filter completed lessons and calculate total exam score
-    const completedLessons = localizedCourseProgress.progress.filter(
-      (item) => item.status === "Completed"
-    );
+    localizedCourseProgress.progress.forEach((item) => {
+      if (
+        !_.isNull(item.lesson) &&
+        item.status === "Completed" &&
+        !seenIds.has(item._id)
+      ) {
+        completedLessons.push(item);
+        seenIds.add(item._id);
+      }
+    });
     const completedLessonsCount = completedLessons.length;
 
     // Fetch Possible grades for completed lessons

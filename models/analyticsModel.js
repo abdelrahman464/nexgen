@@ -23,6 +23,10 @@ const AnalyticSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    isSeen: {
+      type: Boolean,
+      default: false,
+    },
     marketerComment: {
       type: String,
     },

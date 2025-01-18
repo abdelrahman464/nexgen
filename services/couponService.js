@@ -17,6 +17,13 @@ exports.validateCoupon = async (couponName, marketerId) => {
     return "coupon-errors.Un-Authorized";
   return coupon;
 };
+//----------------------------------------------
+exports.filterCoupons = (req, res, next) => {
+  if (req.user.role === "user") {
+    req.filterObj = { marketer: req.user.id };
+  }
+  return next();
+};
 //@desc get list of coupons
 //@route GET /api/v1/coupons
 //@access public
