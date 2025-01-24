@@ -152,7 +152,6 @@ exports.getCourseLessons = async (req, res, next) => {
       course: req.params.id,
     }).populate("progress.lesson");
 
-    console.log("userCourseProgress", userCourseProgress);
     if (!userCourseProgress || userCourseProgress.progress.length === 0) {
       // If no progress, user should only access the first lesson
       accessibleLessons = lessons.map((lesson, index) => {
@@ -168,14 +167,13 @@ exports.getCourseLessons = async (req, res, next) => {
       //------------
       let currentLessonOrder = lastLessonProgress.lesson.order || 0;
 
-      console.log("currentLessonOrder", currentLessonOrder);
       if (
         lastLessonProgress.status === "Completed" &&
-        !lastLessonProgress.passAnalytics
+        (!("passAnalytics" in lastLessonProgress) ||
+          lastLessonProgress.passAnalytics)
       ) {
         currentLessonOrder += 1;
       }
-      console.log("currentLessonOrder", currentLessonOrder);
       //---------------
       // Update accessibleLessons based on currentLessonOrder
       accessibleLessons = lessons.map((lesson) => {
@@ -245,7 +243,8 @@ exports.getSectionLessons = async (req, res, next) => {
 
           if (
             lastLessonProgress.status === "Completed" &&
-            !lastLessonProgress.passAnalytics
+            (!("passAnalytics" in lastLessonProgress) ||
+              lastLessonProgress.passAnalytics)
           ) {
             currentLessonOrder += 1;
           }

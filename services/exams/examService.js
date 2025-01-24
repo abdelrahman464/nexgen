@@ -562,7 +562,6 @@ exports.submitLessonAnswers = async (req, res, next) => {
       lesson: lesson._id,
       modelExam: exam.model,
       status: passed ? "Completed" : "failed",
-      passAnalytics: lesson.isRequireAnalytic ? false : null,
       examScore: examResult.score,
       attemptDate: new Date(),
       wrongAnswers: examResult.wrongAnswers.map((wa) => ({
@@ -570,6 +569,9 @@ exports.submitLessonAnswers = async (req, res, next) => {
         answer: wa.answer,
       })),
     };
+    if (lesson.isRequireAnalytic) {
+      newProgress.passAnalytics = false;
+    }
 
     // Update course progress
 

@@ -8,7 +8,7 @@ const Analytic = require("../models/analyticsModel");
 const CourseProgress = require("../models/courseProgressModel");
 const factory = require("./handllerFactory");
 const { uploadMixOfFiles } = require("../middlewares/uploadImageMiddleware");
-const { passAnalyticsInCourseProgress } = require("./lessonServices");
+const Lesson = require("../models/lessonModel");
 const _ = require("lodash");
 
 exports.uploadMedia = uploadMixOfFiles([
@@ -154,11 +154,20 @@ exports.getOne = factory.getOne(Analytic);
 //assignIds
 exports.createOne = async (req, res, next) => {
   if (req.body.lesson) {
+    //step 1: check if the lesson exists
+    const lesson = await Lesson.findById(req.body.lesson);
+    if (!lesson) {
+      return next(
+        new ApiError(res.__("errors.Not-Found", { document: "lesson" }), 404)
+      );
+    }
+    //step 2: check if the lesson is required to have an analytic
     const userCourseProgress = await CourseProgress.findOne({
       user: req.user._id,
-      course: req.body.course,
+      course: lesson.course._id,
     }).populate("progress.lesson");
-    //update it's course progress object
+
+    //step 3 update it's course progress object
     let flag = false;
     if (userCourseProgress && userCourseProgress.progress.length !== 0) {
       userCourseProgress.progress.map((obj) => {
@@ -183,10 +192,6 @@ exports.updateOne = async (req, res, next) => {
       return next(
         new ApiError(res.__("errors.Not-Found", { document: "document" }), 404)
       );
-    }
-    if (document.lesson && req.body.isPassed === true) {
-      //update this lesson's doc in course progress
-      await passAnalyticsInCourseProgress(document.user, document.lesson);
     }
     return res.status(200).json({ status: "success", data: document });
   } catch (error) {

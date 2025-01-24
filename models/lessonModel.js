@@ -44,7 +44,7 @@ const lessonSchema = new mongoose.Schema(
 );
 
 lessonSchema.pre(/^find/, function (next) {
-  this.populate({ path: "course", select: "title -category" });
+  this.populate({ path: "course", select: "_id title -category" });
   next();
 });
 
