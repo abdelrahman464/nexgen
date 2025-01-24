@@ -31,7 +31,6 @@ exports.deleteLive = factory.deleteOne(Live);
 exports.createFilterObj = asyncHandler(async (req, res, next) => {
   const filterObject = {};
   const newQuery = { ...req.query };
-
   // Date filtering logic (applied for both users and admins)
   if (req.query.startDate && req.query.endDate) {
     filterObject.date = {
@@ -41,17 +40,26 @@ exports.createFilterObj = asyncHandler(async (req, res, next) => {
     //removing the keys from the query
     delete newQuery.startDate;
     delete newQuery.endDate;
-  } else if (req.query.day) {
+  }
+  ///----------------
+  else if (req.query.day) {
     const dayStart = new Date(req.query.day);
     const dayEnd = new Date(req.query.day);
     dayEnd.setUTCHours(23, 59, 59, 999); // Set to the end of the day
-
+    console.log(dayStart, dayEnd);
     filterObject.date = {
       $gte: dayStart,
       $lte: dayEnd,
     };
     //removing the key from the query
     delete newQuery.day;
+  }
+  //----------------
+  else {
+    //exclude lives before last 24hrs
+    const last24hrs = new Date();
+    last24hrs.setDate(last24hrs.getDate() - 1);
+    filterObject.date = { $gte: last24hrs };
   }
 
   if (req.user.role !== "admin") {

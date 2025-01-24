@@ -159,21 +159,21 @@ exports.getCourseLessons = async (req, res, next) => {
         return lesson;
       });
     } else {
-      console.log("hey");
       // Find the last lesson in progress
-      const lastLessonProgress = this.getLastLessonExamOrder(
+      let lastLessonProgress = this.getLastLessonExamOrder(
         userCourseProgress.progress
       );
+      lastLessonProgress = lastLessonProgress.toObject();
       //------------
       let currentLessonOrder = lastLessonProgress.lesson.order || 0;
-
       if (
         lastLessonProgress.status === "Completed" &&
-        (!("passAnalytics" in lastLessonProgress) ||
+        (!_.has(lastLessonProgress, "passAnalytics") ||
           lastLessonProgress.passAnalytics)
       ) {
         currentLessonOrder += 1;
       }
+      console.log("currentLessonOrder", currentLessonOrder);
       //---------------
       // Update accessibleLessons based on currentLessonOrder
       accessibleLessons = lessons.map((lesson) => {
@@ -231,21 +231,23 @@ exports.getSectionLessons = async (req, res, next) => {
         });
       } else {
         // Find the last lesson in progress
-        const lastLessonProgress = this.getLastLessonExamOrder(
+
+        let lastLessonProgress = this.getLastLessonExamOrder(
           userCourseProgress.progress
         );
+        lastLessonProgress = lastLessonProgress.toObject();
 
         // Add null checks for lesson and order
         let currentLessonOrder = 0;
-
         if (lastLessonProgress && lastLessonProgress.lesson) {
           currentLessonOrder = lastLessonProgress.lesson.order || 0;
 
           if (
             lastLessonProgress.status === "Completed" &&
-            (!("passAnalytics" in lastLessonProgress) ||
+            (!_.has(lastLessonProgress, "passAnalytics") ||
               lastLessonProgress.passAnalytics)
           ) {
+            console.log("hey22");
             currentLessonOrder += 1;
           }
         }
@@ -494,6 +496,6 @@ exports.getLastLessonExamOrder = (progresses) => {
       }
     }
   }
-
+  console.log("lastProgressIndex", lastProgressIndex);
   return progresses[lastProgressIndex];
 };

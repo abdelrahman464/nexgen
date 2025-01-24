@@ -1,24 +1,28 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const ArticalSchema = new mongoose.Schema(
   {
+    author: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
     title: {
       type: String,
-      required: [true, 'Article title required'],
+      required: [true, "Article title required"],
       trim: true,
       minlength: 2,
       i18n: true,
     },
     description: {
       type: String,
-      required: [true, 'Article description required'],
+      required: [true, "Article description required"],
       trim: true,
       minlength: 10,
       i18n: true,
     },
     content: {
       type: String,
-      required: [true, 'Article content required'],
+      required: [true, "Article content required"],
       i18n: true,
     },
     date: {
@@ -31,10 +35,7 @@ const ArticalSchema = new mongoose.Schema(
       required: true,
     },
     images: [String],
-    author: {
-      type: String,
-      required: true,
-    },
+
     readTime: {
       type: String,
       required: true,
@@ -44,7 +45,7 @@ const ArticalSchema = new mongoose.Schema(
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-  },
+  }
 );
 
 const setImageURL = (doc) => {
@@ -54,11 +55,16 @@ const setImageURL = (doc) => {
   }
 };
 
-ArticalSchema.post('init', (doc) => {
+ArticalSchema.post("init", (doc) => {
   setImageURL(doc);
 });
-ArticalSchema.post('save', (doc) => {
+ArticalSchema.post("save", (doc) => {
   setImageURL(doc);
 });
 
-module.exports = mongoose.model('Artical', ArticalSchema);
+ArticalSchema.pre(/^find/, function (next) {
+  this.populate({ path: "author", select: "_id name email profileImg" });
+  next();
+});
+
+module.exports = mongoose.model("Artical", ArticalSchema);

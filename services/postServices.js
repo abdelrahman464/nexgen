@@ -110,7 +110,6 @@ exports.createFilterObjAllowedCoursePosts = asyncHandler(
 //filter to get public posts only
 exports.createFilterObjHomePosts = async (req, res, next) => {
   let filterObject;
-  console.log(req.query);
   if (req.query.type) {
     if (req.query.type === "feed") {
       //1-get all profile posts
@@ -122,7 +121,9 @@ exports.createFilterObjHomePosts = async (req, res, next) => {
       //1-get users he follow
       const user = await User.findById(req.user._id).select("following");
       //2-get usersIds from user.following
-      const usersIds = user.following.map((object) => object.user);
+      const usersIds = user.following.map((object) =>
+        mongoose.Types.ObjectId(object.user)
+      );
 
       //3-filter posts to get posts of these users
       filterObject = {

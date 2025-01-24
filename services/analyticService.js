@@ -185,6 +185,9 @@ exports.createOne = async (req, res, next) => {
 //check if the user is the owner or marketer
 exports.updateOne = async (req, res, next) => {
   try {
+    if (req.body.isPassed) {
+      req.body.isSeen = true;
+    }
     const document = await Analytic.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
     });
