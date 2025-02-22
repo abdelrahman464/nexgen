@@ -136,6 +136,10 @@ exports.filterStatus = (req, res, next) => {
     req.filterObj.user = req.query.user;
     delete req.newQuery.user;
   }
+  if (req.query.isSeen) {
+    req.filterObj.isSeen = req.query.isSeen;
+    delete req.newQuery.isSeen;
+  }
   req.query = req.newQuery;
   return next();
 };
@@ -185,7 +189,7 @@ exports.createOne = async (req, res, next) => {
 //check if the user is the owner or marketer
 exports.updateOne = async (req, res, next) => {
   try {
-    if (req.body.isPassed) {
+    if (req.body.isPassed || req.body.marketerComment) {
       req.body.isSeen = true;
     }
     const document = await Analytic.findByIdAndUpdate(req.params.id, req.body, {

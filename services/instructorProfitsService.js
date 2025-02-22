@@ -130,7 +130,7 @@ exports.updateInstructorProfitsInvoiceStatus = async (invoiceId, status) => {
   });
   //2- check if invoice found
   if (!instructorProfitsObject) {
-    throw new ApiError("No invoices found", 404);
+    return false;
   }
   //3- update the invoice status
   instructorProfitsObject.invoices.id(invoiceId).status = status;

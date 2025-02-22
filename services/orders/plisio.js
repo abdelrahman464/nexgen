@@ -1,72 +1,70 @@
-const crypto = require('crypto');
-const axios = require('axios');
-const asyncHandler = require('express-async-handler');
-const ApiError = require('../../utils/apiError');
-const Order = require('../../models/orderModel');
-const Course = require('../../models/courseModel');
-const Package = require('../../models/packageModel');
-const CoursePackage = require('../../models/coursePackageModel');
-const UserSubscription = require('../../models/userSubscriptionModel');
-const User = require('../../models/userModel');
-const Chat = require('../../models/ChatModel');
-const Notification = require('../../models/notificationModel');
-const CourseProgress = require('../../models/courseProgressModel');
-const { checkCourseAccess } = require('../../utils/validators/courseValidator');
-const { calculateProfits } = require('../marketing/marketingService');
-const { availUserToReview } = require('../userService');
+const crypto = require("crypto");
+const axios = require("axios");
+const asyncHandler = require("express-async-handler");
+const ApiError = require("../../utils/apiError");
+const Order = require("../../models/orderModel");
+const Course = require("../../models/courseModel");
+const Package = require("../../models/packageModel");
+const CoursePackage = require("../../models/coursePackageModel");
+const UserSubscription = require("../../models/userSubscriptionModel");
+const User = require("../../models/userModel");
+const Chat = require("../../models/ChatModel");
+const Notification = require("../../models/notificationModel");
+const CourseProgress = require("../../models/courseProgressModel");
+const { checkCourseAccess } = require("../../utils/validators/courseValidator");
+const { calculateProfits } = require("../marketing/marketingService");
+const { availUserToReview } = require("../userService");
 const {
   createCourseOrderHandler,
   createPackageOrderHandler,
   createCoursePackageOrderHandler,
-} = require('./OrderService');
+} = require("./OrderService");
 
 const createPlisioTransaction = async (options) => {
   try {
     const params = {
       api_key: process.env.PLISIO_SECRET_KEY,
-      currency: 'USDT_TRX',
-      order_name: options.type || 'course',
+      currency: "USDT_TRX",
+      order_name: options.type || "course",
       order_number: options.orderId,
-      amount: 10.0, //options.amount,
+      amount: options.amount,
       email: options.userEmail,
       description: options.id,
       callback_url: `${process.env.PLISIO_CALLBACK_URL}?json=true`,
     };
 
     const response = await axios.get(
-      'https://api.plisio.net/api/v1/invoices/new',
-      { params },
+      "https://api.plisio.net/api/v1/invoices/new",
+      { params }
     );
 
-    console.log('Plisio response:', response.data);
-
     // Check if response is successful
-    if (response.data.status !== 'success') {
-      throw new Error('Unsuccessful response from Plisio API');
+    if (response.data.status !== "success") {
+      throw new Error("Unsuccessful response from Plisio API");
     }
 
     // Get the invoice URL from the response
     const invoiceUrl = response.data.data.invoice_url;
     if (!invoiceUrl) {
-      throw new Error('No invoice URL in response');
+      throw new Error("No invoice URL in response");
     }
 
-    console.log('Plisio transaction created:', {
-      orderId: options.orderId,
-      email: options.email,
-      amount: options.amount,
-      invoiceUrl: invoiceUrl,
-    });
+    // console.log('Plisio transaction created:', {
+    //   orderId: options.orderId,
+    //   email: options.email,
+    //   amount: options.amount,
+    //   invoiceUrl: invoiceUrl,
+    // });
 
     return invoiceUrl;
   } catch (error) {
     console.error(
-      'Error creating Plisio transaction:',
-      error.response?.data || error.message,
+      "Error creating Plisio transaction:",
+      error.response?.data || error.message
     );
     throw new Error(
-      'Failed to create Plisio transaction: ' +
-        (error.response?.data?.message || error.message),
+      "Failed to create Plisio transaction: " +
+        (error.response?.data?.message || error.message)
     );
   }
 };
@@ -88,7 +86,7 @@ exports.courseCheckoutSessionPlisio = asyncHandler(async (req, res, next) => {
     course: course._id,
   });
   if (existOrder) {
-    return next(new ApiError('You already bought this course', 400));
+    return next(new ApiError("You already bought this course", 400));
   }
 
   const coursePrice = course.priceAfterDiscount || course.price;
@@ -97,7 +95,7 @@ exports.courseCheckoutSessionPlisio = asyncHandler(async (req, res, next) => {
   if (req.body.couponName) {
     const coupon = await validateCoupon(req.body.couponName, user.invitor);
 
-    if (typeof coupon === 'string') {
+    if (typeof coupon === "string") {
       return next(new ApiError(res.__(coupon), 400));
     }
     totalOrderPrice =
@@ -108,7 +106,7 @@ exports.courseCheckoutSessionPlisio = asyncHandler(async (req, res, next) => {
     id: `${courseId}|${user.email}|${req.body.couponName || null}`,
     userEmail: user.email,
     amount: totalOrderPrice,
-    type: 'course',
+    type: "course",
     orderId: `COURSE_${courseId}_${Date.now()}`,
     userId: user._id,
   };
@@ -117,12 +115,12 @@ exports.courseCheckoutSessionPlisio = asyncHandler(async (req, res, next) => {
     const redirectUrl = await createPlisioTransaction(options);
 
     res.status(200).json({
-      status: 'success',
+      status: "success",
       redirectUrl: redirectUrl,
     });
   } catch (err) {
     return next(
-      new ApiError(`Plisio order creation failed: ${err.message}`, 500),
+      new ApiError(`Plisio order creation failed: ${err.message}`, 500)
     );
   }
 });
@@ -145,7 +143,7 @@ exports.coursePackageCheckoutSessionPlisio = asyncHandler(
     if (req.body.couponName) {
       const coupon = await validateCoupon(req.body.couponName, user.invitor);
 
-      if (typeof coupon === 'string') {
+      if (typeof coupon === "string") {
         return next(new ApiError(res.__(coupon), 400));
       }
       totalOrderPrice =
@@ -156,7 +154,7 @@ exports.coursePackageCheckoutSessionPlisio = asyncHandler(
       id: `${coursePackageId}|${user.email}|${req.body.couponName || null}`,
       userEmail: user.email,
       amount: totalOrderPrice,
-      type: 'coursePackage',
+      type: "coursePackage",
       orderId: `PACKAGE_${coursePackageId}_${Date.now()}`,
       userId: user._id,
     };
@@ -165,15 +163,15 @@ exports.coursePackageCheckoutSessionPlisio = asyncHandler(
       const redirectUrl = await createPlisioTransaction(options);
 
       res.status(200).json({
-        status: 'success',
+        status: "success",
         redirectUrl: redirectUrl,
       });
     } catch (err) {
       return next(
-        new ApiError(`Plisio order creation failed: ${err.message}`, 500),
+        new ApiError(`Plisio order creation failed: ${err.message}`, 500)
       );
     }
-  },
+  }
 );
 
 // Package Checkout Session using Plisio
@@ -192,7 +190,7 @@ exports.packageCheckoutSessionPlisio = asyncHandler(async (req, res, next) => {
   if (req.body.couponName) {
     const coupon = await validateCoupon(req.body.couponName, user.invitor);
 
-    if (typeof coupon === 'string') {
+    if (typeof coupon === "string") {
       return next(new ApiError(res.__(coupon), 400));
     }
     totalOrderPrice =
@@ -203,7 +201,7 @@ exports.packageCheckoutSessionPlisio = asyncHandler(async (req, res, next) => {
     id: `${packageId}|${user.email}|${req.body.couponName || null}`,
     userEmail: user.email,
     amount: totalOrderPrice,
-    type: 'package',
+    type: "package",
     orderId: `PKG_${packageId}_${Date.now()}`,
     userId: user._id,
   };
@@ -212,12 +210,12 @@ exports.packageCheckoutSessionPlisio = asyncHandler(async (req, res, next) => {
     const redirectUrl = await createPlisioTransaction(options);
 
     res.status(200).json({
-      status: 'success',
+      status: "success",
       redirectUrl: redirectUrl,
     });
   } catch (err) {
     return next(
-      new ApiError(`Plisio order creation failed: ${err.message}`, 500),
+      new ApiError(`Plisio order creation failed: ${err.message}`, 500)
     );
   }
 });
@@ -225,15 +223,15 @@ exports.packageCheckoutSessionPlisio = asyncHandler(async (req, res, next) => {
 // Utility function to verify Plisio signatures
 const verifyPlisioSignature = (data) => {
   try {
-    if (!data || typeof data !== 'object') {
-      console.error('Invalid data received for verification');
+    if (!data || typeof data !== "object") {
+      console.error("Invalid data received for verification");
       return false;
     }
 
     // Get verify_hash and remove it from data for verification
     const verify_hash = data.verify_hash;
     if (!verify_hash) {
-      console.error('No verify_hash found in data');
+      console.error("No verify_hash found in data");
       return false;
     }
 
@@ -244,37 +242,37 @@ const verifyPlisioSignature = (data) => {
     const string = JSON.stringify(ordered);
 
     // Create HMAC using SHA1
-    const hmac = crypto.createHmac('sha1', process.env.PLISIO_SECRET_KEY);
-    const hash = hmac.update(string).digest('hex');
+    const hmac = crypto.createHmac("sha1", process.env.PLISIO_SECRET_KEY);
+    const hash = hmac.update(string).digest("hex");
 
     const isValid = hash === verify_hash;
     if (!isValid) {
-      console.error('Signature verification failed');
+      console.error("Signature verification failed");
     }
     return isValid;
   } catch (error) {
-    console.error('Error verifying Plisio signature:', error);
+    console.error("Error verifying Plisio signature:", error);
     return false;
   }
 };
 // Plisio Payment Callback (Webhook Handler)
 // Plisio Payment Callback (Webhook Handler)
 exports.plisioWebhook = asyncHandler(async (req, res) => {
-  console.log(
-    'Received Plisio webhook payload:',
-    JSON.stringify(req.body, null, 2),
-  );
+  // console.log(
+  //   'Received Plisio webhook payload:',
+  //   JSON.stringify(req.body, null, 2),
+  // );
 
   if (!req.body) {
-    console.error('No payload received in webhook');
-    return res.status(400).json({ error: 'No payload received' });
+    console.error("No payload received in webhook");
+    return res.status(400).json({ error: "No payload received" });
   }
 
   try {
     // Verify webhook signature
     if (!verifyPlisioSignature(req.body)) {
-      console.error('Invalid Plisio webhook signature');
-      return res.status(400).json({ error: 'Invalid signature' });
+      console.error("Invalid Plisio webhook signature");
+      return res.status(400).json({ error: "Invalid signature" });
     }
 
     const {
@@ -287,81 +285,81 @@ exports.plisioWebhook = asyncHandler(async (req, res) => {
       txn_id: transactionId,
     } = req.body;
     //order_description = itemId|userEmail
-    const [itemId, userEmail, couponName] = order_description.split('|');
+    const [itemId, userEmail, couponName] = order_description.split("|");
 
     // Validate required fields
     if (!itemId || !itemType || !amount) {
-      console.error('Missing required fields in webhook data', {
+      console.error("Missing required fields in webhook data", {
         itemId,
         itemType,
         amount,
       });
-      return res.status(400).json({ error: 'Missing required fields' });
+      return res.status(400).json({ error: "Missing required fields" });
     }
 
     const paymentDetails = {
       id: itemId,
       email: userEmail,
       price: amount,
-      method: 'plisio',
+      method: "plisio",
       couponName,
     };
 
     // Handle different payment statuses
     switch (status) {
-      case 'completed':
+      case "completed":
         try {
           // Extract userId from order number (assuming format: COURSE_courseId_timestamp)
           const price = parseFloat(amount);
 
           // Process based on order type
           switch (itemType.toLowerCase()) {
-            case 'course':
+            case "course":
               await createCourseOrderHandler(paymentDetails);
               break;
 
-            case 'package':
+            case "package":
               await createPackageOrderHandler(paymentDetails);
               break;
 
-            case 'coursepackage':
+            case "coursepackage":
               await createCoursePackageOrderHandler(paymentDetails);
               break;
 
             default:
               console.error(`Unknown order type: ${itemType}`);
-              return res.status(400).json({ error: 'Invalid order type' });
+              return res.status(400).json({ error: "Invalid order type" });
           }
 
           console.log(
-            `Successfully processed ${itemType} order for transaction ${transactionId}`,
+            `Successfully processed ${itemType} order for transaction ${transactionId}`
           );
         } catch (error) {
           console.error(`Error processing ${itemType} order:`, error);
           // Still return 200 to acknowledge receipt
           return res.status(200).json({
-            status: 'error',
-            message: 'Order processed with errors',
+            status: "error",
+            message: "Order processed with errors",
           });
         }
         break;
 
-      case 'pending':
-        console.log('Payment pending:', {
+      case "pending":
+        console.log("Payment pending:", {
           orderNumber,
           transactionId,
         });
         break;
 
-      case 'failed':
-        console.log('Payment failed:', {
+      case "failed":
+        console.log("Payment failed:", {
           orderNumber,
           transactionId,
         });
         break;
 
-      case 'expired':
-        console.log('Payment expired:', {
+      case "expired":
+        console.log("Payment expired:", {
           orderNumber,
           transactionId,
         });
@@ -376,15 +374,15 @@ exports.plisioWebhook = asyncHandler(async (req, res) => {
 
     // Always return 200 to acknowledge receipt
     return res.status(200).json({
-      status: 'success',
-      message: 'Webhook processed successfully',
+      status: "success",
+      message: "Webhook processed successfully",
     });
   } catch (error) {
-    console.error('Plisio webhook processing error:', error);
+    console.error("Plisio webhook processing error:", error);
     // Still return 200 to prevent retries, but log the error
     return res.status(200).json({
-      status: 'error',
-      message: 'Webhook processed with errors',
+      status: "error",
+      message: "Webhook processed with errors",
     });
   }
 });
@@ -393,13 +391,13 @@ exports.plisioPaymentCallback = async (req, res) => {
   const { status, order_number } = req.query;
 
   try {
-    if (status === 'success') {
+    if (status === "success") {
       res.redirect(`${process.env.FRONTEND_URL}/payment-success`);
     } else {
       res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
     }
   } catch (error) {
-    console.error('Payment callback error:', error);
+    console.error("Payment callback error:", error);
     res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
   }
 };

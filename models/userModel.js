@@ -22,6 +22,7 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
     },
+    bio: String,
     idNumber: String,
     //start uploads
     phone: String,
@@ -112,9 +113,6 @@ const userSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
-    bio: {
-      type: String,
-    },
     //to calculate the total time spent by the user
     timeSpent: {
       totalTimeSpent: {
@@ -131,7 +129,6 @@ const userSchema = new mongoose.Schema(
       monthlyStartDate: {
         type: Date, // Start date for the 30-day calculation
       },
-      
     },
     isMarketer: {
       type: Boolean,

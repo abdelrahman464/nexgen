@@ -6,14 +6,14 @@ const {
 const { getMonthMoney } = require("./marketingService");
 
 //1
-const getInvoices = async (status) => {
+const getProfitsInvoices = async (status) => {
   try {
     const requestedInvoices = await MarketingLog.find({
       "invoices.status": status,
     }).populate("marketer", "name email profileImg");
     // return res.json(requestedInvoices);
     if (requestedInvoices.length === 0) {
-      throw new Error(`No invoices with status ${status}`);
+      return [];
     }
     // Filter only the invoices with the specified status
     const invoices = requestedInvoices.map((log) => ({
@@ -40,7 +40,7 @@ const getWalletInvoices = async (status) => {
     }).populate("marketer", "name email profileImg");
 
     if (requestedInvoices.length === 0) {
-      throw new Error(`No wallet invoices with status => ${status}`);
+      return [];
     }
     // Filter only the invoices with the specified status
     const invoices = requestedInvoices.map((log) => ({
@@ -70,14 +70,18 @@ exports.getAllRequestedInvoices = async (req, res) => {
     if (req.query.invoiceType === "wallet") {
       result = await getWalletInvoices(status);
     } else if (req.query.invoiceType === "profit") {
-      result = await getInvoices(status);
+      result = await getProfitsInvoices(status);
     } else if (req.query.invoiceType === "instructorProfits") {
       result = await getInstructorProfitsInvoices(status);
     }
-    //send the response
+    if (result.length === 0) {
+      return res
+        .status(404)
+        .json({ status: "failed", msg: "no invoices found" });
+    }
+
     return res.status(200).json(result);
   } catch (error) {
-    console.error("Error:", error);
     return res.status(500).json({ status: "error", error: `${error.message}` });
   }
 };
@@ -105,7 +109,7 @@ const updateInvoiceStatus = async (id, status) => {
   //1- selecting the marketer
   const marketLog = await MarketingLog.findOne({ "invoices._id": id });
   if (!marketLog) {
-    throw new Error(`No invoice found for this ${id}`);
+    return false;
   }
   // 4- Update the invoices in marketLog
   marketLog.invoices.forEach((invoice) => {
@@ -117,13 +121,14 @@ const updateInvoiceStatus = async (id, status) => {
   });
 
   await marketLog.save();
+  return true;
 };
 //2
 const updateWalletInvoiceStatus = async (id, status) => {
   //1- selecting the marketer
   const marketLog = await MarketingLog.findOne({ "walletInvoices._id": id });
   if (!marketLog) {
-    throw new Error(`No walletInvoice found for this ${id}`);
+    return false;
   }
   // 4- Update the invoices in marketLog
   marketLog.invoices.forEach((invoice) => {
@@ -135,18 +140,25 @@ const updateWalletInvoiceStatus = async (id, status) => {
   });
 
   await marketLog.save();
+  return true;
 };
 //@params invoiceId {params}
 exports.updateInvoiceStatus = async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
   try {
+    let acknowledgement;
     if (req.query.invoiceType === "wallet") {
-      await updateWalletInvoiceStatus(id, status);
+      acknowledgement = await updateWalletInvoiceStatus(id, status);
     } else if (req.query.invoiceType === "profit") {
-      await updateInvoiceStatus(id, status);
+      acknowledgement = await updateInvoiceStatus(id, status);
     } else if (req.query.invoiceType === "instructorProfits") {
-      await updateInstructorProfitsInvoiceStatus(id, status);
+      acknowledgement = await updateInstructorProfitsInvoiceStatus(id, status);
+    }
+    if (!acknowledgement) {
+      return res
+        .status(404)
+        .json({ status: "failed", msg: "no invoice found" });
     }
     return res.status(200).json({ status: "success", msg: "invoice updated" });
   } catch (error) {

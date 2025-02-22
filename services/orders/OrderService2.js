@@ -17,6 +17,13 @@ const { checkExistingPaidOrder } = require("./OrderService");
  1- i checked for instructor percentage in 'createCourse' function only , cause instructor don't own package or live --> line 226
 */
 //** ==> helpers functions => i distribute the code to small functions to make it more readable and easy to maintain
+
+const checkSpecificOrderExistance = async (filter) => {
+  const order = await Order.findOne(filter);
+  if (order) return true;
+  return false;
+};
+
 async function createOrder(userId, courseId, price, isPaid) {
   let isResale;
   if (isPaid) isResale = await checkExistingPaidOrder(userId);
@@ -84,6 +91,11 @@ async function subscribeUserToPackage(userId, courseId) {
 //** ==> logical functions
 //1
 const createCoursePackageOrder = async (id, userId, isPaid) => {
+  const result = await checkSpecificOrderExistance({
+    user: userId,
+    coursePackage: id,
+  });
+  if (result) throw new Error("Order already exists");
   const coursePackage = await CoursePackage.findById(id);
   if (!coursePackage) throw new Error("CoursePackage not found");
 
@@ -157,7 +169,8 @@ const createCoursePackageOrder = async (id, userId, isPaid) => {
     const data = {
       email: user.email,
       amount: coursePackagePrice,
-      item: `Course Package: ${coursePackage.title}`,
+      itemType: "package",
+      item: coursePackage.title,
     };
     //4) calculate profits
     await calculateProfits(data);
@@ -166,6 +179,12 @@ const createCoursePackageOrder = async (id, userId, isPaid) => {
 };
 //2
 const createPackageOrder = asyncHandler(async (id, userId, isPaid) => {
+  const result = await checkSpecificOrderExistance({
+    user: userId,
+    package: id,
+    endDate: { $gte: new Date() }, // Check if the package is still valid
+  });
+  if (result) throw new Error("Order already exists");
   const package = await Package.findById(id);
   if (!package) throw new Error("Package not found");
 
@@ -205,28 +224,30 @@ const createPackageOrder = asyncHandler(async (id, userId, isPaid) => {
     // If a subscription exists, renew it by updating the endDate
     subscription.endDate = endDate;
     await subscription.save();
-  }
-  // Only create a new subscription if no existing subscription was found or renewed
-  await UserSubscription.create({
-    user: user._id,
-    package: package._id,
-    startDate,
-    endDate,
-  });
-  //if package type is course => let  gave course to user
-  if (package.type === "course") {
-    await createCourseProgress(user._id, package.course._id);
-  }
+  } else {
+    // Only create a new subscription if no existing subscription was found or renewed
+    await UserSubscription.create({
+      user: user._id,
+      package: package._id,
+      startDate,
+      endDate,
+    });
+    //if package type is course => let  gave course to user
+    if (package.type === "course") {
+      await createCourseProgress(user._id, package.course._id);
+    }
 
-  //avail user to review
-  await availUserToReview(user._id);
+    //avail user to review
+    await availUserToReview(user._id);
+  }
   //check if user paid for this package
   if (isPaid) {
     //4) calculate profits
     const data = {
       email: user.email,
       amount: packagePrice,
-      item: `package: ${package.title}`,
+      itemType: "package",
+      item: package.title,
     };
     await calculateProfits(data);
   }
@@ -235,6 +256,11 @@ const createPackageOrder = asyncHandler(async (id, userId, isPaid) => {
 //3
 const createCourseOrder = async (id, userId, isPaid) => {
   try {
+    const result = await checkSpecificOrderExistance({
+      user: userId,
+      course: id,
+    });
+    if (result) throw new Error("Order already exists");
     const [course, user] = await Promise.all([
       Course.findById(id),
       User.findById(userId),
@@ -258,7 +284,8 @@ const createCourseOrder = async (id, userId, isPaid) => {
       await calculateProfits({
         email: user.email,
         amount: coursePrice,
-        item: `Course: ${course.title}`,
+        itemType: "course",
+        item: course.title,
         instructorId: instructorId,
       });
     }
@@ -270,6 +297,7 @@ const createCourseOrder = async (id, userId, isPaid) => {
 exports.purchaseForUser = async (req, res, next) => {
   try {
     const { type, id, userId, isPaid } = req.body;
+
     if (type === "course") {
       await createCourseOrder(id, userId, isPaid);
     } else if (type === "package") {

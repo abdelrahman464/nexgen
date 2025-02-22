@@ -9,10 +9,10 @@ const morgan = require("morgan");
 //env file
 const cors = require("cors");
 const compression = require("compression");
-
-// const rateLimit = require("express-rate-limit");
-
 const dotenv = require("dotenv");
+
+const { logErrorToDatabase } = require("./utils/errorLogs");
+// const rateLimit = require("express-rate-limit");
 
 dotenv.config({ path: "config.env" });
 
@@ -116,27 +116,33 @@ const { initSocket } = require("./socket/index");
 initSocket(server);
 
 //schedule the cron job
-// const { invoicesCronJob } = require("./utils/cronJob/automatedTasks");
+const { invoicesCronJob } = require("./utils/cronJob/automatedTasks");
 
-// Global Error Handling Middleware
-app.use((err, req, res, next) => {
-  console.error("Error:", err.message);
-  console.error("Error:", err.isOperational);
+invoicesCronJob();
 
-  const statusCode = err.statusCode || 500;
-  const message = err.isOperational ? err.message : "Internal Server Error";
-
-  res.status(statusCode).json({ error: message });
-});
 // invoicesCronJob();
 //handle Rejection out side express
 //Events =>list =>callback(err)
-process.on("unhandledRejection", (err) => {
+process.on("unhandledRejection", async (err) => {
   console.error(
     `UnhandledRejection Errors :${err.name} | ${err.message} | ${err.stack}`
   );
-  server.close(() => {
-    console.log("Shutting Down.....");
-    process.exit(1);
-  });
+
+  try {
+    // Log the error to the database
+    await logErrorToDatabase(err);
+
+    // Close the server and exit the process after logging
+    server.close(() => {
+      console.log("Shutting Down.....");
+      process.exit(1);
+    });
+  } catch (dbError) {
+    console.error("Failed to log error to database:", dbError);
+    // If logging to the database fails, still shut down the server
+    server.close(() => {
+      console.log("Shutting Down.....");
+      process.exit(1);
+    });
+  }
 });

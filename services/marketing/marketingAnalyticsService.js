@@ -368,6 +368,7 @@ exports.getMarketerFromInvitationKey = async (invitationKey) => {
   const marketer = await MarketingLog.findOne({
     invitationKeys: invitationKey, // Matches the invitationKey in the array
   }).select("_id marketer");
+
   if (!marketer) return false;
   return marketer.marketer;
 };

@@ -1,6 +1,7 @@
 const { check, query } = require("express-validator");
 const validatorMiddleware = require("../../middlewares/validatorMiddleware");
 const ApiError = require("../apiError");
+const MarketLog = require("../../models/MarketingModel");
 // exports.getCategoryValidator = [
 //   //rules
 //   check("id").isMongoId().withMessage("Invalid category id format"),
@@ -25,8 +26,7 @@ exports.createInvoiceValidator = [
     .notEmpty()
     .withMessage("amount is required")
     .isNumeric()
-    .withMessage("amount must be a number")
-    ,
+    .withMessage("amount must be a number"),
 
   //catch error
   validatorMiddleware,
@@ -35,16 +35,23 @@ exports.createInvoiceValidator = [
 //------------------------------------
 exports.modifyInvitationKeysValidator = [
   //rules
-  query("option")
-    .optional()
+  check("option")
+    .notEmpty()
+    .withMessage("option is required")
     .isIn(["add", "remove"])
     .withMessage("option must be add or remove"),
   check("id").isMongoId().withMessage("Invalid marketer id format"),
-  check("keys")
+  check("invitationKey")
     .notEmpty()
-    .withMessage("Keys are required")
-    .isArray()
-    .withMessage("Keys must be an array"),
+    .withMessage("invitationKey are required")
+    .isString()
+    .withMessage("invitationKeys must be String")
+    .custom(async (value, { req }) => {
+      if (req.body.option === "add") {
+        const isExist = await MarketLog.findOne({ invitationKeys: value });
+        if (isExist) throw new Error("invitationKey already exist");
+      }
+    }),
   //catch error
   validatorMiddleware,
 ];

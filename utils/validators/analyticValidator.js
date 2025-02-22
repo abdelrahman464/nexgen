@@ -50,7 +50,7 @@ exports.analyticPerformanceValidator = [
     .notEmpty()
     .withMessage("startDate is required")
     .custom((value) => {
-      const regex = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
+      const regex = /^\d{4}-\d{2}-\d{2}$/;
       if (!regex.test(value)) {
         throw new Error("Invalid date format");
       }
@@ -60,7 +60,7 @@ exports.analyticPerformanceValidator = [
     .notEmpty()
     .withMessage("endDate is required")
     .custom((value) => {
-      const regex = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
+      const regex = /^\d{4}-\d{2}-\d{2}$/;
       if (!regex.test(value)) {
         throw new Error("Invalid date format");
       }

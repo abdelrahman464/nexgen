@@ -17,8 +17,9 @@ const _ = require("lodash");
 //@access public
 exports.startMarketing = async (req, res) => {
   try {
+    let role;
+    if (!role || role === "customer") role = "marketer";
     const userId = req.params.userId;
-    const role = req.body.role || "marketer";
     const isMarketer = await MarketingLog.exists({ marketer: userId });
     //check existance
     //1- check if user already started marketing
@@ -166,7 +167,7 @@ exports.calculateProfits = async (
       data.totalSalesMoney
     );
     //8- update marketLog with this sale
-    console.log("manga");
+
     await updateSellerSales(data, profitPercentage);
     //9- update current user object in his head.transaction (not sure about this approach till now)
     if (marketerMarketLog.role !== "head" && marketerMarketLog.invitor) {
@@ -508,20 +509,6 @@ exports.setPaymentDetails = async (req, res) => {
   }
 };
 //------------------------------------
-//------------------------------------
-exports.deleteUnUsed = async () => {
-  const membersArray = [
-    "6621f90e5834a7385bbf4786",
-    "6621f9315834a7385bbf478c",
-    "6621f9a45834a7385bbf4796",
-  ]; // Example array of IDs
-  await MarketingLog.deleteMany({
-    _id: { $nin: membersArray }, // Matches docs where _id is NOT in the array
-  });
-
-  console.log("Documents deleted successfully, except for specified members.");
-};
-//**
 //  */
 const filterTeamMembers = async (teamMembers, lang) => {
   let resaleCounter = 0;
@@ -581,18 +568,17 @@ exports.modifyInvitationKeys = async (req, res) => {
     if (!marketLog) throw new ApiError("No marketerLog found", 404);
 
     if (!option || option === "add") {
-      const { invitationKeys } = req.body;
-      marketLog.invitationKeys.push(...invitationKeys);
-      marketLog.invitationKeys = _.uniq(marketLog.invitationKeys);
+      const { invitationKey } = req.body;
+      marketLog.invitationKeys.push(invitationKey);
     }
     if (option === "remove") {
-      const { invitationKeys } = req.body;
+      const { invitationKey } = req.body;
       marketLog.invitationKeys = marketLog.invitationKeys.filter(
-        (key) => !invitationKeys.includes(key)
+        (key) => key !== invitationKey
       );
     }
     await marketLog.save();
-    return res.status(200).json({ status: "success", msg: "keys modified" });
+    return res.status(200).json({ status: "success", msg: "done" });
   } catch (error) {
     console.log("error from modifyInvitationKeys: ", error.message);
     return res.status(500).json({ error: error.message });

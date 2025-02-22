@@ -20,7 +20,7 @@ const InstructorProfitsSchema = new mongoose.Schema(
         profit: Number,
         Date: {
           type: Date,
-          default: Date.now(),
+          default: new Date(),
         },
       },
     ],
@@ -31,7 +31,7 @@ const InstructorProfitsSchema = new mongoose.Schema(
         desc: String,
         createdAt: {
           type: Date,
-          default: Date.now(),
+          default: new Date(),
         },
         status: {
           type: String,

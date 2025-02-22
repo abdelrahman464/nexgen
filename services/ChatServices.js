@@ -77,7 +77,10 @@ exports.createChat = asyncHandler(async (req, res, next) => {
     // Create a notification for the receiver
     await Notification.create({
       user: receiverId,
-      message: `${req.user.name} has started a chat with you`,
+      message: {
+        en: `${req.user.name} has started a chat with you`,
+        ar: `${req.user.name} بدأ محادثة معك`,
+      },
       chat: newChat._id,
       type: "chat",
     });

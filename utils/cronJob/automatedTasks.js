@@ -6,8 +6,8 @@ const {
 } = require("../../services/marketing/marketingInvoicesService");
 
 exports.invoicesCronJob = () => {
-  cron.schedule("* * * * *", () => {
-    console.log("running a task every minute");
+  cron.schedule("0 0 0 1 * *", () => {
+    console.log("Running a task at the first second of each month");
     this.resetMarketLogs();
   });
 };
@@ -18,7 +18,18 @@ exports.resetMarketLogs = async () => {
     if (marketLogs.length === 0) {
       return;
     }
-    marketLogs.map(async (log) => {
+    const headsMarketLogs = [];
+    const marketersMarketLogs = [];
+
+    marketLogs.map((log) => {
+      if (log.role === "head") {
+        headsMarketLogs.push(log);
+      } else {
+        marketersMarketLogs.push(log);
+      }
+    });
+    //calculate them first cause if they require any data from their team
+    headsMarketLogs.map(async (log) => {
       //2- create any invoices remaining for the current month
       log = await createProfitsInvoice(log);
       //3- create any commissions remaining for the current month
@@ -31,6 +42,21 @@ exports.resetMarketLogs = async () => {
       log.profitPercentage = log.role === "head" ? 20 : 10;
       await log.save();
     });
+
+    marketersMarketLogs.map(async (log) => {
+      //2- create any invoices remaining for the current month
+      log = await createProfitsInvoice(log);
+      //3- create any commissions remaining for the current month
+      log = await createCommissionInvoice(log);
+      //4- reset the sales array and total sales
+      log.totalSalesMoney = 0;
+      log.profits = 0;
+      log.sales = [];
+      log.commissions = [];
+      log.profitPercentage = log.role === "head" ? 20 : 10;
+      await log.save();
+    });
+
     return true;
   } catch (err) {
     console.log(err.message);

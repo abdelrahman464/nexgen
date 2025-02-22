@@ -53,7 +53,7 @@ const MarketingLogsSchema = new mongoose.Schema(
         item: { type: String, i18n: true }, //course or package
         Date: {
           type: Date,
-          default: Date.now(),
+          default: new Date(),
         },
       },
     ],
@@ -66,7 +66,7 @@ const MarketingLogsSchema = new mongoose.Schema(
         profit: Number,
         lastUpdate: {
           type: Date,
-          default: Date.now(),
+          default: new Date(),
         },
       },
     ],
@@ -79,7 +79,7 @@ const MarketingLogsSchema = new mongoose.Schema(
         profits: Number,
         createdAt: {
           type: Date,
-          default: Date.now(),
+          default: new Date(),
         },
         status: {
           type: String,
@@ -97,7 +97,7 @@ const MarketingLogsSchema = new mongoose.Schema(
         reasonToWithdraw: String,
         createdAt: {
           type: Date,
-          default: Date.now(),
+          default: new Date(),
         },
         status: {
           type: String,
@@ -114,7 +114,7 @@ const MarketingLogsSchema = new mongoose.Schema(
         profits: Number,
         createdAt: {
           type: Date,
-          default: Date.now(),
+          default: new Date(),
         },
         status: {
           type: String,

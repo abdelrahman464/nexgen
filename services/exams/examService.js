@@ -37,46 +37,50 @@ exports.uploadQuestionAndOptions = uploadMixOfFiles([
 ]);
 // Image processing middleware
 exports.processQuestionImages = asyncHandler(async (req, res, next) => {
-  if (
-    req.files.questionImage &&
-    req.files.questionImage[0].mimetype.startsWith("image/")
-  ) {
-    const questionImageFileName = `questions-${uuidv4()}-${Date.now()}-cover.webp`;
+  try {
+    if (
+      req.files.questionImage &&
+      req.files.questionImage[0].mimetype.startsWith("image/")
+    ) {
+      const questionImageFileName = `questions-${uuidv4()}-${Date.now()}-cover.webp`;
 
-    await sharp(req.files.questionImage[0].buffer)
-      .toFormat("webp")
-      .webp({ quality: 95 })
-      .toFile(`uploads/questions/${questionImageFileName}`);
+      await sharp(req.files.questionImage[0].buffer)
+        .toFormat("webp")
+        .webp({ quality: 95 })
+        .toFile(`uploads/questions/${questionImageFileName}`);
 
-    req.body.questionImage = questionImageFileName;
-  } else if (req.files.questionImage) {
-    return next(new ApiError("Question image is not an image file", 400));
-  }
+      req.body.questionImage = questionImageFileName;
+    } else if (req.files.questionImage) {
+      return next(new ApiError("Question image is not an image file", 400));
+    }
 
-  if (req.files.options) {
-    const imageProcessingPromises = req.files.options.map(
-      async (img, index) => {
-        if (!img.mimetype.startsWith("image/")) {
-          return next(
-            new ApiError(`Option ${index + 1} is not an image file.`, 400)
-          );
+    if (req.files.options) {
+      const imageProcessingPromises = req.files.options.map(
+        async (img, index) => {
+          if (!img.mimetype.startsWith("image/")) {
+            return next(
+              new ApiError(`Option ${index + 1} is not an image file.`, 400)
+            );
+          }
+
+          const imageName = `option-${uuidv4()}-${Date.now()}-${index + 1}.webp`;
+
+          await sharp(img.buffer)
+            .toFormat("webp")
+            .webp({ quality: 95 })
+            .toFile(`uploads/questions/options/${imageName}`);
+
+          return imageName;
         }
+      );
 
-        const imageName = `option-${uuidv4()}-${Date.now()}-${index + 1}.webp`;
+      req.body.options = await Promise.all(imageProcessingPromises);
+    }
 
-        await sharp(img.buffer)
-          .toFormat("webp")
-          .webp({ quality: 95 })
-          .toFile(`uploads/questions/options/${imageName}`);
-
-        return imageName;
-      }
-    );
-
-    req.body.options = await Promise.all(imageProcessingPromises);
+    next();
+  } catch (error) {
+    next(new ApiError(error.message, 500));
   }
-
-  next();
 });
 // Middleware to check if the user has access to the exam----------------
 exports.createFilterObj = (examType) => async (req, res, next) => {
@@ -97,57 +101,60 @@ exports.createFilterObj = (examType) => async (req, res, next) => {
   }
 
   req.filterObj = filterObject;
-  console.log("filterObject", filterObject);
   next();
 };
 
 //Basic CRUD------------------------------------------------------------
 exports.createExam = asyncHandler(async (req, res, next) => {
-  const { lesson, course, model, passingScore, type } = req.body;
+  try {
+    const { lesson, course, model, passingScore, type } = req.body;
 
-  let exam = {};
-  // Create exam document
-  if (type === "lesson") {
-    const existExam = await Exam.findOne({ lesson, model });
-    if (existExam) {
-      return next(
-        new ApiError(
-          `Exam already exists for this lesson with Model ${model}`,
-          400
-        )
-      );
-    }
-    exam = await Exam.create({
-      lesson,
-      model,
-      passingScore,
-      type,
-    });
-  } else if (type === "course" || type === "placement") {
-    const existExam = await Exam.findOne({ course, model, type });
-    if (existExam) {
-      return next(
-        new ApiError(
-          `Exam already exists for this course with Model ${model}`,
-          400
-        )
-      );
+    let exam = {};
+    // Create exam document
+    if (type === "lesson") {
+      const existExam = await Exam.findOne({ lesson, model });
+      if (existExam) {
+        return next(
+          new ApiError(
+            `Exam already exists for this lesson with Model ${model}`,
+            400
+          )
+        );
+      }
+      exam = await Exam.create({
+        lesson,
+        model,
+        passingScore,
+        type,
+      });
+    } else if (type === "course" || type === "placement") {
+      const existExam = await Exam.findOne({ course, model, type });
+      if (existExam) {
+        return next(
+          new ApiError(
+            `Exam already exists for this course with Model ${model}`,
+            400
+          )
+        );
+      }
+
+      exam = await Exam.create({
+        course,
+        model,
+        passingScore,
+        type,
+      });
     }
 
-    exam = await Exam.create({
-      course,
-      model,
-      passingScore,
-      type,
+    res.status(201).json({
+      status: "success",
+      data: {
+        exam,
+      },
     });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
   }
-
-  res.status(201).json({
-    status: "success",
-    data: {
-      exam,
-    },
-  });
 });
 exports.getExams = factory.getALl(Exam);
 
@@ -156,147 +163,167 @@ exports.getExam = factory.getOne(Exam);
 exports.deleteExam = factory.deleteOne(Exam);
 //Questions Management------------------------------------------------
 exports.addQuestionToExam = asyncHandler(async (req, res, next) => {
-  const { examId } = req.params;
-  const { question, questionImage, options, correctOption, grade } = req.body;
+  try {
+    const { examId } = req.params;
+    const { question, questionImage, options, correctOption, grade } = req.body;
 
-  const newQuestion = {
-    question,
-    options,
-    correctOption,
-    grade,
-  };
+    const newQuestion = {
+      question,
+      options,
+      correctOption,
+      grade,
+    };
 
-  // If there's a question image, include it
-  if (questionImage) {
-    newQuestion.questionImage = questionImage;
+    // If there's a question image, include it
+    if (questionImage) {
+      newQuestion.questionImage = questionImage;
+    }
+
+    // Update the exam document with the new question
+    const updatedExam = await Exam.findByIdAndUpdate(
+      examId,
+      { $push: { questions: newQuestion } },
+      { new: true, safe: true, upsert: true }
+    );
+
+    if (!updatedExam) {
+      return next(new ApiError("Exam not found", 404));
+    }
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        exam: updatedExam,
+      },
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
   }
-
-  // Update the exam document with the new question
-  const updatedExam = await Exam.findByIdAndUpdate(
-    examId,
-    { $push: { questions: newQuestion } },
-    { new: true, safe: true, upsert: true }
-  );
-
-  if (!updatedExam) {
-    return next(new ApiError("Exam not found", 404));
-  }
-
-  res.status(200).json({
-    status: "success",
-    data: {
-      exam: updatedExam,
-    },
-  });
 });
 
 exports.updateQuestionInExam = asyncHandler(async (req, res, next) => {
-  const { examId, questionId } = req.params; // Assuming you're passing questionId as a URL parameter
-  const updateData = req.body; // Includes questionText, questionImage, options, correctOption, grade
+  try {
+    const { examId, questionId } = req.params; // Assuming you're passing questionId as a URL parameter
+    const updateData = req.body; // Includes questionText, questionImage, options, correctOption, grade
 
-  // Prepare the update object dynamically based on the provided updateData
-  const update = {};
-  Object.keys(updateData).forEach((key) => {
-    update[`questions.$[elem].${key}`] = updateData[key];
-  });
+    // Prepare the update object dynamically based on the provided updateData
+    const update = {};
+    Object.keys(updateData).forEach((key) => {
+      update[`questions.$[elem].${key}`] = updateData[key];
+    });
 
-  // Use updateOne with the arrayFilters option to specify which question to update
-  const result = await Exam.updateOne(
-    { _id: examId },
-    { $set: update },
-    {
-      arrayFilters: [{ "elem._id": questionId }], // Specify the condition to identify the correct question to update
-      new: true, // Return the updated document
+    // Use updateOne with the arrayFilters option to specify which question to update
+    const result = await Exam.updateOne(
+      { _id: examId },
+      { $set: update },
+      {
+        arrayFilters: [{ "elem._id": questionId }], // Specify the condition to identify the correct question to update
+        new: true, // Return the updated document
+      }
+    );
+
+    if (result.matchedCount === 0) {
+      return next(new ApiError("Exam not found", 404));
     }
-  );
 
-  if (result.matchedCount === 0) {
-    return next(new ApiError("Exam not found", 404));
+    if (result.modifiedCount === 0) {
+      return next(new ApiError("Question not found or no update made", 404));
+    }
+
+    // Since updateOne doesn't return the updated document, we fetch it to return in response
+    const updatedExam = await Exam.findById(examId);
+
+    res.status(200).json({
+      status: "success",
+      data: updatedExam,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
   }
-
-  if (result.modifiedCount === 0) {
-    return next(new ApiError("Question not found or no update made", 404));
-  }
-
-  // Since updateOne doesn't return the updated document, we fetch it to return in response
-  const updatedExam = await Exam.findById(examId);
-
-  res.status(200).json({
-    status: "success",
-    data: updatedExam,
-  });
 });
 
 exports.removeQuestionsFromExam = asyncHandler(async (req, res, next) => {
-  const { examId, questionId } = req.params;
-  const exam = await Exam.findByIdAndUpdate(
-    examId,
-    { $pull: { questions: { _id: questionId } } },
-    { new: true }
-  );
+  try {
+    const { examId, questionId } = req.params;
+    const exam = await Exam.findByIdAndUpdate(
+      examId,
+      { $pull: { questions: { _id: questionId } } },
+      { new: true }
+    );
 
-  if (!exam) {
-    return next(new ApiError("Exam not found", 404));
+    if (!exam) {
+      return next(new ApiError("Exam not found", 404));
+    }
+
+    res.status(200).json({
+      status: "success",
+      message: "Question removed successfully",
+      data: exam.questions,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
   }
-
-  res.status(200).json({
-    status: "success",
-    message: "Question removed successfully",
-    data: exam.questions,
-  });
 });
 
 //get user progress in course
 //-------------
 exports.getCourseProgress = asyncHandler(async (req, res, next) => {
-  const { courseId, userId } = req.params;
-  const courseProgress = await CourseProgress.findOne({
-    user: userId,
-    course: courseId,
-  });
+  try {
+    const { courseId, userId } = req.params;
+    const courseProgress = await CourseProgress.findOne({
+      user: userId,
+      course: courseId,
+    });
 
-  if (!courseProgress) {
-    return next(new ApiError("Course progress not found", 404));
+    if (!courseProgress) {
+      return next(new ApiError("Course progress not found", 404));
+    }
+
+    const localizedCourseProgress =
+      CourseProgress.schema.methods.toJSONLocalizedOnly(
+        courseProgress,
+        req.locale
+      );
+    res.status(200).json({ status: "success", data: localizedCourseProgress });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
   }
-
-  const localizedCourseProgress =
-    CourseProgress.schema.methods.toJSONLocalizedOnly(
-      courseProgress,
-      req.locale
-    );
-  res.status(200).json({ status: "success", data: localizedCourseProgress });
 });
 //--------------------------------------------------
 //@route   GET /getLessonPerformance/:userId/:lessonId
 //@desc    Get lesson Questions and user performance
 //@access  Private(owner || admin)
 exports.getLessonPerformance = asyncHandler(async (req, res, next) => {
-  const { userId, lessonId } = req.params;
+  try {
+    const { userId, lessonId } = req.params;
 
-  const courseProgress = await CourseProgress.findOne({
-    user: userId,
-    "progress.lesson": lessonId,
-  });
+    const courseProgress = await CourseProgress.findOne({
+      user: userId,
+      "progress.lesson": lessonId,
+    });
 
-  if (!courseProgress) {
-    return next(new ApiError("Course progress not found", 404));
+    if (!courseProgress) {
+      return next(new ApiError("Course progress not found", 404));
+    }
+    const { progress } = courseProgress;
+    // res.json({ status: "success", data: courseProgress });
+    const lessonExamResult = _.find(
+      progress,
+      (p) => _.get(p, "lesson._id")?.toString() === lessonId
+    );
+    //return Lesson_exam_object
+    // console.log(lessonExamResult);
+    if (!lessonExamResult) {
+      return next(new ApiError("Lesson progress not found", 404));
+    }
+    // console.log(lessonExamResult);
+    const lessonQuestions =
+      await this.checkLessonQuestionsStatus(lessonExamResult);
+
+    return res.status(200).json({ status: "success", lessonQuestions });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
   }
-  const { progress } = courseProgress;
-  // res.json({ status: "success", data: courseProgress });
-  const lessonExamResult = _.find(
-    progress,
-    (p) => _.get(p, "lesson._id")?.toString() === lessonId
-  );
-  //return Lesson_exam_object
-  // console.log(lessonExamResult);
-  if (!lessonExamResult) {
-    return next(new ApiError("Lesson progress not found", 404));
-  }
-  // console.log(lessonExamResult);
-  const lessonQuestions =
-    await this.checkLessonQuestionsStatus(lessonExamResult);
-
-  return res.status(200).json({ status: "success", lessonQuestions });
 });
 //--------------------------------------------------
 //@route   ----
@@ -331,25 +358,29 @@ exports.checkLessonQuestionsStatus = async (lessonExamResult) => {
 //@desc    Get lesson Questions and user performance
 //@access  Private(owner || admin)
 exports.getCoursePerformance = asyncHandler(async (req, res, next) => {
-  const { userId, courseId } = req.params;
+  try {
+    const { userId, courseId } = req.params;
 
-  const courseExamResult = await CourseProgress.findOne({
-    user: userId,
-    course: courseId,
-  });
+    const courseExamResult = await CourseProgress.findOne({
+      user: userId,
+      course: courseId,
+    });
 
-  if (!courseExamResult) {
-    return next(new ApiError("course's exam result not found", 404));
+    if (!courseExamResult) {
+      return next(new ApiError("course's exam result not found", 404));
+    }
+
+    if (!courseExamResult.modelExam) {
+      return next(new ApiError("You didn't take final exam", 404));
+    }
+
+    const lessonQuestions =
+      await this.checkCourseQuestionsStatus(courseExamResult);
+
+    return res.status(200).json({ status: "success", lessonQuestions });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
   }
-
-  if (!courseExamResult.modelExam) {
-    return next(new ApiError("You didn't take final exam", 404));
-  }
-
-  const lessonQuestions =
-    await this.checkCourseQuestionsStatus(courseExamResult);
-
-  return res.status(200).json({ status: "success", lessonQuestions });
 });
 //@route   ----
 //@desc    check Course Questions Status whether it is correct or not , if not add property wrongAnswer that inform client if it is wrong
@@ -743,53 +774,62 @@ exports.placementExam = async (req, res, next) => {
 };
 
 exports.submitCoursePlacementAnswers = async (req, res, next) => {
-  const { id } = req.params;
-  const { answers } = req.body;
-  const { user } = req;
+  try {
+    const { id } = req.params;
+    const { answers } = req.body;
+    const { user } = req;
 
-  // Fetch the exam
-  const exam = await Exam.findById(id);
-  if (!exam) {
-    return next(new ApiError("Exam not found", 404));
-  }
+    // Fetch the exam
+    const exam = await Exam.findById(id);
+    if (!exam) {
+      return next(new ApiError("Exam not found", 404));
+    }
 
-  // Check if user has already failed this exam
-  if (
-    user.placementExam.status === "failed" &&
-    exam.model === user.placementExam.modelExam
-  ) {
-    return next(new ApiError("You have already failed this exam.", 400));
-  }
+    // Check if user has already failed this exam
+    if (
+      user.placementExam.status === "failed" &&
+      exam.model === user.placementExam.modelExam
+    ) {
+      return next(new ApiError("You have already failed this exam.", 400));
+    }
 
-  // Calculate the score and determine if passed
-  const examResult = calculateScore(exam.questions, answers);
-  const totalPossibleScore = getTotalPossibleGrade(exam.questions);
-  const passed = hasPassed(
-    examResult.score,
-    totalPossibleScore,
-    exam.passingScore
-  );
+    // Calculate the score and determine if passed
+    const examResult = calculateScore(exam.questions, answers);
+    const totalPossibleScore = getTotalPossibleGrade(exam.questions);
+    const passed = hasPassed(
+      examResult.score,
+      totalPossibleScore,
+      exam.passingScore
+    );
 
-  // Update user's placement exam progress
-  await User.findOneAndUpdate(
-    { _id: user._id },
-    {
-      $set: {
-        placementExam: {
-          exam: exam._id,
-          score: examResult.score,
-          status: passed ? "Completed" : "failed",
-          course: exam.course,
-          attemptDate: Date.now(),
-          wrongAnswers: examResult.wrongAnswers,
+    // Update user's placement exam progress
+    await User.findOneAndUpdate(
+      { _id: user._id },
+      {
+        $set: {
+          placementExam: {
+            exam: exam._id,
+            score: examResult.score,
+            status: passed ? "Completed" : "failed",
+            course: exam.course,
+            attemptDate: Date.now(),
+            wrongAnswers: examResult.wrongAnswers,
+          },
         },
       },
-    },
-    { new: true }
-  );
+      { new: true }
+    );
 
-  // Respond with success or failure message
-  return handleExamResponse(res, passed, examResult.score, totalPossibleScore);
+    // Respond with success or failure message
+    return handleExamResponse(
+      res,
+      passed,
+      examResult.score,
+      totalPossibleScore
+    );
+  } catch (err) {
+    return next(new ApiError(err.message, 500));
+  }
 };
 // end placement exam logic
 ///////////////////////////////////////////////////////////////////
@@ -838,10 +878,10 @@ exports.userScores = async (req, res, next) => {
       if (
         !_.isNull(item.lesson) &&
         item.status === "Completed" &&
-        !seenIds.has(item._id)
+        !seenIds.has(item.lesson._id)
       ) {
         completedLessons.push(item);
-        seenIds.add(item._id);
+        seenIds.add(item.lesson._id);
       }
     });
     const completedLessonsCount = completedLessons.length;
