@@ -700,6 +700,7 @@ exports.submitCourseAnswers = async (req, res, next) => {
     // Fetch user's completed lessons
     const completedLessons = existingProgress.progress.filter(
       (item) => item.status === "Completed"
+      
     );
 
     // Fetch Possible grades for completed lessons

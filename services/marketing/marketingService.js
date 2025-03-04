@@ -558,7 +558,7 @@ const filterTeamMembers = async (teamMembers, lang) => {
  *  2.1 - loop on orders and push each distinct order to user.orders
  *  2.2 - filter users who don't have orders
  */
-//---------------------------
+//-----------------------------------------------------------------
 exports.modifyInvitationKeys = async (req, res) => {
   try {
     const { option } = req.query;
@@ -582,5 +582,45 @@ exports.modifyInvitationKeys = async (req, res) => {
   } catch (error) {
     console.log("error from modifyInvitationKeys: ", error.message);
     return res.status(500).json({ error: error.message });
+  }
+};
+//-----------------------------------------------------------------
+exports.moveOrdersFromOneToOne = async (exporter, importer, userId) => {
+  try {
+    const exporterLog = await MarketingLog.findOne({
+      marketer: exporter,
+      sales: { $size: { $ne: 0 } },
+    });
+    if (!exporterLog) return "No orders found";
+    const importerLog = await MarketingLog.findOne({ marketer: importer });
+    if (!importerLog) return "No importer found";
+
+    exporterLog.sales = exporterLog.sales.filter(
+      (sale) => sale.purchaser.toString() !== userId.toString()
+    );
+    const userOrders = exporterLog.sales.filter(
+      (sale) => sale.purchaser.toString() === userId.toString()
+    );
+    importerLog.sales.push(...userOrders);
+
+    const totalOrderMoney = userOrders.reduce(
+      (acc, order) => acc + order.amount,
+      0
+    );
+
+    importerLog.totalSalesMoney += totalOrderMoney;
+    const newPercentage = this.detectPercentage(
+      importerLog.role,
+      importerLog.totalSalesMoney
+    );
+    importerLog.profitPercentage = newPercentage;
+    importerLog.profits = (importerLog.totalSalesMoney * newPercentage) / 100;
+
+    await importerLog.save();
+    await exporterLog.save();
+    return true;
+  } catch (error) {
+    console.log("error from moveOrdersFromOneToOne: ", error.message);
+    throw new Error(error.message);
   }
 };

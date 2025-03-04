@@ -19,6 +19,7 @@ const Course = require("../models/courseModel");
 const Package = require("../models/packageModel");
 const MarketLog = require("../models/MarketingModel");
 const UserSubscription = require("../models/userSubscriptionModel");
+const { moveOrdersFromOneToOne } = require("./marketing/marketingService");
 
 //upload user images
 exports.uploadImages = uploadMixOfFiles([
@@ -173,6 +174,7 @@ exports.getUsersWithoutCourse = async (req, res, next) => {
     const { purchasers } = usersByOrderStatus[0]; // Type 1: Users who have orders but not the course
     const { nonPurchasers } = usersByOrderStatus[0]; // Type 2: Users who have no orders
 
+    // return res.json({ usersByOrderStatus: usersByOrderStatus[0] });
     res.status(200).json({
       success: true,
       purchasers,
@@ -919,4 +921,23 @@ exports.getUsersByFilter = async (filter, fields) => {
     users = await User.find(filter).select(fields);
   } else users = await User.find(filter);
   return users;
+};
+//-----------------------------------------
+exports.moveOneUserToAnother = async (req, res, next) => {
+  const user = await User.findById(req.body.user);
+  if (!user) {
+    return next(new ApiError("No user found for this id", 404));
+  }
+  if (!user.invitor) {
+    const invitorExistance = await User.exists({ _id: req.body.newInvitor });
+    if (!invitorExistance) {
+      return next(new ApiError("No invitor found for this id", 404));
+    }
+    user.invitor = req.body.newInvitor;
+  } else {
+    await moveOrdersFromOneToOne(user.invitor, req.body.newInvitor, user._id);
+    user.invitor = req.body.newInvitor;
+  }
+  user.save();
+  return res.status(200).json({ status: "success", msg: "mission done" });
 };

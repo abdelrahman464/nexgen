@@ -228,7 +228,7 @@ function filterAnalyticsDocs(analytics) {
 //---------------------------------------------------
 function toISOFormat(dateString) {
   // Parse the input date (MM/DD/YYYY)
-  const [day, month, year] = dateString.split("/").map(Number);
+  const [day, month, year] = dateString.split("-").map(Number);
   // Create a Date object
   const date = new Date(Date.UTC(year, month - 1, day));
   // Convert to ISO format

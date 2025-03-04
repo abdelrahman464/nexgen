@@ -62,7 +62,7 @@ exports.analyticPerformanceValidator = [
     .custom((value) => {
       const regex = /^\d{4}-\d{2}-\d{2}$/;
       if (!regex.test(value)) {
-        throw new Error("Invalid date format");
+        throw new Error("Invalid date format it should be yyyy-mm-dd");
       }
       return true;
     }),
