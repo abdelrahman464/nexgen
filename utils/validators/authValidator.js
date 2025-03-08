@@ -57,11 +57,11 @@ exports.signupValidator = [
       }
       return true;
     }),
-  check("phone")
-    .notEmpty()
-    .withMessage("phone required")
-    .isMobilePhone()
-    .withMessage("Phone number must be a real phone number"),
+  // check("phone")
+  //   .notEmpty()
+  //   .withMessage("phone required")
+  //   .isMobilePhone()
+  //   .withMessage("Phone number must be a real phone number"),
   check("country")
     .notEmpty()
     .withMessage("country required")

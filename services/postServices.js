@@ -142,25 +142,59 @@ exports.createFilterObjHomePosts = async (req, res, next) => {
 };
 //filter to get analytics posts only
 exports.createFilterObjPackagesPosts = asyncHandler(async (req, res, next) => {
-  let filterObject = {};
-
+  const filterObject = {
+    sharedTo: "package",
+  };
+  let packageFilterIds;
+  if (req.query.packages) {
+    packageFilterIds = req.query.packages
+      .split(",")
+      .map((packageId) => mongoose.Types.ObjectId(packageId));
+  }
   if (req.user.role === "user") {
     // all packages that suscripe in
     const userSubscriptions = await UserSubscription.find({
       user: req.user._id,
     });
-    const packageIds = userSubscriptions.map((pack) => pack.package);
+    if (userSubscriptions.length === 0) {
+      return res.status(400).json({
+        status: "failed",
+        message: "No valid packages found in your subscriptions.",
+      });
+    }
 
-    filterObject = {
-      sharedTo: "package",
-      package: { $in: packageIds },
-    };
+    let packageIds = userSubscriptions.map((pack) =>
+      pack.package._id.toString()
+    );
+
+    // If there are package filters, ensure they are within the user's subscriptions
+    if (packageFilterIds) {
+      packageFilterIds = packageFilterIds.filter((packageId) =>
+        packageIds.includes(packageId.toString())
+      );
+    }
+    // Apply the filtered package IDs to the filter object
+    if (packageFilterIds) {
+      packageFilterIds = packageFilterIds.map((packageId) =>
+        mongoose.Types.ObjectId(packageId)
+      );
+      filterObject.package = { $in: packageFilterIds };
+    } else {
+      packageIds = packageIds.map((packageId) =>
+        mongoose.Types.ObjectId(packageId)
+      );
+      // If no package filter is provided, only include packages the user is subscribed to
+      filterObject.package = { $in: packageIds };
+    }
   }
+
   if (req.user.role === "admin") {
-    filterObject = {
-      sharedTo: "package",
-    };
+    if (packageFilterIds) {
+      packageFilterIds.map((packageId) => mongoose.Types.ObjectId(packageId));
+      filterObject.package = { $in: packageFilterIds };
+    }
   }
+
   req.filterObj = filterObject;
   next();
 });

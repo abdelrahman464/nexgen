@@ -278,6 +278,8 @@ exports.incrementSignUpClicks = async (req, res) => {
 
     const invitationKeysAnalyticsDoc = await InvitationLinkAnalytics.findOne({
       marketer: marketerId,
+      month,
+      year,
     });
     if (!invitationKeysAnalyticsDoc) {
       //create new document
@@ -323,6 +325,7 @@ exports.getInvitationsAnalytics = async (req, res, next) => {
     const month = req.query.month || new Date().getMonth() + 1;
     const year = req.query.year || new Date().getFullYear();
 
+    console.log(marketerId + " " + month + " " + year);
     const clicksDetails = await InvitationLinkAnalytics.findOne({
       marketer: marketerId,
       month,

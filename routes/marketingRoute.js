@@ -22,9 +22,9 @@ router.use(authServices.protect);
 
 router.get(
   "/getMarketLog/:id",
-  authServices.protect,
-  authServices.allowedTo("user", "admin"),
-  checkAuthority,
+  // authServices.protect,
+  // authServices.allowedTo("user", "admin"),
+  // checkAuthority,
   getMarketLog
 );
 router.get(

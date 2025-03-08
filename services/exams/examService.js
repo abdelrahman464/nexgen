@@ -344,7 +344,7 @@ exports.checkLessonQuestionsStatus = async (lessonExamResult) => {
   // Iterate over questions and find wrong answered question
   lessonExamQuestions.forEach((question) => {
     const wrongAnsweredQuestion = lessonExamResult.wrongAnswers.find(
-      (ans) => ans.question.toString() === question._id.toString()
+      (ans) => ans.question?.toString() === question?._id?.toString()
     );
     if (wrongAnsweredQuestion) {
       question.wrongAnswer = wrongAnsweredQuestion.answer;

@@ -302,6 +302,11 @@ exports.getMarketLog = async (req, res, next) => {
         marketLog.marketer
       );
     }
+
+    marketLog.sales?.map((sale) => {
+      sale.item = sale.item[req.locale];
+    });
+
     //8- return response
     return res
       .status(200)
@@ -436,6 +441,10 @@ exports.getMarketerChildren = async (req, res, next) => {
         new ApiError(res.__(`marketing-errors.No-Team-Members`), 404)
       );
     }
+    // Manually transform profileImg for each team member
+    teamMembers.forEach((member) => {
+      member = setProfileImageURL(member); // Your transformation logic
+    });
     //get orders for these children
     const result = await filterTeamMembers(teamMembers, req.locale);
 
@@ -623,4 +632,26 @@ exports.moveOrdersFromOneToOne = async (exporter, importer, userId) => {
     console.log("error from moveOrdersFromOneToOne: ", error.message);
     throw new Error(error.message);
   }
+};
+//------------------------
+const setProfileImageURL = (doc) => {
+  //return image base url + image name
+  if (doc.profileImg) {
+    const profileImageUrl = `${process.env.BASE_URL}/users/${doc.profileImg}`;
+    doc.profileImg = profileImageUrl;
+  }
+  if (doc.coverImg) {
+    const coverImgUrl = `${process.env.BASE_URL}/users/${doc.coverImg}`;
+    doc.coverImg = coverImgUrl;
+  }
+  if (doc.idDocuments) {
+    const imageListWithUrl = [];
+    doc.idDocuments.forEach((image) => {
+      const imageUrl = `${process.env.BASE_URL}/users/idDocuments/${image}`;
+      imageListWithUrl.push(imageUrl);
+    });
+    doc.idDocuments = imageListWithUrl;
+  }
+
+  return doc;
 };

@@ -88,3 +88,17 @@ testing
 
 !!!
 5- get all invoices <==
+
+
+
+cron jobs 
+1- make cron-job to kick users out from chat when their subscription end
+    - check that when user renew subscription , he enter chat again
+2- when creating invoice , update orders in sales array with marketer percentage
+    - add order field in sales 
+    - add marketerPercentage in order model
+    
+
+prerequests
+-examService.js
+-marketingAnalyticsService.js
