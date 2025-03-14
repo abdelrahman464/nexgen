@@ -67,10 +67,7 @@ exports.updateUserValidator = [
         }
       })
     ),
-  check("phone")
-    .optional()
-    .isMobilePhone()
-    .withMessage("Phone number must be a real phone number"),
+ 
 
   check("profileImg").optional(),
   check("coverImg").optional(),
@@ -127,10 +124,7 @@ exports.updateLoggedUserValidator = [
         }
       })
     ),
-  check("phone")
-    .optional()
-    .isMobilePhone()
-    .withMessage("Phone number must be a real phone number"),
+
 
   validatorMiddleware,
 ];

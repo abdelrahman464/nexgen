@@ -483,20 +483,38 @@ exports.updateLoggedUserPassword = async (req, res, next) => {
 //@route PUT /api/v1/user/changeMyData
 //@access private/protect
 exports.updateLoggedUserData = async (req, res, next) => {
-  const user = await User.findByIdAndUpdate(
-    req.user._id,
-    {
-      phone: req.body.phone,
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Update only if country or phone is not set in the database
+    const updateData = {
       profileImg: req.body.profileImg,
       coverImg: req.body.coverImg,
       bio: req.body.bio,
-    },
-    {
-      new: true,
+    };
+
+    if (!user.country && req.body.country) {
+      updateData.country = req.body.country;
     }
-  );
-  res.status(200).json({ data: user });
+
+    if (!user.phone && req.body.phone) {
+      updateData.phone = req.body.phone;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(req.user._id, updateData, {
+      new: true,
+    });
+
+    res.status(200).json({ data: updatedUser });
+  } catch (error) {
+    next(error);
+  }
 };
+
 //@desc deactivate logged user
 //@route DELETE /api/v1/user/active/:id
 //@access protect
