@@ -79,15 +79,24 @@ exports.signupValidator = [
   //       })
   //   ),
 
-  check('invitationKey')
-    .optional()
-    .custom(async (val) => {
-      const user = await MarketLog.findOne({ invitationKeys: { $in: [val] } });
-      if (!user) {
-        throw new Error('Invalid invitation key');
-      }
-      return true; // Validation passed
-    }),
+  
+check("invitationKey")
+.optional()
+.custom(async (val) => {
+  if (!val) return true; // Skip validation if `invitationKey` is not provided
+
+  console.log("Checking invitationKey:", val);
+  
+  const user = await MarketLog.findOne({ invitationKeys: { $in: [val] } });
+  
+  console.log("User found:", user);
+  
+  if (!user) {
+    throw new Error("Invalid invitation key");
+  }
+
+  return true; // Validation passed
+}),
   validatorMiddleware,
 ];
 
