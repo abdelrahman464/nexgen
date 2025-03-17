@@ -1,29 +1,29 @@
-const { check } = require("express-validator");
-const User = require("../../models/userModel");
-const MarketLog = require("../../models/MarketingModel");
+const { check } = require('express-validator');
+const User = require('../../models/userModel');
+const MarketLog = require('../../models/MarketingModel');
 
-const validatorMiddleware = require("../../middlewares/validatorMiddleware");
-const verifyEmailWithMailboxLayer = require("../verifyEmail");
+const validatorMiddleware = require('../../middlewares/validatorMiddleware');
+const verifyEmailWithMailboxLayer = require('../verifyEmail');
 
 exports.signupValidator = [
-  check("name")
+  check('name')
     .notEmpty()
-    .withMessage("name required")
+    .withMessage('name required')
     .isLength({ min: 2 })
-    .withMessage("too short User name")
+    .withMessage('too short User name')
     .isLength({ max: 100 })
-    .withMessage("too long User name"),
-  check("email")
+    .withMessage('too long User name'),
+  check('email')
     .notEmpty()
-    .withMessage("Email required")
+    .withMessage('Email required')
     .isEmail()
-    .withMessage("Invalid email address")
+    .withMessage('Invalid email address')
     .custom((val) =>
       User.findOne({ email: val }).then((user) => {
         if (user) {
-          return Promise.reject(new Error("E-mail already in use"));
+          return Promise.reject(new Error('E-mail already in use'));
         }
-      })
+      }),
     ),
   // check('email')
   //   .notEmpty()
@@ -44,16 +44,16 @@ exports.signupValidator = [
   //       }
   //     }),
   //   ),
-  check("password")
+  check('password')
     .notEmpty()
-    .withMessage("password required")
+    .withMessage('password required')
     .isLength({ min: 8 })
-    .withMessage("password must be at least 8 characters")
+    .withMessage('password must be at least 8 characters')
     .isLength({ max: 32 })
-    .withMessage("password must be at least 8 characters")
+    .withMessage('password must be at least 8 characters')
     .custom((password, { req }) => {
       if (password !== req.body.passwordConfirm) {
-        throw new Error("password does not match");
+        throw new Error('password does not match');
       }
       return true;
     }),
@@ -62,39 +62,48 @@ exports.signupValidator = [
   //   .withMessage("phone required")
   //   .isMobilePhone()
   //   .withMessage("Phone number must be a real phone number"),
-  check("country")
+  check('country')
     .notEmpty()
-    .withMessage("country required")
+    .withMessage('country required')
     .isLength({ min: 2 })
-    .withMessage("too short country name"),
-  check("passwordConfirm").notEmpty().withMessage("password required"),
-  check("invitationKey")
-    .optional()
-    .custom(
-      async (val) =>
-        await MarketLog.findOne({ invitationKeys: val }).then((user) => {
-          if (!user) {
-            return Promise.reject(new Error("Invalid invitation key"));
-          }
-        })
-    ),
+    .withMessage('too short country name'),
+  check('passwordConfirm').notEmpty().withMessage('password required'),
+  // check("invitationKey")
+  //   .optional()
+  //   .custom(
+  //     async (val) =>
+  //       await MarketLog.findOne({ invitationKeys: val }).then((user) => {
+  //         if (!user) {
+  //           return Promise.reject(new Error("Invalid invitation key"));
+  //         }
+  //       })
+  //   ),
 
+  check('invitationKey')
+    .optional()
+    .custom(async (val) => {
+      const user = await MarketLog.findOne({ invitationKeys: { $in: [val] } });
+      if (!user) {
+        throw new Error('Invalid invitation key');
+      }
+      return true; // Validation passed
+    }),
   validatorMiddleware,
 ];
 
 exports.loginValidator = [
-  check("email")
+  check('email')
     .notEmpty()
-    .withMessage("Email required")
+    .withMessage('Email required')
     .isEmail()
-    .withMessage("Invalid email address"),
+    .withMessage('Invalid email address'),
 
-  check("password")
+  check('password')
     .notEmpty()
-    .withMessage("password required")
+    .withMessage('password required')
     .isLength({ min: 8 })
-    .withMessage("password must be at least 8 characters")
+    .withMessage('password must be at least 8 characters')
     .isLength({ max: 32 })
-    .withMessage("password must be at least 8 characters"),
+    .withMessage('password must be at least 8 characters'),
   validatorMiddleware,
 ];

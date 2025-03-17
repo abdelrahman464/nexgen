@@ -368,8 +368,11 @@ exports.getInvitationsAnalytics = async (req, res, next) => {
 };
 //---------------------------------------------------
 exports.getMarketerFromInvitationKey = async (invitationKey) => {
+  // const marketer = await MarketingLog.findOne({
+  //   invitationKeys: invitationKey, // Matches the invitationKey in the array
+  // }).select("_id marketer");
   const marketer = await MarketingLog.findOne({
-    invitationKeys: invitationKey, // Matches the invitationKey in the array
+    invitationKeys: { $in: [invitationKey] } // Checks if invitationKey exists in the array
   }).select("_id marketer");
 
   if (!marketer) return false;
