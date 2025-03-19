@@ -130,6 +130,16 @@ const MarketingLogsSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+
+MarketingLogsSchema.pre("save", function (next) {
+  if (this.invitationKeys && Array.isArray(this.invitationKeys)) {
+    this.invitationKeys = this.invitationKeys.map((key) =>
+      key.replace(/\s+/g, "-")
+    );
+  }
+  next();
+});
+
 const MarketingLog = mongoose.model("MarketingLogs", MarketingLogsSchema);
 
 module.exports = MarketingLog;

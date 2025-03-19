@@ -371,6 +371,8 @@ exports.getMarketerFromInvitationKey = async (invitationKey) => {
   // const marketer = await MarketingLog.findOne({
   //   invitationKeys: invitationKey, // Matches the invitationKey in the array
   // }).select("_id marketer");
+  //replace spaces and add -
+    
   const marketer = await MarketingLog.findOne({
     invitationKeys: { $in: [invitationKey] } // Checks if invitationKey exists in the array
   }).select("_id marketer");

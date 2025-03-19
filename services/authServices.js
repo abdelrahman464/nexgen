@@ -11,6 +11,7 @@ const generateToken = require("../utils/generateToken");
 const {
   getMarketerFromInvitationKey,
 } = require("./marketing/marketingAnalyticsService");
+const MarketingLog = require("../models/MarketingModel");
 // @desc    User Register,login with Google
 // @route   POST /api/v1/auth/google
 // @access  Public
@@ -74,6 +75,8 @@ exports.signup = asyncHandler(async (req, res, next) => {
   //**2-Handle invitor and treeHead */
   let invitorId = null;
   if (req.body.invitationKey) {
+    console.log("invitationKey", req.body.invitationKey);
+
     //check if invitor is valid
     invitorId = await getMarketerFromInvitationKey(req.body.invitationKey);
     if (!invitorId) {
@@ -199,11 +202,11 @@ exports.signup = asyncHandler(async (req, res, next) => {
       emailVerificationExpires: Date.now() + 10 * 60 * 1000, // 10 minutes from now
     }
   );
-  await sendEmail({
-    to: user.email,
-    subject: "Your Email Verification Code (valid for 10 minutes)",
-    html: htmlEmail,
-  });
+  // await sendEmail({
+  //   to: user.email,
+  //   subject: "Your Email Verification Code (valid for 10 minutes)",
+  //   html: htmlEmail,
+  // });
 
   // generate token
   const token = generateToken(user._id);
