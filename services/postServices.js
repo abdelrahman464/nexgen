@@ -1,63 +1,68 @@
-const asyncHandler = require("express-async-handler");
-const mongoose = require("mongoose");
-const sharp = require("sharp");
-const { v4: uuidv4 } = require("uuid");
-const ApiError = require("../utils/apiError");
-const Post = require("../models/postModel");
-const Comment = require("../models/commentModel");
-const Reaction = require("../models/reactionModel");
-const Course = require("../models/courseModel");
-const Package = require("../models/packageModel");
-const UserSubscription = require("../models/userSubscriptionModel");
-const User = require("../models/userModel");
-const CourseProgress = require("../models/courseProgressModel");
-const Notification = require("../models/notificationModel");
-const factory = require("./handllerFactory");
-const { uploadMixOfFiles } = require("../middlewares/uploadImageMiddleware");
+const asyncHandler = require('express-async-handler');
+const mongoose = require('mongoose');
+const fs = require('fs');
+const sharp = require('sharp');
+const { v4: uuidv4 } = require('uuid');
+const ApiError = require('../utils/apiError');
+const Post = require('../models/postModel');
+const Comment = require('../models/commentModel');
+const Reaction = require('../models/reactionModel');
+const Course = require('../models/courseModel');
+const Package = require('../models/packageModel');
+const UserSubscription = require('../models/userSubscriptionModel');
+const User = require('../models/userModel');
+const CourseProgress = require('../models/courseProgressModel');
+const Notification = require('../models/notificationModel');
+const factory = require('./handllerFactory');
+const { uploadMixOfFiles } = require('../middlewares/uploadImageMiddleware');
 
-exports.uploadImages = uploadMixOfFiles([
+exports.uploadFiles = uploadMixOfFiles([
   {
-    name: "imageCover",
+    name: 'imageCover',
     maxCount: 1,
   },
   {
-    name: "images",
+    name: 'images',
     maxCount: 30,
+  },
+  {
+    name: 'documents',
+    maxCount: 10,
   },
 ]);
 
-exports.resizeImages = asyncHandler(async (req, res, next) => {
+exports.processFiles = asyncHandler(async (req, res, next) => {
   // Image processing for imageCover
   if (
     req.files.imageCover &&
-    req.files.imageCover[0].mimetype.startsWith("image/")
+    req.files.imageCover[0].mimetype.startsWith('image/')
   ) {
     const imageCoverFileName = `post-${uuidv4()}-${Date.now()}-cover.webp`;
 
     await sharp(req.files.imageCover[0].buffer)
-      .toFormat("webp") // Convert to WebP
+      .toFormat('webp') // Convert to WebP
       .webp({ quality: 95 })
       .toFile(`uploads/posts/${imageCoverFileName}`);
 
     // Save imageCover file name in the request body for database saving
     req.body.imageCover = imageCoverFileName;
   } else if (req.files.imageCover) {
-    return next(new ApiError("Image cover is not an image file", 400));
+    return next(new ApiError('Image cover is not an image file', 400));
   }
 
   // Image processing for images
   if (req.files.images) {
     const imageProcessingPromises = req.files.images.map(async (img, index) => {
-      if (!img.mimetype.startsWith("image/")) {
+      if (!img.mimetype.startsWith('image/')) {
         return next(
-          new ApiError(`File ${index + 1} is not an image file.`, 400)
+          new ApiError(`File ${index + 1} is not an image file.`, 400),
         );
       }
 
       const imageName = `post-${uuidv4()}-${Date.now()}-${index + 1}.webp`;
 
       await sharp(img.buffer)
-        .toFormat("webp") // Convert to WebP
+        .toFormat('webp') // Convert to WebP
         .webp({ quality: 95 })
         .toFile(`uploads/posts/${imageName}`);
 
@@ -72,6 +77,56 @@ exports.resizeImages = asyncHandler(async (req, res, next) => {
     }
   }
 
+  if (req.files.documents) {
+    const documentProcessingPromises = req.files.documents.map(
+      async (doc, index) => {
+        const allowedMimeTypes = [
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ];
+
+        if (!allowedMimeTypes.includes(doc.mimetype)) {
+          return next(
+            new ApiError(
+              `File ${index + 1} is not a supported document type (PDF or Word).`,
+              400,
+            ),
+          );
+        }
+
+        let fileExtension = '.doc';
+        if (doc.mimetype === 'application/pdf') {
+          fileExtension = '.pdf';
+        } else if (
+          doc.mimetype.includes(
+            'openxmlformats-officedocument.wordprocessingml.document',
+          )
+        ) {
+          fileExtension = '.docx';
+        }
+
+        const documentName = `post-${uuidv4()}-${Date.now()}-${index + 1}${fileExtension}`;
+
+        await new Promise((resolve, reject) => {
+          fs.writeFile(`uploads/posts/${documentName}`, doc.buffer, (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+
+        return documentName;
+      },
+    );
+
+    try {
+      const processedDocuments = await Promise.all(documentProcessingPromises);
+      req.body.documents = processedDocuments;
+    } catch (error) {
+      return next(error);
+    }
+  }
+
   next();
 });
 
@@ -81,7 +136,7 @@ exports.createFilterObjAllowedCoursePosts = asyncHandler(
     let filterObject = {};
 
     //if role is user
-    if (req.user.role === "user") {
+    if (req.user.role === 'user') {
       // all courses that the logged user is subscripe in
 
       //get all courses that user is subscribed in by getting all course progress that user have and extract the coursesIds from there
@@ -91,104 +146,104 @@ exports.createFilterObjAllowedCoursePosts = asyncHandler(
       const coursesIds = userCoursesProgress.map((course) => course.course);
 
       filterObject = {
-        sharedTo: "course",
+        sharedTo: 'course',
         course: { $in: coursesIds },
       };
     }
     //if role is admin
-    if (req.user.role === "admin") {
+    if (req.user.role === 'admin') {
       filterObject = {
-        sharedTo: "course",
+        sharedTo: 'course',
       };
     }
 
     req.filterObj = filterObject;
     next();
-  }
+  },
 );
 //-------------------------------------------------------------------------------------------------
 //filter to get public posts only
 exports.createFilterObjHomePosts = async (req, res, next) => {
   let filterObject;
   if (req.query.type) {
-    if (req.query.type === "feed") {
+    if (req.query.type === 'feed') {
       //1-get all profile posts
       filterObject = {
-        sharedTo: "profile",
+        sharedTo: 'profile',
         user: mongoose.Types.ObjectId(req.query.user),
       };
-    } else if (req.query.type === "following") {
+    } else if (req.query.type === 'following') {
       //1-get users he follow
-      const user = await User.findById(req.user._id).select("following");
+      const user = await User.findById(req.user._id).select('following');
       //2-get usersIds from user.following
       const usersIds = user.following.map((object) =>
-        mongoose.Types.ObjectId(object.user)
+        mongoose.Types.ObjectId(object.user),
       );
 
       //3-filter posts to get posts of these users
       filterObject = {
-        sharedTo: "profile",
+        sharedTo: 'profile',
         user: { $in: usersIds },
       };
     }
   } else {
     filterObject = {
-      sharedTo: "home",
+      sharedTo: 'home',
     };
   }
-  console.log(filterObject);
+
   req.filterObj = filterObject;
   next();
 };
-//filter to get analytics posts only
+//filter to get analytics post  s only
 exports.createFilterObjPackagesPosts = asyncHandler(async (req, res, next) => {
   const filterObject = {
-    sharedTo: "package",
+    sharedTo: 'package',
   };
   let packageFilterIds;
   if (req.query.packages) {
     packageFilterIds = req.query.packages
-      .split(",")
+      .split(',')
       .map((packageId) => mongoose.Types.ObjectId(packageId));
   }
-  if (req.user.role === "user") {
+  if (req.user.role === 'user') {
     // all packages that suscripe in
     const userSubscriptions = await UserSubscription.find({
       user: req.user._id,
     });
     if (userSubscriptions.length === 0) {
       return res.status(400).json({
-        status: "failed",
-        message: "No valid packages found in your subscriptions.",
+        status: 'failed',
+        message: 'No valid packages found in your subscriptions.',
       });
     }
 
     let packageIds = userSubscriptions.map((pack) =>
-      pack.package._id.toString()
+      pack.package._id.toString(),
     );
 
     // If there are package filters, ensure they are within the user's subscriptions
     if (packageFilterIds) {
       packageFilterIds = packageFilterIds.filter((packageId) =>
-        packageIds.includes(packageId.toString())
+        packageIds.includes(packageId.toString()),
       );
     }
     // Apply the filtered package IDs to the filter object
     if (packageFilterIds) {
       packageFilterIds = packageFilterIds.map((packageId) =>
-        mongoose.Types.ObjectId(packageId)
+        mongoose.Types.ObjectId(packageId),
       );
       filterObject.package = { $in: packageFilterIds };
     } else {
       packageIds = packageIds.map((packageId) =>
-        mongoose.Types.ObjectId(packageId)
+        mongoose.Types.ObjectId(packageId),
       );
       // If no package filter is provided, only include packages the user is subscribed to
       filterObject.package = { $in: packageIds };
     }
   }
 
-  if (req.user.role === "admin") {
+  if (req.user.role === 'admin') {
     if (packageFilterIds) {
       packageFilterIds.map((packageId) => mongoose.Types.ObjectId(packageId));
       filterObject.package = { $in: packageFilterIds };
@@ -222,7 +277,6 @@ async function getUserFollowers(userId) {
       },
     },
   });
-  console.log(followers);
   if (followers.length === 0) return [];
   return followers.map((user) => user._id);
 }
@@ -233,13 +287,13 @@ async function fetchUsersFromTarget(target, ids) {
       let targetModel;
       let usersInTarget;
 
-      if (target === "package") {
+      if (target === 'package') {
         targetModel = Package;
         usersInTarget = await UserSubscription.find({
           package: id,
           endDate: { $gte: new Date() },
         });
-      } else if (target === "course") {
+      } else if (target === 'course') {
         targetModel = Course;
         usersInTarget = await CourseProgress.find({ course: id });
       }
@@ -250,7 +304,7 @@ async function fetchUsersFromTarget(target, ids) {
       }
 
       return usersInTarget.map((user) => user.user);
-    })
+    }),
   );
 
   return users.flat();
@@ -260,22 +314,23 @@ async function fetchUsersFromTarget(target, ids) {
 //@route POST api/v1/posts
 //@access protected user
 exports.createPost = asyncHandler(async (req, res, next) => {
-  const { content, package, course, imageCover, images, sharedTo } = req.body;
+  const { content, package, course, imageCover, images, sharedTo, documents } =
+    req.body;
 
   let users = [];
-  if (sharedTo === "package") {
+  if (sharedTo === 'package') {
     if (!package || !Array.isArray(package) || package.length === 0) {
       return next(
-        new ApiError("Package IDs must be provided as an array", 400)
+        new ApiError('Package IDs must be provided as an array', 400),
       );
     }
-    users = await fetchUsersFromTarget("package", package);
-  } else if (sharedTo === "course") {
+    users = await fetchUsersFromTarget('package', package);
+  } else if (sharedTo === 'course') {
     if (!course || !Array.isArray(course) || course.length === 0) {
-      return next(new ApiError("Course IDs must be provided as an array", 400));
+      return next(new ApiError('Course IDs must be provided as an array', 400));
     }
-    users = await fetchUsersFromTarget("course", course);
-  } else if (sharedTo === "profile") {
+    users = await fetchUsersFromTarget('course', course);
+  } else if (sharedTo === 'profile') {
     //get users who follow this guy
     users = await getUserFollowers(req.user._id);
   }
@@ -284,15 +339,16 @@ exports.createPost = asyncHandler(async (req, res, next) => {
   const post = await Post.create({
     user: req.user._id,
     content,
-    package: sharedTo === "package" ? package : [],
-    course: sharedTo === "course" ? course : [],
+    package: sharedTo === 'package' ? package : [],
+    course: sharedTo === 'course' ? course : [],
     imageCover,
     images,
     sharedTo,
+    documents,
   });
 
   // Populate the user field
-  await post.populate("user", "name email");
+  await post.populate('user', 'name email');
   // Create notifications for users
   if (users.length !== 0)
     await Promise.all(
@@ -304,9 +360,9 @@ exports.createPost = asyncHandler(async (req, res, next) => {
             ar: `${req.user.name} قام بمشاركة منشور جديد معك`,
           },
           post: post._id,
-          type: req.body.sharedTo === "profile" ? "follow" : "post",
+          type: req.body.sharedTo === 'profile' ? 'follow' : 'post',
         });
-      })
+      }),
     );
 
   res.status(201).json({ success: true, data: post });
@@ -321,6 +377,9 @@ exports.updatePost = factory.updateOne(Post);
 //@access protected user,admin
 
 exports.getPosts = asyncHandler(async (req, res) => {
+  // Get the logged-in user's ID
+  const loggedUserId = req.user._id;
+
   let filter = {};
   if (req.filterObj) {
     filter = req.filterObj;
@@ -332,40 +391,87 @@ exports.getPosts = asyncHandler(async (req, res) => {
   const skip = (page - 1) * limit;
   const sort = req.query.sort ? JSON.parse(req.query.sort) : { createdAt: -1 }; // Default sort by creation date descending
 
+  // Create an array to store additional match stages
+  const additionalMatchStages = [];
+
+  // Check for reaction type filtering
+  if (req.query.reactionType) {
+    additionalMatchStages.push({
+      $match: {
+        'reactions.type': req.query.reactionType,
+      },
+    });
+  }
+
+  // Check for minimum comments filtering
+  if (req.query.minComments) {
+    const minComments = parseInt(req.query.minComments, 10);
+    additionalMatchStages.push({
+      $match: {
+        commentsCount: { $gte: minComments },
+      },
+    });
+  }
+
   // Define initial aggregation pipeline stages
   const aggregationStages = [
     { $match: filter },
     {
       $lookup: {
-        from: "reactions",
-        localField: "_id",
-        foreignField: "post",
-        as: "reactions",
+        from: 'reactions',
+        localField: '_id',
+        foreignField: 'post',
+        as: 'reactions',
       },
     },
     {
       $lookup: {
-        from: "comments",
-        localField: "_id",
-        foreignField: "post",
-        as: "comments",
+        from: 'comments',
+        localField: '_id',
+        foreignField: 'post',
+        as: 'comments',
       },
     },
     {
       $lookup: {
-        from: "users",
-        localField: "user",
-        foreignField: "_id",
-        as: "user",
+        from: 'users',
+        localField: 'user',
+        foreignField: '_id',
+        as: 'user',
       },
     },
     {
-      $unwind: "$user",
+      $unwind: '$user',
     },
     {
       $addFields: {
-        reactionsCount: { $size: "$reactions" },
-        commentsCount: { $size: "$comments" },
+        reactionsCount: { $size: '$reactions' },
+        commentsCount: { $size: '$comments' },
+        reactionTypes: {
+          $reduce: {
+            input: '$reactions',
+            initialValue: [],
+            in: {
+              $cond: {
+                if: { $in: ['$$this.type', '$$value'] },
+                then: '$$value',
+                else: { $concatArrays: ['$$value', ['$$this.type']] },
+              },
+            },
+          },
+        },
+        // Find the logged-in user's reaction
+        loggedUserReaction: {
+          $first: {
+            $filter: {
+              input: '$reactions',
+              as: 'reaction',
+              cond: {
+                $eq: ['$$reaction.user', mongoose.Types.ObjectId(loggedUserId)],
+              },
+            },
+          },
+        },
       },
     },
     {
@@ -374,29 +480,34 @@ exports.getPosts = asyncHandler(async (req, res) => {
         comments: 0,
       },
     },
-    { $sort: sort },
-    { $skip: skip },
-    { $limit: limit },
   ];
+
+  // Add additional match stages
+  aggregationStages.push(...additionalMatchStages);
+
+  // Add remaining stages
+  aggregationStages.push({ $sort: sort }, { $skip: skip }, { $limit: limit });
 
   // Check if course query parameter exists
   if (req.query.course) {
-    const courseId = mongoose.Types.ObjectId(req.query.course); // Convert course ID to ObjectId
+    const courseId = mongoose.Types.ObjectId(req.query.course);
     aggregationStages.unshift({
       $match: {
         $and: [filter, { course: courseId }],
       },
     });
   }
+
   // Check if package query parameter exists
   if (req.query.package) {
-    const packageId = mongoose.Types.ObjectId(req.query.package); // Convert course ID to ObjectId
+    const packageId = mongoose.Types.ObjectId(req.query.package);
     aggregationStages.unshift({
       $match: {
         $and: [filter, { package: packageId }],
       },
     });
   }
+
   // Perform aggregation
   const postsWithCounts = await Post.aggregate(aggregationStages);
 
@@ -421,6 +532,13 @@ exports.getPosts = asyncHandler(async (req, res) => {
     updatedAt: post.updatedAt,
     reactionsCount: post.reactionsCount,
     commentsCount: post.commentsCount,
+    reactionTypes: post.reactionTypes,
+    loggedUserReaction: post.loggedUserReaction
+      ? {
+          type: post.loggedUserReaction.type,
+          _id: post.loggedUserReaction._id,
+        }
+      : null,
   }));
 
   // Count total documents without pagination
@@ -443,7 +561,132 @@ exports.getPosts = asyncHandler(async (req, res) => {
 //@desc get post
 //@route GET api/v1/posts/:id
 //@access protected user
-exports.getPost = factory.getOne(Post);
+exports.getPost = asyncHandler(async (req, res, next) => {
+  // Get the logged-in user's ID
+  const loggedUserId = req.user._id;
+
+  // Define the aggregation pipeline
+  const aggregationStages = [
+    // Match the specific post by ID
+    {
+      $match: {
+        _id: mongoose.Types.ObjectId(req.params.id),
+      },
+    },
+    {
+      $lookup: {
+        from: 'reactions',
+        localField: '_id',
+        foreignField: 'post',
+        as: 'reactions',
+      },
+    },
+    {
+      $lookup: {
+        from: 'comments',
+        localField: '_id',
+        foreignField: 'post',
+        as: 'comments',
+      },
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'user',
+        foreignField: '_id',
+        as: 'user',
+      },
+    },
+    {
+      $unwind: '$user',
+    },
+    {
+      $addFields: {
+        reactionsCount: { $size: '$reactions' },
+        commentsCount: { $size: '$comments' },
+        reactionTypes: {
+          $reduce: {
+            input: '$reactions',
+            initialValue: [],
+            in: {
+              $cond: {
+                if: { $in: ['$$this.type', '$$value'] },
+                then: '$$value',
+                else: { $concatArrays: ['$$value', ['$$this.type']] },
+              },
+            },
+          },
+        },
+        // Find the logged-in user's reaction
+        loggedUserReaction: {
+          $first: {
+            $filter: {
+              input: '$reactions',
+              as: 'reaction',
+              cond: {
+                $eq: ['$$reaction.user', mongoose.Types.ObjectId(loggedUserId)],
+              },
+            },
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        reactions: 0,
+        comments: 0,
+      },
+    },
+  ];
+
+  // Perform aggregation
+  const posts = await Post.aggregate(aggregationStages);
+
+  // Check if post exists
+  if (!posts || posts.length === 0) {
+    return next(new ApiError('No post found with that ID', 404));
+  }
+
+  // Prepare baseURL for image URLs
+  const baseURL = process.env.BASE_URL;
+
+  // Transform post data
+  const post = {
+    _id: posts[0]._id,
+    user: {
+      _id: posts[0].user._id,
+      name: posts[0].user.name,
+      profileImg: `${baseURL}/users/${posts[0].user.profileImg}`,
+    },
+    content: posts[0].content,
+    sharedTo: posts[0].sharedTo,
+    course: posts[0].course,
+    package: posts[0].package,
+    imageCover: posts[0].imageCover
+      ? `${baseURL}/posts/${posts[0].imageCover}`
+      : null,
+    images: posts[0].images.map((image) => `${baseURL}/posts/${image}`),
+    documents: posts[0].documents
+      ? posts[0].documents.map((doc) => `${baseURL}/posts/${doc}`)
+      : [],
+    createdAt: posts[0].createdAt,
+    updatedAt: posts[0].updatedAt,
+    reactionsCount: posts[0].reactionsCount,
+    commentsCount: posts[0].commentsCount,
+    reactionTypes: posts[0].reactionTypes,
+    loggedUserReaction: posts[0].loggedUserReaction
+      ? {
+          type: posts[0].loggedUserReaction.type,
+          _id: posts[0].loggedUserReaction._id,
+        }
+      : null,
+  };
+
+  // Send response
+  res.status(200).json({
+    data: post,
+  });
+});
 //@desc delete post
 //@route DELTE api/v1/posts:id
 //@access protected admin that create the post
@@ -454,7 +697,7 @@ exports.deletePost = asyncHandler(async (req, res, next) => {
       // Find and delete the course
       const post = await Post.findByIdAndDelete(id).session(session);
       // Check if post exists
-      if (!post) return next(new ApiError("post not found ", 404));
+      if (!post) return next(new ApiError('post not found ', 404));
 
       // Delete associated lessons and reviews
       await Promise.all([
@@ -467,12 +710,12 @@ exports.deletePost = asyncHandler(async (req, res, next) => {
     res.status(204).send();
   } catch (error) {
     // Handle any transaction-related errors
-    console.error("Transaction error:", error);
+    console.error('Transaction error:', error);
     if (error instanceof ApiError) {
       // Forward specific ApiError instances
       return next(error);
     }
     // Handle other errors with a generic message
-    return next(new ApiError("Error during post deletion", 500));
+    return next(new ApiError('Error during post deletion', 500));
   }
 });

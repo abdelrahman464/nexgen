@@ -1,10 +1,10 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const PostSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
     content: {
@@ -13,39 +13,40 @@ const PostSchema = new mongoose.Schema(
     },
     sharedTo: {
       type: String,
-      enum: ["home", "course", "package", "profile"],
-      default: "home",
+      enum: ['home', 'course', 'package', 'profile'],
+      default: 'home',
     },
     course: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Course",
+        ref: 'Course',
       },
     ],
     package: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Package",
+        ref: 'Package',
       },
     ],
     imageCover: {
       type: String,
-      required: [true, "post image cover is required"],
+      required: [true, 'post image cover is required'],
     },
     images: [String],
+    documents: [String],
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // ^find => it mean if part of of teh word contains find
 PostSchema.pre(/^find/, function (next) {
   // this => query
-  this.populate({ path: "user", select: "name profileImg" });
+  this.populate({ path: 'user', select: 'name profileImg' });
   this.populate({
-    path: "course",
-    select: "title -accessibleCourses -category",
+    path: 'course',
+    select: 'title -accessibleCourses -category',
   });
-  this.populate({ path: "package", select: "title course" });
+  this.populate({ path: 'package', select: 'title course' });
   next();
 });
 
@@ -63,17 +64,26 @@ const setImageURL = (doc) => {
     });
     doc.images = imageListWithUrl;
   }
+  if (doc.documents) {
+    const documentListWithUrl = [];
+    doc.documents.forEach((document) => {
+      const documentUrl = `${process.env.BASE_URL}/posts/${document}`;
+      documentListWithUrl.push(documentUrl);
+    });
+    doc.documents = documentListWithUrl;
+  }
+  return doc;
 };
 
 //after initializ the doc in db
 // check if the document contains image
 // it work with findOne,findAll,update
-PostSchema.post("init", (doc) => {
+PostSchema.post('init', (doc) => {
   setImageURL(doc);
 });
 // it work with create
-PostSchema.post("save", (doc) => {
+PostSchema.post('save', (doc) => {
   setImageURL(doc);
 });
-const Post = mongoose.model("Post", PostSchema);
+const Post = mongoose.model('Post', PostSchema);
 module.exports = Post;

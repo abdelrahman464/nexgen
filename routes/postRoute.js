@@ -1,12 +1,12 @@
-const express = require("express");
+const express = require('express');
 
 const {
   processPostValidator,
   createPostValidator,
   getPostValidator,
   checkCourseAuthority,
-} = require("../utils/validators/postValidator");
-const authServices = require("../services/authServices");
+} = require('../utils/validators/postValidator');
+const authServices = require('../services/authServices');
 const {
   convertToArray,
   createPost,
@@ -16,65 +16,62 @@ const {
   getPost,
   updatePost,
   deletePost,
-  uploadImages,
-  resizeImages,
+  uploadFiles,
+  processFiles,
+
   getPosts,
-} = require("../services/postServices");
+} = require('../services/postServices');
 
 const router = express.Router();
 
 router
-  .route("/")
-  .get(
-    authServices.protect,
-    createFilterObjHomePosts,
-    getPosts
-  )
+  .route('/')
+  .get(authServices.protect, createFilterObjHomePosts, getPosts)
   .post(
     authServices.protect,
-    authServices.allowedTo("user", "admin"),
-    uploadImages,
-    resizeImages,
+    authServices.allowedTo('user', 'admin'),
+    uploadFiles,
+    processFiles,
     convertToArray,
     createPostValidator,
     checkCourseAuthority,
-    createPost
+    createPost,
   );
 router.get(
-  "/courses",
+  '/courses',
   authServices.protect,
-  authServices.allowedTo("user", "admin"),
+  authServices.allowedTo('user', 'admin'),
   createFilterObjAllowedCoursePosts,
-  getPosts
+  getPosts,
 );
 router.get(
-  "/packages",
+  '/packages',
   authServices.protect,
-  authServices.allowedTo("user", "admin"),
+  authServices.allowedTo('user', 'admin'),
   createFilterObjPackagesPosts,
-  getPosts
+  getPosts,
 );
 router
-  .route("/:id")
+  .route('/:id')
   .get(
     authServices.protect,
-    authServices.allowedTo("user", "admin"),
+    authServices.allowedTo('user', 'admin'),
     getPostValidator,
-    getPost
+    getPost,
   )
   .put(
     authServices.protect,
-    authServices.allowedTo("admin"),
-    uploadImages,
-    resizeImages,
+    authServices.allowedTo('admin'),
+    uploadFiles,
+    processFiles,
     processPostValidator,
-    updatePost
+    updatePost,
   )
   .delete(
     authServices.protect,
-    authServices.allowedTo("admin"),
+    authServices.allowedTo('admin'),
     processPostValidator,
-    deletePost
+    deletePost,
   );
 
 module.exports = router;

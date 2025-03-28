@@ -16,7 +16,6 @@ const Notification = require('../models/notificationModel');
 const React = require('../models/reactionModel');
 const Comment = require('../models/commentModel');
 const Course = require('../models/courseModel');
-const Package = require('../models/packageModel');
 const MarketLog = require('../models/MarketingModel');
 const UserSubscription = require('../models/userSubscriptionModel');
 const { moveOrdersFromOneToOne } = require('./marketing/marketingService');
@@ -148,7 +147,13 @@ exports.getUsersWithoutCourse = async (req, res, next) => {
                 _id: 1,
                 name: 1,
                 email: 1,
-                profileImg: 1,
+                profileImg: {
+                  $cond: {
+                    if: { $and: [{ $ifNull: ['$profileImg', false] }, { $ne: ['$profileImg', ''] }] }, // Check if profileImg exists and is not empty
+                    then: { $concat: [process.env.BASE_URL, '/', '$profileImg'] }, // Append BASE_URL
+                    else: null, // Set to null if missing or empty
+                  },
+                },
               },
             },
           ],
@@ -160,7 +165,13 @@ exports.getUsersWithoutCourse = async (req, res, next) => {
                 _id: 1,
                 name: 1,
                 email: 1,
-                profileImg: 1,
+                profileImg: {
+                  $cond: {
+                    if: { $and: [{ $ifNull: ['$profileImg', false] }, { $ne: ['$profileImg', ''] }] }, // Check if profileImg exists and is not empty
+                    then: { $concat: [process.env.BASE_URL, '/', '$profileImg'] }, // Append BASE_URL
+                    else: null, // Set to null if missing or empty
+                  },
+                },
               },
             },
           ],
@@ -214,7 +225,18 @@ exports.getUsersCourse = async (req, res, next) => {
           _id: 1,
           name: 1,
           email: 1,
-          profileImg: 1,
+          profileImg: {
+            $cond: {
+              if: {
+                $and: [
+                  { $ifNull: ['$profileImg', false] },
+                  { $ne: ['$profileImg', ''] },
+                ],
+              }, // Check if profileImg exists and is not empty
+              then: { $concat: [process.env.BASE_URL, '/', '$profileImg'] }, // Append BASE_URL
+              else: null, // Set to null if missing or empty
+            },
+          },
         },
       },
     ]);
@@ -283,23 +305,20 @@ exports.getPurchasersUsersAndNon = async (req, res, next) => {
     const { purchasers } = usersWithAndWithoutOrders[0]; // Users who have orders
     const { nonPurchasers } = usersWithAndWithoutOrders[0]; // Users who have no orders
 
-    // // //send email to all users without orders
-    // try {
-    //   const emailPromises = usersWithoutOrders.map(async (user) => {
-    //     const htmlEmail = `
-    //     <h1>Hi ${user.name},</h1>
-    //     <p>It seems you haven't placed any orders yet. Don't miss out on our amazing courses and packages. Visit our website to explore more.</p>
-    //     <p>Best regards,</p>
-    //     <p>NEXGEN Team</p>
-    //     `;
-    //     await sendEmail({
-    //       to: user.email,
-    //       subject: "Don't miss out on our amazing courses and packages!",
-    //       html: htmlEmail,
-    //     });
-    //   });
-
-    //   await Promise.all(emailPromises); // Wait for all email sending operations to complete
+    // Add baseURL to profile images
+    const baseURL = process.env.BASE_URL;
+    const processedPurchasers = purchasers.map((user) => ({
+      ...user,
+      profileImg: user.profileImg
+        ? `${baseURL}/users/${user.profileImg}`
+        : null,
+    }));
+    const processedNonPurchasers = nonPurchasers.map((user) => ({
+      ...user,
+      profileImg: user.profileImg
+        ? `${baseURL}/users/${user.profileImg}`
+        : null,
+    }));
 
     return res.status(200).json({
       success: true,
@@ -307,14 +326,9 @@ exports.getPurchasersUsersAndNon = async (req, res, next) => {
         purchasers: purchasers.length,
         nonPurchasers: nonPurchasers.length,
       },
-      purchasers,
-      nonPurchasers,
+      purchasers: processedPurchasers,
+      nonPurchasers: processedNonPurchasers,
     });
-    // } catch (err) {
-    //   return next(
-    //     new ApiError(`There is a problem with sending emails ${err}`, 500)
-    //   );
-    // }
   } catch (err) {
     return next(new ApiError(err.message, 400));
   }
