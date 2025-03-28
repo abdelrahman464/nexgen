@@ -149,8 +149,15 @@ exports.getUsersWithoutCourse = async (req, res, next) => {
                 email: 1,
                 profileImg: {
                   $cond: {
-                    if: { $and: [{ $ifNull: ['$profileImg', false] }, { $ne: ['$profileImg', ''] }] }, // Check if profileImg exists and is not empty
-                    then: { $concat: [process.env.BASE_URL, '/', '$profileImg'] }, // Append BASE_URL
+                    if: {
+                      $and: [
+                        { $ifNull: ['$profileImg', false] },
+                        { $ne: ['$profileImg', ''] },
+                      ],
+                    }, // Check if profileImg exists and is not empty
+                    then: {
+                      $concat: [process.env.BASE_URL, '/users/', '$profileImg'],
+                    }, // Append BASE_URL
                     else: null, // Set to null if missing or empty
                   },
                 },
@@ -167,8 +174,15 @@ exports.getUsersWithoutCourse = async (req, res, next) => {
                 email: 1,
                 profileImg: {
                   $cond: {
-                    if: { $and: [{ $ifNull: ['$profileImg', false] }, { $ne: ['$profileImg', ''] }] }, // Check if profileImg exists and is not empty
-                    then: { $concat: [process.env.BASE_URL, '/', '$profileImg'] }, // Append BASE_URL
+                    if: {
+                      $and: [
+                        { $ifNull: ['$profileImg', false] },
+                        { $ne: ['$profileImg', ''] },
+                      ],
+                    }, // Check if profileImg exists and is not empty
+                    then: {
+                      $concat: [process.env.BASE_URL, '/users/', '$profileImg'],
+                    }, // Append BASE_URL
                     else: null, // Set to null if missing or empty
                   },
                 },
@@ -232,9 +246,11 @@ exports.getUsersCourse = async (req, res, next) => {
                   { $ifNull: ['$profileImg', false] },
                   { $ne: ['$profileImg', ''] },
                 ],
-              }, // Check if profileImg exists and is not empty
-              then: { $concat: [process.env.BASE_URL, '/', '$profileImg'] }, // Append BASE_URL
-              else: null, // Set to null if missing or empty
+              }, // Ensure profileImg exists
+              then: {
+                $concat: [process.env.BASE_URL, '/users/', '$profileImg'], // Ensure correct path
+              },
+              else: null, // Set to null if missing
             },
           },
         },
