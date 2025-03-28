@@ -358,58 +358,50 @@ exports.getUsers = factory.getALl(User, 'User');
 //@access public
 exports.getUser = async (req, res, next) => {
   try {
-    //1- check if token exists, if exist get it
-    let token;
-    if (
-      req.headers.authorization &&
-      req.headers.authorization.startsWith('Bearer')
-    ) {
-      token = req.headers.authorization.split(' ')[1];
-    }
-    if (!token) {
-      return next(new ApiError('you are not login,please login first', 401));
-    }
-    //2- verify token (no change happens,expired token)
-    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+    // Verify current user and check if they are admin
 
-    // 3- Check if user exists
-    const currentUser = await User.findById(decoded.userId);
-    if (!currentUser) {
-      return next(new ApiError('User no longer exists', 401));
-    }
-    //4-check if user changed password after token generated
-    if (currentUser.passwordChangedAt) {
-      //convert data to timestamp by =>getTime()
-      const passwordChangedTimestamp = parseInt(
-        currentUser.passwordChangedAt.getTime() / 1000,
-        10,
-      );
-      //it mean password changer after token generated
-      if (passwordChangedTimestamp > decoded.iat) {
-        return next(
-          new ApiError(
-            'user recently changed his password,please login again',
-            401,
-          ),
-        );
-      }
-    }
-
-    //----------------------
-    let user = {};
-    if (currentUser.role === 'admin') {
-      user = await User.findById(req.params.id);
-    } else {
-      user = await User.findById(req.params.id).select(
-        'name email profileImg authToReview coverImg role timeSpent isMarketer isInstructor isCustomerService startMarketing idNumber phone country idVerification note',
-      );
-    }
-    if (!user) {
+    // Check if current user is an admin
+    if (req.user.role !== 'admin') {
       return next(
-        new ApiError(`No document found with this id ${currentUser._id}`, 404),
+        new ApiError('You are not authorized to access this resource', 403),
       );
     }
-    res.status(200).json({ data: user });
+
+    // Find user by ID
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return next(new ApiError('No user found with this ID', 404));
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: user,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 400));
+  }
+};
+
+// Get logged-in user's data
+exports.getLoggedUserData = async (req, res, next) => {
+  try {
+
+    // Select specific fields for logged-in user
+    const user = await User.findById(req.user._id).select(
+      'name email profileImg authToReview coverImg role timeSpent ' +
+        'isMarketer isInstructor isCustomerService startMarketing ' +
+        'idNumber phone country idVerification note lang',
+    );
+
+    if (!user) {
+      return next(new ApiError('User not found', 404));
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: user,
+    });
   } catch (err) {
     next(new ApiError(err.message, 400));
   }
