@@ -496,6 +496,5 @@ exports.getLastLessonExamOrder = (progresses) => {
       }
     }
   }
-  console.log("lastProgressIndex", lastProgressIndex);
   return progresses[lastProgressIndex];
 };

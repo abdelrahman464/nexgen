@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { sendNotification } = require('../socket/index'); // Adjust the path as per your file structure
+const User = require('./userModel');
 
 const NotificationSchema = new mongoose.Schema(
   {
@@ -80,15 +81,26 @@ NotificationSchema.post('save', (doc) => {
   setCourseImageURL(doc);
 });
 
-// // Emit a notification event after saving a new notification
 NotificationSchema.post('save', async (doc) => {
   try {
-    const userId = doc.user.toString();
-    // Send notification to the user
-    sendNotification(userId, doc);
+    const user = await User.findById(doc.user).select('lang'); // Fetch user language
+    if (!user) {
+      console.error('User not found for notification:', doc.user);
+      return;
+    }
+    const notificationTitle =
+      user.lang === 'ar'
+        ? doc.toObject().message.ar
+        : doc.toObject().message.en;
+    console.log('notificationTitle:', notificationTitle);
+    // Send localized notification
+    sendNotification(doc.user.toString(), {
+      ...doc.toObject(),
+      message: notificationTitle,
+    });
   } catch (error) {
     console.error('Error emitting notification:', error);
-    // Handle error as needed
   }
 });
+
 module.exports = mongoose.model('Notification', NotificationSchema);

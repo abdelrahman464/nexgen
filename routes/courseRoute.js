@@ -12,7 +12,7 @@ const {
   createCourse,
   getAllCourses,
   getCourseById,
-  deleteCourse,
+  // deleteCourse,
   updateCourse,
   addUserToCourse,
   getCourseDetails,
@@ -78,13 +78,13 @@ router.put(
 );
 
 // Delete a course by ID
-router.delete(
-  '/:id',
-  authServices.protect,
-  authServices.allowedTo('admin'),
-  checkCourseIdParamValidator,
-  deleteCourse,
-);
+// router.delete(
+//   '/:id',
+//   authServices.protect,
+//   authServices.allowedTo('admin'),
+//   checkCourseIdParamValidator,
+//   deleteCourse,
+// );
 
 // add user to course list
 router.post(

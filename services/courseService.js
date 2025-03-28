@@ -7,22 +7,16 @@ const asyncHandler = require("express-async-handler");
 const ApiError = require("../utils/apiError");
 const factory = require("./handllerFactory");
 const Chat = require("../models/ChatModel");
-const Post = require("../models/postModel");
 const Course = require("../models/courseModel");
 const Notification = require("../models/notificationModel");
 const Order = require("../models/orderModel");
 const Lesson = require("../models/lessonModel");
-const Section = require("../models/sectionModel");
-const Review = require("../models/reviewModel");
 const CourseProgress = require("../models/courseProgressModel");
-const Package = require("../models/packageModel");
-const UserSubscription = require("../models/userSubscriptionModel");
 const User = require("../models/userModel");
-const Exam = require("../models/examModel");
+
 const { uploadSingleFile } = require("../middlewares/uploadImageMiddleware");
 const { createOne, deleteOne } = require("./instructorProfitsService");
-const { getTotalGrades, getTotalPossibleGrade } = require("./exams/examUtils");
-const _ = require("lodash");
+
 
 //upload course image
 exports.uploadCourseImage = uploadSingleFile("image");
@@ -243,67 +237,66 @@ exports.getCourseById = asyncHandler(async (req, res, next) => {
 exports.updateCourse = factory.updateOne(Course);
 
 // Delete a course by ID
-exports.deleteCourse = asyncHandler(async (req, res, next) => {
-  try {
-    await mongoose.connection.transaction(async (session) => {
-      // Find and delete the course
-      const course = await Course.findByIdAndDelete(req.params.id).session(
-        session
-      );
+// exports.deleteCourse = asyncHandler(async (req, res, next) => {
+//   try {
+//     await mongoose.connection.transaction(async (session) => {
+//       // Find and delete the course
+//       const course = await Course.findByIdAndDelete(req.params.id).session(
+//         session
+//       );
 
-      // Check if course exists
-      if (!course) {
-        return next(
-          new ApiError(`Course not found for this id ${req.params.id}`, 404)
-        );
-      }
-      const package = await Package.findOne({ course: course._id });
-      // Delete associated lessons and reviews
-      await Promise.all([
-        Lesson.deleteMany({ course: course._id }).session(session),
-        Section.deleteMany({ course: course._id }).session(session),
-        Review.deleteMany({ course: course._id }).session(session),
-        Chat.deleteMany({ course: course._id }).session(session),
-        Notification.deleteMany({ course: course._id }).session(session),
-        await Post.updateMany(
-          { course: { $in: course._id } },
-          { $pull: { course: { $in: course._id } } }
-        ).session(session),
+//       // Check if course exists
+//       if (!course) {
+//         return next(
+//           new ApiError(`Course not found for this id ${req.params.id}`, 404)
+//         );
+//       }
 
-        //update order description and set order course to null
-        Order.updateMany(
-          { course: course._id },
-          {
-            $set: {
-              course: null,
-              description: `course ${course.title.en} Deleted`,
-            },
-          }
-        ).session(session),
-        //delete the package and all subscription related to this package
-        Package.deleteMany({ course: course._id }).session(session),
-        UserSubscription.deleteMany({ package: package._id }).session(session),
-        // remove this course from Course Package
-        CourseProgress.updateMany(
-          { course: course._id },
-          { $pull: { course: course._id } }
-        ).session(session),
-      ]);
-    });
+//       // Delete associated lessons and reviews
+//       await Promise.all([
+//         Lesson.deleteMany({ course: course._id }).session(session),
+//         Section.deleteMany({ course: course._id }).session(session),
+//         Review.deleteMany({ course: course._id }).session(session),
+//         Chat.deleteMany({ course: course._id }).session(session),
+//         Notification.deleteMany({ course: course._id }).session(session),
+//         await Post.updateMany(
+//           { course: { $in: course._id } },
+//           { $pull: { course: { $in: course._id } } }
+//         ).session(session),
 
-    // Return success response
-    res.status(204).send();
-  } catch (error) {
-    // Handle any transaction-related errors
+//         //update order description and set order course to null
+//         Order.updateMany(
+//           { course: course._id },
+//           {
+//             $set: {
+//               course: null,
+//               description: `course ${course.title.en} Deleted`,
+//             },
+//           }
+//         ).session(session),
+//         //delete the package and all subscription related to this package
+//         Package.deleteMany({ course: course._id }).session(session),
+      
+//         CourseProgress.updateMany(
+//           { course: course._id },
+//           { $unset: { course: "" } }
+//         ).session(session),
+//       ]);
+//     });
 
-    if (error instanceof ApiError) {
-      // Forward specific ApiError instances
-      return next(error);
-    }
-    // Handle other errors with a generic message
-    return next(new ApiError("Error during course deletion", 500));
-  }
-});
+//     // Return success response
+//     res.status(204).send();
+//   } catch (error) {
+//     // Handle any transaction-related errors
+
+//     if (error instanceof ApiError) {
+//       // Forward specific ApiError instances
+//       return next(error);
+//     }
+//     // Handle other errors with a generic message
+//     return next(new ApiError(`Error during course deletion ${error}`, 500));
+//   }
+// });
 
 // Admin add user to course
 exports.addUserToCourse = asyncHandler(async (req, res, next) => {
