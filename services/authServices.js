@@ -694,8 +694,42 @@ exports.resetPassword = asyncHandler(async (req, res, next) => {
 // Get logged-in user's data
 exports.getLoggedUserData = async (req, res, next) => {
   try {
+    // 1- check if token exists, if exist get it
+    let token;
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith('Bearer')
+    ) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+    if (!token) {
+      return next(new ApiError('you are not login,please login first', 401));
+    }
+    //2- verify token (no change happens,expired token)
+    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY); // 3- Check if user exists
+    const currentUser = await User.findById(decoded.userId);
+    if (!currentUser) {
+      return next(new ApiError('User no longer exists', 401));
+    }
+    //4-check if user changed password after token generated
+    if (currentUser.passwordChangedAt) {
+      //convert data to timestamp by =>getTime()
+      const passwordChangedTimestamp = parseInt(
+        currentUser.passwordChangedAt.getTime() / 1000,
+        10,
+      );
+      //it mean password changer after token generated
+      if (passwordChangedTimestamp > decoded.iat) {
+        return next(
+          new ApiError(
+            'user recently changed his password,please login again',
+            401,
+          ),
+        );
+      }
+    } //----------------------
     // Select specific fields for logged-in user
-    const user = await User.findById(req.user._id).select(
+    const user = await User.findById(currentUser._id).select(
       'name email profileImg authToReview coverImg role timeSpent ' +
         'isMarketer isInstructor isCustomerService startMarketing ' +
         'idNumber phone country idVerification note lang',

@@ -54,5 +54,5 @@ router.route('/resetPassword').put(resetPassword);
 //email verification
 router.route('/verifyEmail').post(verifyEmail);
 router.route('/resendEmailCode').post(resendEmailCode);
-router.route('/getMe').get(protect, getLoggedUserData);
+router.route('/getMe').get(getLoggedUserData);
 module.exports = router;
