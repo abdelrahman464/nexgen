@@ -6,6 +6,7 @@ const {
   loginValidator,
 } = require('../utils/validators/authValidator');
 const {
+  protect,
   signup,
   login,
   forgotPassword,
@@ -13,6 +14,7 @@ const {
   resetPassword,
   resendEmailCode,
   verifyEmail,
+  getLoggedUserData,
 } = require('../services/authServices');
 const { uploadImages, resizeImage } = require('../services/userService');
 
@@ -29,7 +31,6 @@ router.get(
   '/google/callback',
   passport.authenticate('google', { session: false }), // Disable sessions
   (req, res) => {
-    
     // Assuming your strategy attaches the JWT to the user object
     if (req.user && req.user.token) {
       // Redirect the user or send the token directly
@@ -53,5 +54,5 @@ router.route('/resetPassword').put(resetPassword);
 //email verification
 router.route('/verifyEmail').post(verifyEmail);
 router.route('/resendEmailCode').post(resendEmailCode);
-
+router.route('/getMe').get(protect, getLoggedUserData);
 module.exports = router;

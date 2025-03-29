@@ -16,7 +16,6 @@ const {
   updateUser,
   deleteUser,
   changeUserPassword,
-  getLoggedUserData,
   updateLoggedUserPassword,
   updateLoggedUserData,
   unActiveUser,
@@ -109,7 +108,7 @@ router
     deleteUserValidator,
     deleteUser,
   );
-router.get('/profile/getMe', authServices.protect, getLoggedUserData);
+
 router.get(
   '/:id/userData',
   authServices.protect,
@@ -160,4 +159,7 @@ router.put(
 );
 
 router.post('/idDocument/upload', uploadImages, resizeImage, uploadIdDocument);
+
+
+
 module.exports = router;

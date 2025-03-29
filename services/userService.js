@@ -383,29 +383,6 @@ exports.getUser = async (req, res, next) => {
   }
 };
 
-// Get logged-in user's data
-exports.getLoggedUserData = async (req, res, next) => {
-  try {
-
-    // Select specific fields for logged-in user
-    const user = await User.findById(req.user._id).select(
-      'name email profileImg authToReview coverImg role timeSpent ' +
-        'isMarketer isInstructor isCustomerService startMarketing ' +
-        'idNumber phone country idVerification note lang',
-    );
-
-    if (!user) {
-      return next(new ApiError('User not found', 404));
-    }
-
-    res.status(200).json({
-      status: 'success',
-      data: user,
-    });
-  } catch (err) {
-    next(new ApiError(err.message, 400));
-  }
-};
 //@desc create user
 //@route POST /api/v1/users
 //@access private
