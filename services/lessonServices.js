@@ -4,7 +4,6 @@ const path = require("path");
 const asyncHandler = require("express-async-handler");
 const { v4: uuidv4 } = require("uuid");
 const axios = require("axios");
-const crypto = require("crypto");
 const ApiError = require("../utils/apiError");
 const factory = require("./handllerFactory");
 const Lesson = require("../models/lessonModel");
@@ -12,7 +11,7 @@ const Section = require("../models/sectionModel");
 const CourseProgress = require("../models/courseProgressModel");
 const { uploadMixOfFiles } = require("../middlewares/uploadImageMiddleware");
 const ApiFeatures = require("../utils/apiFeatures");
-const _ = require("lodash");
+
 
 exports.uploadFiles = uploadMixOfFiles([
   {
@@ -247,7 +246,7 @@ exports.getSectionLessons = async (req, res, next) => {
             (!_.has(lastLessonProgress, "passAnalytics") ||
               lastLessonProgress.passAnalytics)
           ) {
-            console.log("hey22");
+            
             currentLessonOrder += 1;
           }
         }
