@@ -7,6 +7,7 @@ const {
   changeUserPasswordValidator,
   updateLoggedUserValidator,
   changeLoggedUserPasswordValidator,
+  actionOnIdDocumentValidator,
 } = require('../utils/validators/userValidator');
 const authServices = require('../services/authServices');
 const {
@@ -155,11 +156,10 @@ router.put(
   '/idDocument/:id/action',
   authServices.protect,
   authServices.allowedTo('admin'),
+  actionOnIdDocumentValidator,
   actionOnIdDocument,
 );
 
 router.post('/idDocument/upload', uploadImages, resizeImage, uploadIdDocument);
-
-
 
 module.exports = router;
