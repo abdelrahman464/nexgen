@@ -1,18 +1,18 @@
-const crypto = require('crypto');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
-const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const asyncHandler = require('express-async-handler');
-const User = require('../models/userModel');
-const ApiError = require('../utils/apiError');
-const sendEmail = require('../utils/sendEmail');
-const { getLoggedUserData } = require('./userService');
-const generateToken = require('../utils/generateToken');
+const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
+const passport = require("passport");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
+const asyncHandler = require("express-async-handler");
+const User = require("../models/userModel");
+const ApiError = require("../utils/apiError");
+const sendEmail = require("../utils/sendEmail");
+const { getLoggedUserData } = require("./userService");
+const generateToken = require("../utils/generateToken");
 const {
   getMarketerFromInvitationKey,
-} = require('./marketing/marketingAnalyticsService');
-const MarketingLog = require('../models/MarketingModel');
+} = require("./marketing/marketingAnalyticsService");
+const MarketingLog = require("../models/MarketingModel");
 // @desc    User Register,login with Google
 // @route   POST /api/v1/auth/google
 // @access  Public
@@ -27,7 +27,7 @@ passport.use(
     asyncHandler(async (req, accessToken, refreshToken, profile, done) => {
       // Find a user by google.id or email in the database
       let existingUser = await User.findOne({
-        $or: [{ 'google.id': profile.id }, { email: profile.emails[0].value }],
+        $or: [{ "google.id": profile.id }, { email: profile.emails[0].value }],
       });
 
       if (existingUser) {
@@ -39,11 +39,11 @@ passport.use(
             {
               // update
               $set: {
-                'google.id': profile.id,
-                'google.email': profile.emails[0].value,
+                "google.id": profile.id,
+                "google.email": profile.emails[0].value,
                 isOAuthUser: true,
               },
-            },
+            }
           );
           // After update, it's a good idea to refresh the existingUser object if you plan to use it right after
           existingUser = await User.findById(existingUser._id);
@@ -66,8 +66,8 @@ passport.use(
       });
       const token = generateToken(newUser._id);
       done(null, { user: newUser, token }); // Include token in the user object
-    }),
-  ),
+    })
+  )
 );
 //@desc signup
 //@route POST /api/v1/auth/signup
@@ -76,12 +76,12 @@ exports.signup = asyncHandler(async (req, res, next) => {
   //**2-Handle invitor and treeHead */
   let invitorId = null;
   if (req.body.invitationKey) {
-    console.log('invitationKey', req.body.invitationKey);
+    console.log("invitationKey", req.body.invitationKey);
 
     //check if invitor is valid
     invitorId = await getMarketerFromInvitationKey(req.body.invitationKey);
     if (!invitorId) {
-      return next(new ApiError('this link is invalid', 400));
+      return next(new ApiError("this link is invalid", 400));
     }
   } else {
     invitorId = process.env.ADMIN_ID;
@@ -104,12 +104,12 @@ exports.signup = asyncHandler(async (req, res, next) => {
   });
   //send email with reset code to user Gmail account to verify his email
   const verificationCode = Math.floor(
-    100000 + Math.random() * 900000,
+    100000 + Math.random() * 900000
   ).toString();
   const hashedVerificationCode = crypto
-    .createHash('sha256')
+    .createHash("sha256")
     .update(verificationCode)
-    .digest('hex');
+    .digest("hex");
 
   const htmlEmail = `
     <!DOCTYPE html>
@@ -201,7 +201,7 @@ exports.signup = asyncHandler(async (req, res, next) => {
     {
       emailVerificationCode: hashedVerificationCode,
       emailVerificationExpires: Date.now() + 10 * 60 * 1000, // 10 minutes from now
-    },
+    }
   );
   // await sendEmail({
   //   to: user.email,
@@ -223,7 +223,7 @@ exports.login = asyncHandler(async (req, res, next) => {
   //  check if user exist & check if password is correct
   const user = await User.findOne({ email: req.body.email });
   if (!user || !(await bcrypt.compare(req.body.password, user.password))) {
-    return next(new ApiError('incorrect password or email', 401));
+    return next(new ApiError("incorrect password or email", 401));
   }
   // generate token
   const token = generateToken(user._id);
@@ -241,12 +241,12 @@ exports.protect = asyncHandler(async (req, res, next) => {
   let token;
   if (
     req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
+    req.headers.authorization.startsWith("Bearer")
   ) {
-    token = req.headers.authorization.split(' ')[1];
+    token = req.headers.authorization.split(" ")[1];
   }
   if (!token) {
-    return next(new ApiError('you are not login,please login first', 401));
+    return next(new ApiError("you are not login,please login first", 401));
   }
   //2- verify token (no change happens,expired token)
   const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
@@ -254,26 +254,27 @@ exports.protect = asyncHandler(async (req, res, next) => {
   // 3- Check if user exists
   const currentUser = await User.findById(decoded.userId);
   if (!currentUser) {
-    return next(new ApiError('User no longer exists', 401));
+    return next(new ApiError("User no longer exists", 401));
   }
   //4-check if user changed password after token generated
   if (currentUser.passwordChangedAt) {
     //convert data to timestamp by =>getTime()
     const passwordChangedTimestamp = parseInt(
       currentUser.passwordChangedAt.getTime() / 1000,
-      10,
+      10
     );
     //it mean password changer after token generated
     if (passwordChangedTimestamp > decoded.iat) {
       return next(
         new ApiError(
-          'user recently changed his password,please login again',
-          401,
-        ),
+          "user recently changed his password,please login again",
+          401
+        )
       );
     }
   }
   //5-check if user is active
+
   if (!currentUser.emailVerified) {
     return next(new ApiError('Please Active Your Email', 407));
   }
@@ -304,7 +305,7 @@ exports.allowedTo = (...roles) =>
     //2- access registered user (req.user.role)
     if (!roles.includes(req.user.role)) {
       return next(
-        new ApiError('you are not allowed to access this route', 403),
+        new ApiError("you are not allowed to access this route", 403)
       );
     }
     next();
@@ -318,16 +319,16 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
   const user = await User.findOne({ email: req.body.email });
   if (!user) {
     return next(
-      new ApiError(`There is no user with email ${req.body.email}`, 404),
+      new ApiError(`There is no user with email ${req.body.email}`, 404)
     );
   }
 
   // 2-If user exists, generate random 6 digits and hash it
   const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
   const hashedResetCode = crypto
-    .createHash('sha256')
+    .createHash("sha256")
     .update(resetCode)
-    .digest('hex');
+    .digest("hex");
 
   // Define update fields
   const updateFields = {
@@ -428,12 +429,12 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
   try {
     await sendEmail({
       to: user.email,
-      subject: 'Your Password Reset Code (valid for 10 minutes)',
+      subject: "Your Password Reset Code (valid for 10 minutes)",
       html: htmlEmail,
     });
 
     res.status(200).json({
-      status: 'success',
+      status: "success",
       message: `Reset Code Sent Successfully To ${user.email}`,
     });
   } catch (err) {
@@ -442,17 +443,17 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
       { email: req.body.email },
       {
         $unset: {
-          passwordResetCode: '', // Remove passwordResetCode
-          passwordResetExpires: '', // Remove passwordResetExpires
-          passwordResetVerified: '', // Remove passwordResetVerified
+          passwordResetCode: "", // Remove passwordResetCode
+          passwordResetExpires: "", // Remove passwordResetExpires
+          passwordResetVerified: "", // Remove passwordResetVerified
         },
-      },
+      }
     );
     return next(
       new ApiError(
-        'There was a problem sending the email with your reset code',
-        500,
-      ),
+        "There was a problem sending the email with your reset code",
+        500
+      )
     );
   }
 });
@@ -462,9 +463,9 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
 exports.verifyPassResetCode = asyncHandler(async (req, res, next) => {
   // 1-Get user based on reset code
   const hashedResetCode = crypto
-    .createHash('sha256')
+    .createHash("sha256")
     .update(req.body.resetCode)
-    .digest('hex');
+    .digest("hex");
   const user = await User.findOne({
     passwordResetCode: hashedResetCode,
     // Check if the reset code is valid
@@ -473,13 +474,13 @@ exports.verifyPassResetCode = asyncHandler(async (req, res, next) => {
   });
 
   if (!user) {
-    return next(new ApiError('Reset code invalid or expired', 400));
+    return next(new ApiError("Reset code invalid or expired", 400));
   }
 
   // 2- Reset code is valid
   await User.updateOne({ _id: user._id }, { passwordResetVerified: true });
 
-  res.status(200).json({ status: 'success' });
+  res.status(200).json({ status: "success" });
 });
 //@desc verify email code
 //@route POST /api/v1/auth/verifyEmailCode
@@ -488,9 +489,9 @@ exports.verifyEmail = asyncHandler(async (req, res, next) => {
   const { code } = req.body;
   // 1-Get user based on email code
   const hashedEmailCode = crypto
-    .createHash('sha256')
+    .createHash("sha256")
     .update(code)
-    .digest('hex');
+    .digest("hex");
   const user = await User.findOne({
     emailVerificationCode: hashedEmailCode,
     // Check if the email code is valid
@@ -499,7 +500,7 @@ exports.verifyEmail = asyncHandler(async (req, res, next) => {
   });
 
   if (!user) {
-    return next(new ApiError('Email code invalid or expired', 400));
+    return next(new ApiError("Email code invalid or expired", 400));
   }
   // 2- Email code is valid
   await User.updateOne(
@@ -510,13 +511,13 @@ exports.verifyEmail = asyncHandler(async (req, res, next) => {
         active: true,
       },
       $unset: {
-        emailVerificationCode: '', // Use $unset to remove the fields
-        emailVerificationExpires: '',
+        emailVerificationCode: "", // Use $unset to remove the fields
+        emailVerificationExpires: "",
       },
-    },
+    }
   );
 
-  res.status(200).json({ status: 'success' });
+  res.status(200).json({ status: "success" });
 });
 //@desc get new email code and send it to user
 //@route POST /api/v1/auth/resendEmailCode
@@ -532,19 +533,19 @@ exports.resendEmailCode = asyncHandler(async (req, res, next) => {
     return next(
       new ApiError(
         `There is no user with email ${email} or email already verified`,
-        404,
-      ),
+        404
+      )
     );
   }
 
   //  Generate new email code and hash it
   const verificationCode = Math.floor(
-    100000 + Math.random() * 900000,
+    100000 + Math.random() * 900000
   ).toString();
   const hashedVerificationCode = crypto
-    .createHash('sha256')
+    .createHash("sha256")
     .update(verificationCode)
-    .digest('hex');
+    .digest("hex");
 
   //update user with new email code and expiration time
   await User.updateOne(
@@ -552,7 +553,7 @@ exports.resendEmailCode = asyncHandler(async (req, res, next) => {
     {
       emailVerificationCode: hashedVerificationCode,
       emailVerificationExpires: Date.now() + 10 * 60 * 1000, // 10 minutes from now
-    },
+    }
   );
 
   const htmlEmail = `
@@ -642,12 +643,12 @@ exports.resendEmailCode = asyncHandler(async (req, res, next) => {
 
   await sendEmail({
     to: user.email,
-    subject: 'Your Email Verification Code (valid for 10 minutes)',
+    subject: "Your Email Verification Code (valid for 10 minutes)",
     html: htmlEmail,
   });
 
   res.status(200).json({
-    status: 'success',
+    status: "success",
     message: `Email Verification Code Sent Successfully To ${user.email}`,
   });
 });
@@ -660,13 +661,13 @@ exports.resetPassword = asyncHandler(async (req, res, next) => {
   const user = await User.findOne({ email: req.body.email });
   if (!user) {
     return next(
-      new ApiError(`There is no user with that email ${req.body.email}`, 404),
+      new ApiError(`There is no user with that email ${req.body.email}`, 404)
     );
   }
 
   // 2- Check if reset code is verified
   if (!user.passwordResetVerified) {
-    return next(new ApiError('Reset code not verified', 400));
+    return next(new ApiError("Reset code not verified", 400));
   }
 
   const newPass = await bcrypt.hash(req.body.newPassword, 12);
@@ -678,12 +679,12 @@ exports.resetPassword = asyncHandler(async (req, res, next) => {
         password: newPass, // Update the password field
       },
       $unset: {
-        passwordResetCode: '', // Remove passwordResetCode
-        passwordResetExpires: '', // Remove passwordResetExpires
-        passwordResetVerified: '', // Remove passwordResetVerified
+        passwordResetCode: "", // Remove passwordResetCode
+        passwordResetExpires: "", // Remove passwordResetExpires
+        passwordResetVerified: "", // Remove passwordResetVerified
       },
     },
-    { new: true },
+    { new: true }
   );
 
   // 4- Generate token and send response
@@ -698,49 +699,49 @@ exports.getLoggedUserData = async (req, res, next) => {
     let token;
     if (
       req.headers.authorization &&
-      req.headers.authorization.startsWith('Bearer')
+      req.headers.authorization.startsWith("Bearer")
     ) {
-      token = req.headers.authorization.split(' ')[1];
+      token = req.headers.authorization.split(" ")[1];
     }
     if (!token) {
-      return next(new ApiError('you are not login,please login first', 401));
+      return next(new ApiError("you are not login,please login first", 401));
     }
     //2- verify token (no change happens,expired token)
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY); // 3- Check if user exists
     const currentUser = await User.findById(decoded.userId);
     if (!currentUser) {
-      return next(new ApiError('User no longer exists', 401));
+      return next(new ApiError("User no longer exists", 401));
     }
     //4-check if user changed password after token generated
     if (currentUser.passwordChangedAt) {
       //convert data to timestamp by =>getTime()
       const passwordChangedTimestamp = parseInt(
         currentUser.passwordChangedAt.getTime() / 1000,
-        10,
+        10
       );
       //it mean password changer after token generated
       if (passwordChangedTimestamp > decoded.iat) {
         return next(
           new ApiError(
-            'user recently changed his password,please login again',
-            401,
-          ),
+            "user recently changed his password,please login again",
+            401
+          )
         );
       }
     } //----------------------
     // Select specific fields for logged-in user
     const user = await User.findById(currentUser._id).select(
-      'name email profileImg authToReview coverImg role timeSpent ' +
-        'isMarketer isInstructor isCustomerService startMarketing ' +
-        'idNumber phone country idVerification note lang',
+      "name email profileImg authToReview coverImg role timeSpent " +
+        "isMarketer isInstructor isCustomerService startMarketing " +
+        "idNumber phone country idVerification note lang"
     );
 
     if (!user) {
-      return next(new ApiError('User not found', 404));
+      return next(new ApiError("User not found", 404));
     }
 
     res.status(200).json({
-      status: 'success',
+      status: "success",
       data: user,
     });
   } catch (err) {

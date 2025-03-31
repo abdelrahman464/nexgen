@@ -48,6 +48,10 @@ const MarketingLogsSchema = new mongoose.Schema(
           type: mongoose.Schema.Types.ObjectId,
           ref: "User",
         },
+        order: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Order",
+        },
         amount: Number,
         itemType: String, //course or package
         item: { type: String, i18n: true }, //course or package
@@ -129,7 +133,6 @@ const MarketingLogsSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
 
 MarketingLogsSchema.pre("save", function (next) {
   if (this.invitationKeys && Array.isArray(this.invitationKeys)) {
