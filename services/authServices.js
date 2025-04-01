@@ -7,12 +7,10 @@ const asyncHandler = require('express-async-handler');
 const User = require('../models/userModel');
 const ApiError = require('../utils/apiError');
 const sendEmail = require('../utils/sendEmail');
-const { getLoggedUserData } = require('./userService');
 const generateToken = require('../utils/generateToken');
 const {
   getMarketerFromInvitationKey,
 } = require('./marketing/marketingAnalyticsService');
-const MarketingLog = require('../models/MarketingModel');
 // @desc    User Register,login with Google
 // @route   POST /api/v1/auth/google
 // @access  Public
