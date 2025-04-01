@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
   {
+    lang: String,
     invitor: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

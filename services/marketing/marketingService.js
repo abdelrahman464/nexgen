@@ -81,6 +81,7 @@ const updateSellerSales = async (data, profitPercentage) => {
       $push: {
         sales: {
           purchaser: data.purchaser,
+          order: data.order,
           amount: data.amount,
           itemType: data.itemType,
           item: data.item || null,
@@ -154,6 +155,7 @@ exports.calculateProfits = async (
     const data = {
       marketerId: marketerMarketLog.marketer,
       purchaser: user._id,
+      order:details.order,
       amount: details.amount,
       itemType: details.itemType,
       item: details.item,
@@ -433,7 +435,7 @@ exports.getMarketerChildren = async (req, res, next) => {
     const marketerId = req.params.id;
 
     const teamMembers = await User.find({ invitor: marketerId })
-      .select("name email profileImg createdAt timeSpent")
+      .select("name email phone profileImg createdAt timeSpent")
       .lean();
 
     if (teamMembers.length === 0) {

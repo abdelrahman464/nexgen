@@ -95,6 +95,25 @@ const getCurrentMonthSalesMoney = (orders) =>
     return acc;
   }, 0);
 //--------------------------------------------------------------------------
+function getMonthRange(yyyyMm) {
+  // Validate input format (yyyy-mm)
+  if (!/^\d{4}-\d{2}$/.test(yyyyMm)) {
+    throw new Error('Invalid date format. Please use "yyyy-mm"');
+  }
+
+  const [year, month] = yyyyMm.split("-").map(Number);
+
+  // Create date for the first moment of the month
+  const firstDay = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+
+  // Last millisecond of the month (UTC)
+  const lastDay = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
+  console.log(firstDay, lastDay);
+  return {
+    $gte: firstDay,
+    $lte: lastDay,
+  };
+}
 //the coming functions are for page1 => analytics
 exports.getTotalSalesAnalytics = async (req, res) => {
   try {
@@ -112,9 +131,13 @@ exports.getTotalSalesAnalytics = async (req, res) => {
 
     const usersIds = users.map((user) => user._id);
     //get order of his users in this month and year
-    const orders = await Order.find({
+    const filter = {
       user: { $in: usersIds },
-    });
+    };
+    if (req.query.month) {
+      filter.createdAt = getMonthRange(req.query.month);
+    }
+    const orders = await Order.find(filter);
     //validation => if no orders return error
     if (orders.length === 0)
       throw new ApiError(404, "No orders found for this marketer");
@@ -372,9 +395,9 @@ exports.getMarketerFromInvitationKey = async (invitationKey) => {
   //   invitationKeys: invitationKey, // Matches the invitationKey in the array
   // }).select("_id marketer");
   //replace spaces and add -
-    
+
   const marketer = await MarketingLog.findOne({
-    invitationKeys: { $in: [invitationKey] } // Checks if invitationKey exists in the array
+    invitationKeys: { $in: [invitationKey] }, // Checks if invitationKey exists in the array
   }).select("_id marketer");
 
   if (!marketer) return false;

@@ -38,6 +38,7 @@ async function createOrder(userId, courseId, price, isPaid) {
   });
 
   if (!order) throw new Error("Couldn't create order");
+  return order;
 }
 
 async function createCourseProgress(userId, courseId) {
@@ -170,6 +171,7 @@ const createCoursePackageOrder = async (id, userId, isPaid) => {
       email: user.email,
       amount: coursePackagePrice,
       itemType: "package",
+      order: order._id,
       item: coursePackage.title,
     };
     //4) calculate profits
@@ -247,6 +249,7 @@ const createPackageOrder = asyncHandler(async (id, userId, isPaid) => {
       email: user.email,
       amount: packagePrice,
       itemType: "package",
+      order: order._id,
       item: package.title,
     };
     await calculateProfits(data);
@@ -269,7 +272,7 @@ const createCourseOrder = async (id, userId, isPaid) => {
       ? course.priceAfterDiscount
       : course.price;
 
-    await createOrder(user._id, course._id, coursePrice, isPaid);
+    const order = await createOrder(user._id, course._id, coursePrice, isPaid);
     await createCourseProgress(user._id, course._id);
     await addUserToGroupChat(user._id, course._id);
     await subscribeUserToPackage(user._id, course._id);
@@ -286,6 +289,7 @@ const createCourseOrder = async (id, userId, isPaid) => {
         amount: coursePrice,
         itemType: "course",
         item: course.title,
+        order: order._id,
         instructorId: instructorId,
       });
     }

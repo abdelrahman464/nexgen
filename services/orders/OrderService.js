@@ -236,6 +236,7 @@ const createCourseOrderHandler = async (paymentDetails) => {
       date: order.createdAt,
       itemType: "course",
       item: course.title,
+      order: order._id,
       instructorId: course.instructorPercentage > 0 ? course.instructor : null,
     });
     // Generate the PDF
@@ -316,6 +317,7 @@ const createPackageOrderHandler = async (paymentDetails) => {
       email: user.email,
       amount: price,
       itemType: "package",
+      order: order._id,
       item: package.title,
     });
 
@@ -386,6 +388,7 @@ const createCoursePackageOrderHandler = async (paymentDetails) => {
       email: user.email,
       amount: price,
       itemType: "coursePackage",
+      order: order._id,
       item: coursePackage.title,
     });
     // Generate the PDF
