@@ -1,119 +1,88 @@
 const LeaderBoard = require("../models/leaderBoardModel");
 
 exports.addMarketerToLeaderBoard = async (marketerId, totalSalesMoney) => {
+  totalSalesMoney = 1400;
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
 
+  // Find or create leaderboard document
   let leaderBoardDoc = await LeaderBoard.findOne({
     year: currentYear,
     month: currentMonth,
-  }).lean(); // lean() to get plain JS object instead of Mongoose document
+  });
+
   if (!leaderBoardDoc) {
-    await LeaderBoard.create({
+    return await LeaderBoard.create({
       year: currentYear,
       month: currentMonth,
       firstRank: {
         amount: totalSalesMoney,
         marketer: marketerId,
-        gotInAt: Date.now(),
+        gotInAt: new Date(),
       },
-      secondRank: {},
-      thirdRank: {},
+      secondRank: { amount: 0 },
+      thirdRank: { amount: 0 },
     });
-    return true;
   }
-  //check if the marketer is already in the leader board
-  if (
-    leaderBoardDoc.firstRank &&
-    leaderBoardDoc.firstRank.marketer.toString() === marketerId.toString()
-  ) {
-    leaderBoardDoc.firstRank.amount = totalSalesMoney;
-  } else if (
-    leaderBoardDoc?.secondRank?.marketer?.toString() === marketerId.toString()
-  ) {
-    leaderBoardDoc.secondRank.amount = totalSalesMoney;
-    leaderBoardDoc = secondRank(leaderBoardDoc);
-  } else if (
-    leaderBoardDoc?.thirdRank?.marketer?.toString() === marketerId.toString()
-  ) {
-    leaderBoardDoc.thirdRank.amount = totalSalesMoney;
-    leaderBoardDoc = thirdRank(leaderBoardDoc);
+  // Create a deep copy of current ranks to avoid reference issues
+  const currentRanks = {
+    firstRank: leaderBoardDoc.firstRank?.marketer
+      ? { ...leaderBoardDoc.firstRank.toObject() }
+      : { amount: 0 },
+    secondRank: leaderBoardDoc.secondRank?.marketer
+      ? { ...leaderBoardDoc.secondRank.toObject() }
+      : { amount: 0 },
+    thirdRank: leaderBoardDoc.thirdRank?.marketer
+      ? { ...leaderBoardDoc.thirdRank.toObject() }
+      : { amount: 0 },
+  };
+
+  // Check if marketer exists in any rank and update amount
+  const ranks = ["firstRank", "secondRank", "thirdRank"];
+  let marketerFound = false;
+
+  for (const rank of ranks) {
+    if (
+      currentRanks[rank]?.marketer?._id.toString() === marketerId.toString()
+    ) {
+      currentRanks[rank].amount = totalSalesMoney;
+      marketerFound = true;
+      break;
+    }
   }
-  //if the marketer is not in the leader board
-  else {
-    leaderBoardDoc = await reformLeaderBoard(
-      leaderBoardDoc,
-      marketerId,
-      totalSalesMoney
-    );
-  }
-  //update the leader board
-  await LeaderBoard.findByIdAndUpdate(leaderBoardDoc._id, leaderBoardDoc);
+  // If marketer not found in any rank, add them to appropriate position
+  // Prepare all entries including the new marketer if not found
+  const allEntries = [
+    currentRanks.firstRank,
+    currentRanks.secondRank,
+    currentRanks.thirdRank,
+    ...(!marketerFound
+      ? [
+          {
+            amount: totalSalesMoney,
+            marketer: marketerId,
+            gotInAt: new Date(),
+          },
+        ]
+      : []),
+  ].filter((entry) => entry?.marketer); // Remove empty ranks
+
+  allEntries.sort((a, b) => b.amount - a.amount);
+
+  //till here
+  leaderBoardDoc.firstRank = allEntries[0]
+    ? { ...allEntries[0] }
+    : { amount: 0 };
+  leaderBoardDoc.secondRank = allEntries[1]
+    ? { ...allEntries[1] }
+    : { amount: 0 };
+  leaderBoardDoc.thirdRank = allEntries[2]
+    ? { ...allEntries[2] }
+    : { amount: 0 };
+  // Save the updated document
+  await leaderBoardDoc.save();
 
   return true;
-};
-//---------------------------------------------------
-const reformLeaderBoard = async (leaderBoard, marketerId, totalSalesMoney) => {
-  if (totalSalesMoney > leaderBoard.firstRank.amount) {
-    leaderBoard.thirdRank = leaderBoard.secondRank;
-    leaderBoard.secondRank = leaderBoard.firstRank;
-    leaderBoard.firstRank = {
-      amount: totalSalesMoney,
-      marketer: marketerId,
-      gotInAt: Date.now(),
-    };
-  } else if (!leaderBoard.secondRank) {
-    leaderBoard.secondRank = {
-      amount: totalSalesMoney,
-      marketer: marketerId,
-      gotInAt: Date.now(),
-    };
-  } else if (totalSalesMoney > leaderBoard.secondRank.amount) {
-    leaderBoard.thirdRank = leaderBoard.secondRank;
-    leaderBoard.secondRank = {
-      amount: totalSalesMoney,
-      marketer: marketerId,
-      gotInAt: Date.now(),
-    };
-  } else if (!leaderBoard.thirdRank) {
-    leaderBoard.thirdRank = {
-      amount: totalSalesMoney,
-      marketer: marketerId,
-      gotInAt: Date.now(),
-    };
-  } else if (totalSalesMoney > leaderBoard.thirdRank.amount) {
-    leaderBoard.thirdRank = {
-      amount: totalSalesMoney,
-      marketer: marketerId,
-      gotInAt: Date.now(),
-    };
-  }
-  return leaderBoard;
-};
-//---------------------------------------------------
-const secondRank = (leaderBoard) => {
-  if (leaderBoard.secondRank.amount > leaderBoard.firstRank.amount) {
-    //swap the two ranks
-    const temp = leaderBoard.firstRank;
-    leaderBoard.firstRank = leaderBoard.secondRank;
-    leaderBoard.secondRank = temp;
-  }
-  return leaderBoard;
-};
-//---------------------------------------------------
-const thirdRank = (leaderBoard) => {
-  if (leaderBoard.thirdRank.amount > leaderBoard.firstRank.amount) {
-    const temp = leaderBoard.firstRank;
-    leaderBoard.firstRank = leaderBoard.thirdRank;
-    leaderBoard.thirdRank = temp;
-  }
-  //thirdRank may be the original , or the firstRank after the above swap
-  if (leaderBoard.thirdRank.amount > leaderBoard.secondRank.amount) {
-    const temp = leaderBoard.secondRank;
-    leaderBoard.secondRank = leaderBoard.thirdRank;
-    leaderBoard.thirdRank = temp;
-  }
-  return leaderBoard;
 };
 //---------------------------------------------------
 exports.getLeaderBoard = async (req, res) => {

@@ -435,7 +435,7 @@ exports.getMarketerChildren = async (req, res, next) => {
     const marketerId = req.params.id;
 
     const teamMembers = await User.find({ invitor: marketerId })
-      .select("name email profileImg createdAt timeSpent")
+      .select("name email phone profileImg createdAt timeSpent")
       .lean();
 
     if (teamMembers.length === 0) {
