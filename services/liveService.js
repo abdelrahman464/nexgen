@@ -104,17 +104,10 @@ exports.SendEmailsToLiveFollowers = asyncHandler(async (req, res, next) => {
   //get html template
   try {
     const emailPromises = users.map(async (follower) => {
-      const emailMessage =
-        req.body.info ||
-        (follower.lang === "ar"
-          ? `نود أن نخبرك بأن البث المباشر سيبدأ قريباً، كن مستعداً`
-          : `We want to inform you that the live session is starting soon, be ready`);
-      const htmlEmail = this.getHtmlTemplate(
-        follower,
-        live,
-        emailMessage,
-        follower.lang
-      );
+      const emailMessage = req.body.info
+        ? req.body.info
+        : `نود أن نخبرك بأن البث المباشر سيبدأ قريباً، كن مستعداً`;
+      const htmlEmail = this.getHtmlTemplate(follower, live, emailMessage);
       await sendEmail({
         to: follower.email,
         subject: `Remember the live ${live.title}`,
@@ -145,23 +138,10 @@ exports.getHtmlTemplate = (user, live, emailMessage, lang) => `
     <title>Your Live Session Reminder</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary: #0084FF;
-            --primary-faded: #F2F8FF;
-            --primary-dark: #0066CC;
-            --text-1: #1F2937;
-            --text-2: #4B5563;
-            --background: #FFFFFF;
-            --border: #E5E7EB;
-            --success: #10B981;
-            --warning: #EF4444;
-            --accent: #6366F1;
-        }
-
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             line-height: 1.6;
-            color: var(--text-1);
+            color: #1F2937;
             margin: 0;
             padding: 0;
             background-color: #F3F4F6;
@@ -171,7 +151,7 @@ exports.getHtmlTemplate = (user, live, emailMessage, lang) => `
         .container {
             max-width: 600px;
             margin: 40px auto;
-            background: var(--background);
+            background: #FFFFFF;
             border-radius: 24px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
             padding: 40px;
@@ -181,7 +161,7 @@ exports.getHtmlTemplate = (user, live, emailMessage, lang) => `
             text-align: center;
             margin-bottom: 32px;
             padding-bottom: 32px;
-            border-bottom: 1px dashed var(--border);
+            border-bottom: 1px dashed #E5E7EB;
         }
 
         .logo {
@@ -195,7 +175,7 @@ exports.getHtmlTemplate = (user, live, emailMessage, lang) => `
         }
 
         h1 {
-            color: var(--text-1);
+            color: #1F2937;
             font-size: 28px;
             font-weight: 700;
             margin: 0;
@@ -203,7 +183,7 @@ exports.getHtmlTemplate = (user, live, emailMessage, lang) => `
         }
 
         .subtitle {
-            color: var(--text-2);
+            color: #4B5563;
             font-size: 16px;
             margin-top: 8px;
         }
@@ -227,7 +207,7 @@ exports.getHtmlTemplate = (user, live, emailMessage, lang) => `
             position: absolute;
             top: 16px;
             left: 16px;
-            background: var(--warning);
+            background: #EF4444;
             color: white;
             padding: 6px 12px;
             border-radius: 20px;
@@ -265,7 +245,7 @@ exports.getHtmlTemplate = (user, live, emailMessage, lang) => `
 
         .live-details {
             padding: 24px;
-            background: linear-gradient(135deg, var(--primary-faded) 0%, #FFFFFF 100%);
+            background: linear-gradient(135deg, #F2F8FF 0%, #FFFFFF 100%);
             border-radius: 16px;
             margin: 24px 0;
             border: 1px solid rgba(0, 132, 255, 0.1);
@@ -274,12 +254,12 @@ exports.getHtmlTemplate = (user, live, emailMessage, lang) => `
         .live-title {
             font-size: 24px;
             font-weight: 700;
-            color: var(--text-1);
+            color: #1F2937;
             margin-bottom: 12px;
         }
 
         .live-description {
-            color: var(--text-2);
+            color: #4B5563;
             font-size: 16px;
             line-height: 1.6;
             margin-bottom: 24px;
@@ -308,12 +288,12 @@ exports.getHtmlTemplate = (user, live, emailMessage, lang) => `
 
         .host-name {
             font-weight: 600;
-            color: var(--text-1);
+            color: #1F2937;
             margin-bottom: 4px;
         }
 
         .host-title {
-            color: var(--text-2);
+            color: #4B5563;
             font-size: 14px;
         }
 
@@ -323,7 +303,7 @@ exports.getHtmlTemplate = (user, live, emailMessage, lang) => `
             gap: 8px;
             margin-top: 24px;
             padding: 16px;
-            background-color: var(--accent);
+            background-color: #6366F1;
             color: white;
             border-radius: 12px;
         }
@@ -338,8 +318,8 @@ exports.getHtmlTemplate = (user, live, emailMessage, lang) => `
 
         .cta-button {
             display: block;
-            background-color: var(--primary);
-            color: white;
+            background-color: #0084FF;
+            color: #FFF !important;
             padding: 16px 32px;
             border-radius: 12px;
             text-decoration: none;
@@ -347,20 +327,19 @@ exports.getHtmlTemplate = (user, live, emailMessage, lang) => `
             margin-top: 24px;
             text-align: center;
             transition: all 0.2s ease;
-
         }
 
         .cta-button:hover {
-            background-color: var(--primary-dark);
+            background-color: #0066CC;
         }
 
         .footer {
             text-align: center;
-            color: var(--text-2);
+            color: #4B5563;
             font-size: 14px;
             margin-top: 40px;
             padding-top: 32px;
-            border-top: 1px dashed var(--border);
+            border-top: 1px dashed #E5E7EB;
         }
 
         .social-links {
@@ -377,13 +356,13 @@ exports.getHtmlTemplate = (user, live, emailMessage, lang) => `
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            background-color: var(--primary-faded);
-            color: var(--primary);
+            background-color: #F2F8FF;
+            color: #0084FF;
             transition: all 0.2s ease;
         }
 
         .social-link:hover {
-            background-color: var(--primary);
+            background-color: #0084FF;
             color: white;
         }
 
@@ -414,8 +393,7 @@ dir="${lang === "ar" ? "rtl" : "ltr"}"
     <div class="container">
         <div class="header">
             <div class="logo">
-
-                <img src="https://nexgen-academy.com/logos/logo.svg" alt="NextGen Academy" />
+                <img src="https://nexgen-academy.com/logos/visa.png" alt="NextGen Academy" />
             </div>
             <h1>
             ${lang === "ar" ? "تذكير للبث المباشر" : "Live Session Reminder"}
