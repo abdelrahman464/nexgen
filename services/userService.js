@@ -830,6 +830,11 @@ exports.getMyFollowersAndFollowing = async (req, res, next) => {
 exports.actionOnIdDocument = async (req, res, next) => {
   try {
     const { action, note, idNumber, name } = req.body;
+    if (action === 'verified') {
+      if (!idNumber || !name) {
+        return next(new ApiError('Please provide idNumber and name', 400));
+      }
+    }
     // Toggle approval status of ID document
     const user = await User.findById(req.params.id);
 
