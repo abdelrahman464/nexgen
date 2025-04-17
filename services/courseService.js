@@ -1,43 +1,42 @@
-const sharp = require("sharp");
-const fs = require("fs");
-const mongoose = require("mongoose");
-const { v4: uuidv4 } = require("uuid");
-const asyncHandler = require("express-async-handler");
+const sharp = require('sharp');
+const fs = require('fs');
+const mongoose = require('mongoose');
+const { v4: uuidv4 } = require('uuid');
+const asyncHandler = require('express-async-handler');
 
-const ApiError = require("../utils/apiError");
-const factory = require("./handllerFactory");
-const Chat = require("../models/ChatModel");
-const Course = require("../models/courseModel");
-const Notification = require("../models/notificationModel");
-const Order = require("../models/orderModel");
-const Lesson = require("../models/lessonModel");
-const CourseProgress = require("../models/courseProgressModel");
-const User = require("../models/userModel");
+const ApiError = require('../utils/apiError');
+const factory = require('./handllerFactory');
+const Chat = require('../models/ChatModel');
+const Course = require('../models/courseModel');
+const Notification = require('../models/notificationModel');
+const Order = require('../models/orderModel');
+const Lesson = require('../models/lessonModel');
+const CourseProgress = require('../models/courseProgressModel');
+const User = require('../models/userModel');
 
-const { uploadSingleFile } = require("../middlewares/uploadImageMiddleware");
-const { createOne, deleteOne } = require("./instructorProfitsService");
-
+const { uploadSingleFile } = require('../middlewares/uploadImageMiddleware');
+const { createOne, deleteOne } = require('./instructorProfitsService');
 
 //upload course image
-exports.uploadCourseImage = uploadSingleFile("image");
+exports.uploadCourseImage = uploadSingleFile('image');
 //upload certificate file
-exports.uploadCertificateFile = uploadSingleFile("file");
+exports.uploadCertificateFile = uploadSingleFile('file');
 //image processing
 exports.resizeImage = asyncHandler(async (req, res, next) => {
   const { file } = req; // Access the uploaded file
   if (file) {
     const fileExtension = file.originalname.substring(
-      file.originalname.lastIndexOf(".")
+      file.originalname.lastIndexOf('.'),
     ); // Extract file extension
     const newFileName = `course-${uuidv4()}-${Date.now()}${fileExtension}`; // Generate new file name
 
     // Check if the file is an image for the profile picture
-    if (file.mimetype.startsWith("image/")) {
+    if (file.mimetype.startsWith('image/')) {
       // Process and save the image file using sharp for resizing, conversion, etc.
       const filePath = `uploads/courses/${newFileName}`;
 
       await sharp(file.buffer)
-        .toFormat("webp") // Convert to WebP
+        .toFormat('webp') // Convert to WebP
         .webp({ quality: 95 })
         .toFile(filePath);
 
@@ -46,9 +45,9 @@ exports.resizeImage = asyncHandler(async (req, res, next) => {
     } else {
       return next(
         new ApiError(
-          "Unsupported file type. Only images are allowed for courses.",
-          400
-        )
+          'Unsupported file type. Only images are allowed for courses.',
+          400,
+        ),
       );
     }
   }
@@ -57,9 +56,9 @@ exports.resizeImage = asyncHandler(async (req, res, next) => {
 //store certificate file
 exports.storeCertificateFile = asyncHandler(async (req, res, next) => {
   const { file } = req; // Access the uploaded file
-  if (file && file.mimetype === "application/pdf") {
+  if (file && file.mimetype === 'application/pdf') {
     const fileExtension = file.originalname.substring(
-      file.originalname.lastIndexOf(".")
+      file.originalname.lastIndexOf('.'),
     ); // Extract file extension
     const newFileName = `certificate-${uuidv4()}${fileExtension}`; // Generate new file name
 
@@ -68,7 +67,7 @@ exports.storeCertificateFile = asyncHandler(async (req, res, next) => {
     // Use fs module to write the PDF file
     fs.writeFile(filePath, file.buffer, (err) => {
       if (err) {
-        return next(new ApiError("Error saving PDF file", 500));
+        return next(new ApiError('Error saving PDF file', 500));
       }
       // Update the req.body to include the path for the PDF file
       req.body.file = newFileName;
@@ -77,9 +76,9 @@ exports.storeCertificateFile = asyncHandler(async (req, res, next) => {
   } else {
     return next(
       new ApiError(
-        "Unsupported file type. Only PDFs are allowed for certificate.",
-        400
-      )
+        'Unsupported file type. Only PDFs are allowed for certificate.',
+        400,
+      ),
     );
   }
 });
@@ -151,19 +150,19 @@ exports.getMyCourses = asyncHandler(async (req, res, next) => {
     coursesDetails.map(async (course) => {
       const localizedCourse = Course.schema.methods.toJSONLocalizedOnly(
         course,
-        req.locale
+        req.locale,
       );
 
       const courseId = course._id;
       const courseProgress = await CourseProgress.findOne({
         user: userId,
         course: courseId,
-      }).populate("progress.lesson", "title order");
+      }).populate('progress.lesson', 'title order');
 
       const allLessons = await Lesson.find(
         { course: courseId },
-        "_id"
-      ).populate("course", "title");
+        '_id',
+      ).populate('course', 'title');
 
       if (!courseProgress) {
         return { ...localizedCourse, totalProgress: 0 };
@@ -175,7 +174,7 @@ exports.getMyCourses = asyncHandler(async (req, res, next) => {
 
       // Process completed exams
       courseProgress.progress.forEach((item) => {
-        if (item.status === "Completed") {
+        if (item.status === 'Completed') {
           completedLessonsCount += 1;
           totalExamScore += item.examScore;
           if (item.lesson) attemptedLessonIds.add(item.lesson._id.toString());
@@ -195,15 +194,15 @@ exports.getMyCourses = asyncHandler(async (req, res, next) => {
         (
           examsCompletedPercentage * lessonExamsWeight +
           finalExamCompletionPercentage * finalExamWeight
-        ).toFixed(2)
+        ).toFixed(2),
       );
 
       return { ...localizedCourse, totalProgress };
-    })
+    }),
   );
 
   res.status(200).json({
-    status: "success",
+    status: 'success',
     data: coursesWithProgress,
   });
 });
@@ -216,19 +215,19 @@ exports.getAllCourses = factory.getALl(Course);
 // Get a specific course by ID
 exports.getCourseById = asyncHandler(async (req, res, next) => {
   const course = await Course.findById(req.params.id)
-    .populate("reviews")
-    .populate("instructor", "name email profileImg");
+    .populate('reviews')
+    .populate('instructor', 'name email profileImg');
   if (!course) {
     return next(
-      new ApiError(`No course found for this id ${req.params.id}`, 404)
+      new ApiError(`No course found for this id ${req.params.id}`, 404),
     );
   }
   const localizedResult = Course.schema.methods.toJSONLocalizedOnly(
     course,
-    req.locale
+    req.locale,
   );
   return res.status(200).json({
-    status: "success",
+    status: 'success',
     data: localizedResult,
   });
 });
@@ -276,7 +275,7 @@ exports.updateCourse = factory.updateOne(Course);
 //         ).session(session),
 //         //delete the package and all subscription related to this package
 //         Package.deleteMany({ course: course._id }).session(session),
-      
+
 //         CourseProgress.updateMany(
 //           { course: course._id },
 //           { $unset: { course: "" } }
@@ -308,7 +307,7 @@ exports.addUserToCourse = asyncHandler(async (req, res, next) => {
   const order = await Order.findOne({ user: user._id, course: req.params.id });
   if (order) {
     return next(
-      new ApiError(`user ${user.name} already subscribed to this course`, 404)
+      new ApiError(`user ${user.name} already subscribed to this course`, 404),
     );
   }
 
@@ -317,7 +316,7 @@ exports.addUserToCourse = asyncHandler(async (req, res, next) => {
     user: user._id,
     course: req.params.id,
     totalOrderPrice: 0,
-    paymentMethodType: "free",
+    paymentMethodType: 'free',
     isPaid: true,
     paidAt: Date.now(),
   });
@@ -330,8 +329,8 @@ exports.addUserToCourse = asyncHandler(async (req, res, next) => {
 
   // User added to the course successfully
   res.status(200).json({
-    status: "success",
-    message: "User added to the course",
+    status: 'success',
+    message: 'User added to the course',
   });
 });
 
@@ -348,66 +347,66 @@ exports.getCourseDetails = asyncHandler(async (req, res, next) => {
 
   // Fetch course details and user progress in parallel
   const [course, usersProgressAggregation] = await Promise.all([
-    Course.findById(courseId).populate("category", "title"),
+    Course.findById(courseId).populate('category', 'title'),
     CourseProgress.aggregate([
       { $match: { course: mongoose.Types.ObjectId(courseId) } },
       {
         $lookup: {
-          from: "users",
-          localField: "user",
-          foreignField: "_id",
-          as: "userDetails",
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'userDetails',
         },
       },
-      { $unwind: "$userDetails" },
+      { $unwind: '$userDetails' },
       {
         $lookup: {
-          from: "exams",
-          let: { courseId: "$course", modelExam: "$modelExam" },
+          from: 'exams',
+          let: { courseId: '$course', modelExam: '$modelExam' },
           pipeline: [
             {
               $match: {
                 $expr: {
                   $and: [
-                    { $eq: ["$course", "$$courseId"] },
-                    { $eq: ["$type", "course"] },
-                    { $eq: ["$model", "$$modelExam"] },
+                    { $eq: ['$course', '$$courseId'] },
+                    { $eq: ['$type', 'course'] },
+                    { $eq: ['$model', '$$modelExam'] },
                   ],
                 },
               },
             },
           ],
-          as: "finalExam",
+          as: 'finalExam',
         },
       },
-      { $unwind: { path: "$finalExam", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: '$finalExam', preserveNullAndEmptyArrays: true } },
       {
         $addFields: {
           finalExamGrade: {
             $cond: [
-              { $in: ["$status", ["Completed", "failed"]] },
-              { $sum: "$finalExam.questions.grade" },
+              { $in: ['$status', ['Completed', 'failed']] },
+              { $sum: '$finalExam.questions.grade' },
               0,
             ],
           },
           userTotalExamScore: {
-            $sum: "$progress.examScore",
+            $sum: '$progress.examScore',
           },
         },
       },
       {
         $project: {
-          _id: "$userDetails._id",
-          name: "$userDetails.name",
-          email: "$userDetails.email",
+          _id: '$userDetails._id',
+          name: '$userDetails.name',
+          email: '$userDetails.email',
           profileImg: {
             $cond: [
-              { $ne: ["$userDetails.profileImg", null] },
+              { $ne: ['$userDetails.profileImg', null] },
               {
                 $concat: [
                   process.env.BASE_URL,
-                  "/users/",
-                  "$userDetails.profileImg",
+                  '/users/',
+                  '$userDetails.profileImg',
                 ],
               },
               null,
@@ -419,8 +418,8 @@ exports.getCourseDetails = asyncHandler(async (req, res, next) => {
                 $eq: [
                   {
                     $add: [
-                      { $sum: "$progress.possibleGrade" },
-                      "$finalExamGrade",
+                      { $sum: '$progress.possibleGrade' },
+                      '$finalExamGrade',
                     ],
                   },
                   0,
@@ -433,14 +432,14 @@ exports.getCourseDetails = asyncHandler(async (req, res, next) => {
                     $divide: [
                       {
                         $add: [
-                          "$userTotalExamScore",
-                          { $ifNull: ["$score", 0] },
+                          '$userTotalExamScore',
+                          { $ifNull: ['$score', 0] },
                         ],
                       },
                       {
                         $add: [
-                          { $sum: "$progress.possibleGrade" },
-                          "$finalExamGrade",
+                          { $sum: '$progress.possibleGrade' },
+                          '$finalExamGrade',
                         ],
                       },
                     ],
@@ -467,7 +466,7 @@ exports.getCourseDetails = asyncHandler(async (req, res, next) => {
   // Get localized course details
   const localizedCourse = Course.schema.methods.toJSONLocalizedOnly(
     course,
-    req.locale
+    req.locale,
   );
 
   // Get overall statistics using aggregation
@@ -478,26 +477,26 @@ exports.getCourseDetails = asyncHandler(async (req, res, next) => {
         _id: null,
         totalUsers: { $sum: 1 },
         usersCompletedCourse: {
-          $sum: { $cond: [{ $eq: ["$status", "Completed"] }, 1, 0] },
+          $sum: { $cond: [{ $eq: ['$status', 'Completed'] }, 1, 0] },
         },
         usersFailedCourse: {
-          $sum: { $cond: [{ $eq: ["$status", "failed"] }, 1, 0] },
+          $sum: { $cond: [{ $eq: ['$status', 'failed'] }, 1, 0] },
         },
         usersNotTakenCourse: {
-          $sum: { $cond: [{ $eq: ["$status", "notTaken"] }, 1, 0] },
+          $sum: { $cond: [{ $eq: ['$status', 'notTaken'] }, 1, 0] },
         },
         totalCertificatesDeserved: {
-          $sum: { $cond: ["$certificate.isDeserve", 1, 0] },
+          $sum: { $cond: ['$certificate.isDeserve', 1, 0] },
         },
         totalCertificatesTaken: {
-          $sum: { $cond: ["$certificate.isTake", 1, 0] },
+          $sum: { $cond: ['$certificate.isTake', 1, 0] },
         },
       },
     },
   ]);
 
   return res.status(200).json({
-    status: "success",
+    status: 'success',
     data: {
       courseDetails: localizedCourse,
       users: usersProgressAggregation,
@@ -827,34 +826,34 @@ exports.giveCertificate = asyncHandler(async (req, res, next) => {
     {
       course: courseId,
       user: userId,
-      "certificate.isDeserve": true,
+      'certificate.isDeserve': true,
     },
-    { $set: { "certificate.isTake": true, "certificate.file": file } },
-    { new: true }
+    { $set: { 'certificate.isTake': true, 'certificate.file': file } },
+    { new: true },
   );
   if (!courseProgress) {
     return next(
       new ApiError(
         `No course progress found for this user ${userId} and course ${courseId} or user does not deserve a certificate`,
-        404
-      )
+        404,
+      ),
     );
   }
   //send notification to user
   await Notification.create({
     user: userId,
     message: {
-      en: "You have received a certificate",
-      ar: "لقد تلقيت شهادة",
+      en: 'You have received a certificate',
+      ar: 'لقد تلقيت شهادة',
     },
     file,
-    type: "certificate",
+    type: 'certificate',
     course: courseId,
   });
 
   return res.status(200).json({
-    status: "success",
-    msg: "Certificate given successfully",
+    status: 'success',
+    msg: 'Certificate given successfully',
   });
 });
 
@@ -880,8 +879,8 @@ exports.assignInstructorPercentage = asyncHandler(async (req, res, next) => {
     return next(
       new ApiError(
         `Instructor percentage already assigned for this course`,
-        404
-      )
+        404,
+      ),
     );
   }
   // Check if course has an instructor
@@ -895,7 +894,7 @@ exports.assignInstructorPercentage = asyncHandler(async (req, res, next) => {
   const result = await createOne(course.instructor);
   if (!result) {
     return next(
-      new ApiError(`Error while creating instructor profit object`, 500)
+      new ApiError(`Error while creating instructor profit object`, 500),
     );
   }
   await course.save();
@@ -903,8 +902,8 @@ exports.assignInstructorPercentage = asyncHandler(async (req, res, next) => {
 
   //---> <Response>-------------------
   return res.status(200).json({
-    status: "success",
-    msg: "Instructor percentage assigned successfully",
+    status: 'success',
+    msg: 'Instructor percentage assigned successfully',
   });
 });
 
@@ -920,7 +919,7 @@ exports.removeInstructorPercentage = asyncHandler(async (req, res, next) => {
   // Check if course has an instructor
   if (!course.instructorPercentage) {
     return next(
-      new ApiError(`No instructorPercentage found for this course`, 404)
+      new ApiError(`No instructorPercentage found for this course`, 404),
     );
   }
   // Remove the instructor percentage
@@ -931,8 +930,8 @@ exports.removeInstructorPercentage = asyncHandler(async (req, res, next) => {
   await course.save();
   // Return success response
   return res.status(200).json({
-    status: "success",
-    msg: "Instructor percentage removed successfully",
+    status: 'success',
+    msg: 'Instructor percentage removed successfully',
   });
 });
 //-------------------------
@@ -956,3 +955,18 @@ exports.removeInstructorPercentage = asyncHandler(async (req, res, next) => {
 //   });
 //   res.json({ status: "done" });
 // };
+
+// get certificate by certificate._id
+exports.getCertificate = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const courseProgress = await CourseProgress.findOne({
+    'certificate._id': id,
+  });
+  if (!courseProgress) {
+    return next(new ApiError('No Certificate found', 404));
+  }
+  return res.status(200).json({
+    status: 'success',
+    data: courseProgress.certificate.file,
+  });
+});

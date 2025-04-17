@@ -110,7 +110,7 @@ exports.SendEmailsToLiveFollowers = asyncHandler(async (req, res, next) => {
       const htmlEmail = this.getHtmlTemplate(follower, live, emailMessage);
       await sendEmail({
         to: follower.email,
-        subject: `Remember the live ${live.title}`,
+        subject: `Remember the live ${live.title.en}`,
         html: htmlEmail,
       });
     });

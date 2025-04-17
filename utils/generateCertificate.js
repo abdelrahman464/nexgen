@@ -1,220 +1,293 @@
-const fs = require('fs');
+const sharp = require('sharp');
+const fs = require('fs-extra');
 const path = require('path');
-const { createCanvas, loadImage } = require('canvas');
+const bwipjs = require('bwip-js');
+
+// Configuration
+const config = {
+  // Template paths - now with different paths for each language
+  templates: {
+    en: path.join(__dirname, '..', 'assets', 'certificate_template_en.png'),
+    ar: path.join(__dirname, '..', 'assets', 'certificate_template_ar.png'),
+  },
+
+  // Star image path
+  starImage: path.join(__dirname, '..', 'assets', 'star.png'),
+
+  // Output settings
+  outputFolder: path.join(__dirname, '..', 'uploads', 'certificate'),
+  imageDimensions: {
+    width: 1263,
+    height: 893,
+  },
+
+  // Name settings
+  name: {
+    en: {
+      position: { x: 588, y: 335 },
+      fontSize: 48,
+      color: '#1d5a9b',
+    },
+    ar: {
+      position: { x: 588, y: 335 },
+      fontSize: 48,
+      color: '#1d5a9b',
+    },
+  },
+
+  // Course name settings
+  course: {
+    en: {
+      position: { x: 588, y: 640 },
+      fontSize: 32,
+      color: '#fff',
+    },
+    ar: {
+      position: { x: 588, y: 640 },
+      fontSize: 32,
+      color: '#fff',
+    },
+  },
+
+  // Date settings
+  date: {
+    en: {
+      position: { x: 265, y: 800 },
+      fontSize: 28,
+      color: '#1d5a9b',
+      format: 'en-GB',
+    },
+    ar: {
+      position: { x: 265, y: 800 },
+      fontSize: 28,
+      color: '#1d5a9b',
+      format: 'ar-SA',
+    },
+  },
+
+  // Rating settings
+  rating: {
+    en: {
+      position: { x: 588, y: 685 },
+      starSize: 50,
+      starSpacing: 55,
+    },
+    ar: {
+      position: { x: 588, y: 685 },
+      starSize: 50,
+      starSpacing: 55,
+    },
+  },
+
+  // QR Code settings
+  qrCode: {
+    en: {
+      position: { x: 1000, y: 100 },
+      size: 130,
+      color: '507cbf', 
+      background: 'FFFFFF' 
+    },
+    ar: {
+      position: { x: 1000, y: 100 },
+      size: 130,
+      color: '507cbf', 
+      background: 'FFFFFF' 
+    },
+  },
+};
+
+// Ensure output directory exists
+fs.ensureDirSync(config.outputFolder);
 
 /**
- * Generates a certificate with the given name and course name
- * @param {string} name - The recipient's name
- * @param {string} courseName - The name of the completed course
- * @returns {Promise<string>} - Path to the generated certificate
+ * Generate QR code buffer using bwip-js with custom colors
+ * @param {string} certificateId - The ID to encode in the QR code
+ * @param {number} size - The size of the QR code in pixels
+ * @param {string} color - The color of the QR code (hex without #)
+ * @param {string} background - The background color (hex without #)
+ * @returns {Promise<Buffer>} - The QR code as a buffer
  */
-const generateCertificate = async (name, courseName) => {
-  // Create canvas for the certificate
-  const canvas = createCanvas(1000, 600);
-  const ctx = canvas.getContext('2d');
+async function generateQRCode(certificateId, size, color, background) {
+  return new Promise((resolve, reject) => {
+    bwipjs.toBuffer(
+      {
+        bcid: 'qrcode', // Barcode type
+        text: certificateId, // Text to encode
+        scale: 3, // Scale factor
+        height: 10, // Bar height in millimeters
+        width: 10, // Bar width in millimeters
+        includetext: false, // No text below the barcode
+        backgroundcolor: background, // Background color
+        foregroundcolor: color, // QR code color
+      },
+      (err, png) => {
+        if (err) {
+          reject(err);
+        } else {
+          // Resize the QR code to the specified size
+          sharp(png).resize(size, size).toBuffer().then(resolve).catch(reject);
+        }
+      },
+    );
+  });
+}
 
+async function generateCertificate(certificateDetails) {
+  const {
+    studentName,
+    courseName,
+    rating,
+    certificateId,
+    language = 'en',
+  } = certificateDetails;
   try {
-    // Create uploads and certificate directories if they don't exist
-    const uploadsDir = path.join(__dirname, '..', 'uploads');
-    const certificateDir = path.join(uploadsDir, 'certificate');
-
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
+    // Validate language and get the appropriate template
+    if (!['en', 'ar'].includes(language)) {
+      throw new Error(
+        'Unsupported language. Only "en" and "ar" are supported.',
+      );
     }
 
-    if (!fs.existsSync(certificateDir)) {
-      fs.mkdirSync(certificateDir, { recursive: true });
+    // Check if template exists for the specified language
+    const templatePath = config.templates[language];
+    if (!fs.existsSync(templatePath)) {
+      throw new Error(
+        `Certificate template for language "${language}" not found at path: ${templatePath}`,
+      );
     }
 
-    // Draw a default background
-    ctx.fillStyle = '#f5f5f5';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Draw border
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 10;
-    ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
-
-    // Draw decorative inner border
-    ctx.strokeStyle = '#4a86e8';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(35, 35, canvas.width - 70, canvas.height - 70);
-
-    // Add decorative corners
-    const cornerSize = 50;
-    ctx.fillStyle = '#4a86e8';
-    // Top left
-    ctx.beginPath();
-    ctx.moveTo(20, 20);
-    ctx.lineTo(20 + cornerSize, 20);
-    ctx.lineTo(20, 20 + cornerSize);
-    ctx.fill();
-    // Top right
-    ctx.beginPath();
-    ctx.moveTo(canvas.width - 20, 20);
-    ctx.lineTo(canvas.width - 20 - cornerSize, 20);
-    ctx.lineTo(canvas.width - 20, 20 + cornerSize);
-    ctx.fill();
-    // Bottom left
-    ctx.beginPath();
-    ctx.moveTo(20, canvas.height - 20);
-    ctx.lineTo(20 + cornerSize, canvas.height - 20);
-    ctx.lineTo(20, canvas.height - 20 - cornerSize);
-    ctx.fill();
-    // Bottom right
-    ctx.beginPath();
-    ctx.moveTo(canvas.width - 20, canvas.height - 20);
-    ctx.lineTo(canvas.width - 20 - cornerSize, canvas.height - 20);
-    ctx.lineTo(canvas.width - 20, canvas.height - 20 - cornerSize);
-    ctx.fill();
-
-    // Try to load logo
-    let logoImage = null;
-    try {
-      const logoPath = path.join(__dirname, 'iconicLogo.png');
-      if (fs.existsSync(logoPath)) {
-        logoImage = await loadImage(logoPath);
-        // Draw logo at top center
-        const logoWidth = 150;
-        const logoHeight = 80;
-        ctx.drawImage(
-          logoImage,
-          (canvas.width - logoWidth) / 2,
-          40,
-          logoWidth,
-          logoHeight,
-        );
-      } else {
-        // Draw placeholder logo
-        ctx.fillStyle = '#4a86e8';
-        ctx.beginPath();
-        ctx.arc(canvas.width / 2, 70, 40, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 30px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('LOGO', canvas.width / 2, 70);
-      }
-    } catch (error) {
-      console.warn('Could not load logo, using placeholder', error);
-      // Draw placeholder logo
-      ctx.fillStyle = '#4a86e8';
-      ctx.beginPath();
-      ctx.arc(canvas.width / 2, 70, 40, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 30px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('LOGO', canvas.width / 2, 70);
+    // Check if star image exists
+    if (!fs.existsSync(config.starImage)) {
+      throw new Error('Star image not found!');
     }
 
-    // Configure text styling
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    const centerX = canvas.width / 2;
-
-    // Add certificate title - position adjusted to account for logo
-    ctx.font = 'bold 48px Arial';
-    ctx.fillStyle = '#333';
-    ctx.fillText('CERTIFICATE OF COMPLETION', centerX, 150);
-
-    // Add "This certifies that" text
-    ctx.font = '24px Arial';
-    ctx.fillText('This certifies that', centerX, 200);
-
-    // Add name
-    ctx.font = 'bold 48px Arial';
-    ctx.fillStyle = '#000';
-    ctx.fillText(name, centerX, 250);
-
-    // Add "has successfully completed" text
-    ctx.font = '24px Arial';
-    ctx.fillStyle = '#333';
-    ctx.fillText('has successfully completed', centerX, 310);
-
-    // Add course name
-    ctx.font = 'bold 36px Arial';
-    ctx.fillStyle = '#000';
-    ctx.fillText(courseName, centerX, 360);
-
-    // Add date
-    const today = new Date();
-    const formattedDate = today.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-    ctx.font = '20px Arial';
-    ctx.fillStyle = '#333';
-    ctx.fillText(formattedDate, centerX, 420);
-
-    // Try to load signature image
-    let signatureImage = null;
-    try {
-      const signaturePath = path.join(__dirname, 'iconicLogo.png');
-      if (fs.existsSync(signaturePath)) {
-        signatureImage = await loadImage(signaturePath);
-        // Draw signature above the line
-        const sigWidth = 150;
-        const sigHeight = 60;
-        ctx.drawImage(
-          signatureImage,
-          centerX - sigWidth / 2,
-          465 - sigHeight,
-          sigWidth,
-          sigHeight,
-        );
-      } else {
-        // Draw placeholder signature
-        ctx.font = 'italic 30px "Times New Roman"';
-        ctx.fillStyle = '#000';
-        ctx.fillText('John Smith', centerX, 465);
-      }
-    } catch (error) {
-      console.warn('Could not load signature, using placeholder', error);
-      // Draw placeholder signature
-      ctx.font = 'italic 30px "Times New Roman"';
-      ctx.fillStyle = '#000';
-      ctx.fillText('John Smith', centerX, 465);
+    // Validate rating
+    if (rating < 1 || rating > 5) {
+      throw new Error('Rating must be between 1 and 5');
     }
 
-    // Add signature line
-    ctx.beginPath();
-    ctx.moveTo(centerX - 100, 500);
-    ctx.lineTo(centerX + 100, 500);
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    // Validate certificateId
+    if (!certificateId) {
+      throw new Error('Certificate ID is required for QR code generation');
+    }
 
-    ctx.font = '18px Arial';
-    ctx.fillText('Authorized Signature', centerX, 520);
+    // Create output filename
+    const outputFilename = `certificate_${studentName.replace(
+      /\s+/g,
+      '_',
+    )}_${language}.png`;
+    const outputPath = path.join(config.outputFolder, outputFilename);
 
-    // Create the specified output path
-    const outputPath = path.join(
-      certificateDir,
-      `${courseName}-${Date.now()}-${name}.png`,
+    // Create SVG text overlay
+    const date = new Date();
+    const day = date.getDate();
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+
+    const currentDate =
+      language === 'ar'
+        ? `${day}/${month}/${year}`
+        : date.toLocaleDateString(config.date[language].format, {
+            numberingSystem: 'latn',
+          });
+    const svgText = Buffer.from(`
+      <svg width="${config.imageDimensions.width}" height="${config.imageDimensions.height}">
+        <style>
+          .name { font-size: ${config.name[language].fontSize}px; fill: ${config.name[language].color}; font-family: Arial; }
+          .course { font-size: ${config.course[language].fontSize}px; fill: ${config.course[language].color}; font-family: Arial; }
+          .date { font-size: ${config.date[language].fontSize}px; fill: ${config.date[language].color}; font-family: Arial; }
+        </style>
+        <text x="${config.name[language].position.x}" y="${config.name[language].position.y}" class="name" text-anchor="middle" dominant-baseline="middle">
+          ${studentName}
+        </text>
+        
+        <text x="${config.course[language].position.x}" y="${config.course[language].position.y}" class="course" text-anchor="middle" dominant-baseline="middle">
+          ${courseName}
+        </text>
+        
+        <text x="${config.date[language].position.x}" y="${config.date[language].position.y}" class="date" text-anchor="middle" dominant-baseline="middle">
+          ${currentDate}
+        </text>
+      </svg>
+    `);
+
+    // Create star overlays
+    const starOverlays = await Promise.all(
+      Array(rating)
+        .fill()
+        .map(async (_, i) => {
+          // Calculate the offset from center for each star
+          const isEven = rating % 2 === 0;
+          const centerShift = isEven
+            ? config.rating[language].starSpacing / 2
+            : 0;
+          const centerOffset = Math.round(
+            (i - Math.floor(rating / 2)) * config.rating[language].starSpacing +
+              centerShift,
+          );
+          return {
+            input: await sharp(config.starImage)
+              .resize(
+                config.rating[language].starSize,
+                config.rating[language].starSize,
+              )
+              .toBuffer(),
+            top: Math.round(
+              config.rating[language].position.y -
+                config.rating[language].starSize / 2,
+            ),
+            left: Math.round(
+              config.rating[language].position.x +
+                centerOffset -
+                config.rating[language].starSize / 2,
+            ),
+          };
+        }),
     );
 
-    // Save the image
-    const buffer = canvas.toBuffer('image/png');
-    fs.writeFileSync(outputPath, buffer);
+    // Generate QR code with custom colors
+    const qrCodeSize = config.qrCode[language].size;
+    // Remove the # from the color if present
+    const qrColor = config.qrCode[language].color.replace('#', '');
+    const qrBackground = config.qrCode[language].background;
 
-    console.log(`Certificate generated successfully: ${outputPath}`);
-    return outputPath;
+    const qrCodeBuffer = await generateQRCode(
+      certificateId,
+      qrCodeSize,
+      qrColor,
+      qrBackground,
+    );
+
+    // Add QR code to composite overlays
+    const qrCodeOverlay = {
+      input: qrCodeBuffer,
+      top: config.qrCode[language].position.y - qrCodeSize / 2,
+      left: config.qrCode[language].position.x - qrCodeSize / 2,
+    };
+
+    // Generate the certificate using the language-specific template
+    await sharp(templatePath)
+      .composite([
+        {
+          input: svgText,
+          top: 0,
+          left: 0,
+        },
+        ...starOverlays,
+        qrCodeOverlay, // Add QR code overlay
+      ])
+      .toFile(outputPath);
+
+    console.log(
+      `Certificate generated successfully for ${studentName} in ${language} language with colored QR code for ID: ${certificateId}`,
+    );
+    return outputFilename;
   } catch (error) {
     console.error('Error generating certificate:', error);
     throw error;
   }
+}
+
+module.exports = {
+  generateCertificate,
 };
-
-/**
- * Example usage:
- *
- * generateCertificate('John Doe', 'Advanced JavaScript Programming')
- *   .then(path => console.log(`Certificate saved at: ${path}`))
- *   .catch(err => console.error(err));
- */
-
-module.exports = generateCertificate;
