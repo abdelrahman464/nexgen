@@ -11,6 +11,8 @@ const User = require("../../models/userModel");
 const Notification = require("../../models/notificationModel");
 const factory = require("../handllerFactory");
 const { uploadMixOfFiles } = require("../../middlewares/uploadImageMiddleware");
+const generateCertificate = require("../../utils/generateCertificate");
+const generateTimestampId = require("../../utils/randomId");
 const {
   checkUserProgress,
   fetchExam,
@@ -700,7 +702,6 @@ exports.submitCourseAnswers = async (req, res, next) => {
     // Fetch user's completed lessons
     const completedLessons = existingProgress.progress.filter(
       (item) => item.status === "Completed"
-      
     );
 
     // Fetch Possible grades for completed lessons
@@ -725,26 +726,38 @@ exports.submitCourseAnswers = async (req, res, next) => {
 
     // Check if the user deserves a certificate
     if (totalCourseExamsPercentage >= 90 && passed) {
+      const certificatePath = await generateCertificate(
+        req.user.name,
+        course.title.ar
+      );
       await CourseProgress.findOneAndUpdate(
         { user: req.user._id, course: exam.course },
-        { $set: { "certificate.isDeserve": true } }
+        {
+          $set: {
+            "certificate.ID": generateTimestampId(),
+            "certificate.isDeserve": true,
+            "certificate.file": certificatePath,
+          },
+        }
       );
       await Notification.create({
         user: req.user._id,
         course: course._id,
         type: "certificate",
+        file: certificatePath,
         message: {
-          en: `You have earned a certificate for the course ${course.title.en}. Please wait for the admin to issue it.`,
-          ar: ` انتظر حتي تصدرها اداره الموقع.${course.title.ar} لقد حصلت علي شهاده للدروه `,
+          en: `You have earned a certificate for the course ${course.title.en}.`,
+          ar: ` ${course.title.ar} لقد حصلت علي شهاده للدروه `,
         },
       });
       await Notification.create({
         user: adminId,
         course: course._id,
         type: "certificate",
+        file: certificatePath,
         message: {
-          en: `User ${req.user.name} has earned a certificate for the course ${course.title.en}. Please issue it.`,
-          ar: `يرجي اصدارها في اقرب وقت ${course.title.en} حصل علي شهاده للدروه  ${req.user.name} المستخدم`,
+          en: `User ${req.user.name} has earned a certificate for the course ${course.title.en}.`,
+          ar: `${course.title.ar} حصل علي شهاده للدوره  ${req.user.name} المستخدم`,
         },
       });
     }
@@ -1040,4 +1053,16 @@ exports.userScores = async (req, res, next) => {
   } catch (err) {
     return next(new ApiError(err.message, 400));
   }
+};
+//-----------------------------------------------------
+exports.getCertificateDetails = async (req, res, next) => {
+  const { ID } = req.params;
+  const certificate = await CourseProgress.findOne({
+    "certificate.ID": ID,
+  }).select("certificate").certificate;
+
+  if (!certificate) {
+    return next(new ApiError("there is no certificate for this id"));
+  }
+  return res.status(200).json({ status: "success", certificate });
 };

@@ -173,6 +173,7 @@ async function createOrUpdateSubscription(userId, packageId, durationDays) {
 
   if (subscription) {
     subscription.endDate = endDate;
+    await makeSureUserInChat(packageId, userId);
     await subscription.save();
   } else {
     await UserSubscription.create({
@@ -270,7 +271,10 @@ const createCourseOrderHandler = async (paymentDetails) => {
     // }
   }
 };
-
+/**
+ * @desc : this function do that => (create order , create subscription doc || update existing one)
+ * @param {*} paymentDetails
+ */
 // Handler for creating a package order
 const createPackageOrderHandler = async (paymentDetails) => {
   const { id, email, price, method, couponName } = paymentDetails;
@@ -709,6 +713,27 @@ const getOrdersByMonth = async (req, res) => {
       message: error.message,
     });
   }
+};
+//------------------
+exports.makeSureUserInChat = async (packageId, userId) => {
+  const package = await Package.findById(packageId).select("course");
+  if (!package) {
+    return;
+  }
+  const chat = await Chat.findOne({
+    course: package.course._id,
+    "participants.user": userId,
+  }).select("_id");
+  if (chat) {
+    return;
+  }
+  await Chat.findOneAndUpdate(
+    { course: package.course._id },
+    {
+      $addToSet: { participants: { user: userId } },
+    }
+  );
+  return;
 };
 
 module.exports = {

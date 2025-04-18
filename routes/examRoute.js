@@ -1,7 +1,7 @@
-const router = require('express').Router();
-const { checkCourseAccess } = require('../utils/validators/lessonsValidator');
+const router = require("express").Router();
+const { checkCourseAccess } = require("../utils/validators/lessonsValidator");
 
-const authService = require('../services/authServices');
+const authService = require("../services/authServices");
 const {
   createExam,
   deleteExam,
@@ -25,130 +25,136 @@ const {
   courseExam,
   submitCourseAnswers,
   //end exams
-} = require('../services/exams/examService');
+  getCertificateDetails,
+} = require("../services/exams/examService");
 
 const {
   checkLessonExamAccess,
-} = require('../utils/validators/lessonsValidator');
+} = require("../utils/validators/lessonsValidator");
 
 router.get(
-  '/courseProgress/:courseId/:userId',
+  "/getCertificateDetails/:ID",
   authService.protect,
-  getCourseProgress,
+  getCertificateDetails
 );
 router.get(
-  '/getLessonPerformance/:lessonId/:userId',
+  "/courseProgress/:courseId/:userId",
   authService.protect,
-  getLessonPerformance,
+  getCourseProgress
 );
 router.get(
-  '/getCoursePerformance/:courseId/:userId',
+  "/getLessonPerformance/:lessonId/:userId",
   authService.protect,
-  getCoursePerformance,
+  getLessonPerformance
+);
+router.get(
+  "/getCoursePerformance/:courseId/:userId",
+  authService.protect,
+  getCoursePerformance
 );
 //------------
 router
-  .route('/:examId/questions/:questionId')
+  .route("/:examId/questions/:questionId")
   .put(
     authService.protect,
-    authService.allowedTo('admin'),
+    authService.allowedTo("admin"),
     uploadQuestionAndOptions,
     processQuestionImages,
-    updateQuestionInExam,
+    updateQuestionInExam
   )
   .delete(
     authService.protect,
-    authService.allowedTo('admin'),
-    removeQuestionsFromExam,
+    authService.allowedTo("admin"),
+    removeQuestionsFromExam
   );
 
 router
-  .route('/userScore/:courseId/:userId')
-  .get(authService.protect, authService.allowedTo('admin', 'user'), userScores);
+  .route("/userScore/:courseId/:userId")
+  .get(authService.protect, authService.allowedTo("admin", "user"), userScores);
 
 router
-  .route('/courses/:courseId')
+  .route("/courses/:courseId")
   .get(
     authService.protect,
-    authService.allowedTo('admin'),
-    createFilterObj('course'),
-    getExams,
+    authService.allowedTo("admin"),
+    createFilterObj("course"),
+    getExams
   );
 router
-  .route('/placements/:courseId')
+  .route("/placements/:courseId")
   .get(
     authService.protect,
-    authService.allowedTo('admin'),
-    createFilterObj('placement'),
-    getExams,
+    authService.allowedTo("admin"),
+    createFilterObj("placement"),
+    getExams
   );
 router
-  .route('/lessons/:lessonId')
+  .route("/lessons/:lessonId")
   .get(
     authService.protect,
-    authService.allowedTo('admin'),
-    createFilterObj('lesson'),
-    getExams,
+    authService.allowedTo("admin"),
+    createFilterObj("lesson"),
+    getExams
   );
 
 router.post(
-  '/',
+  "/",
   authService.protect,
-  authService.allowedTo('admin'),
-  createExam,
+  authService.allowedTo("admin"),
+  createExam
 );
 
 router.put(
-  '/:examId/questions',
+  "/:examId/questions",
   authService.protect,
-  authService.allowedTo('user', 'admin'),
+  authService.allowedTo("user", "admin"),
   uploadQuestionAndOptions,
   processQuestionImages,
-  addQuestionToExam,
+  addQuestionToExam
 );
 
 router
-  .route('/:id')
-  .get(authService.protect, authService.allowedTo('admin'), getExam)
-  .delete(authService.protect, authService.allowedTo('admin'), deleteExam);
+  .route("/:id")
+  .get(authService.protect, authService.allowedTo("admin"), getExam)
+  .delete(authService.protect, authService.allowedTo("admin"), deleteExam);
 
 /////////////////////////////////////////////////////////////////////////
 //start lesson exam
 router.get(
-  '/lesson/:id',
+  "/lesson/:id",
   authService.protect,
-  authService.allowedTo('user', 'admin'),
+  authService.allowedTo("user", "admin"),
   checkLessonExamAccess,
-  lessonExam,
+  lessonExam
 );
 router.post(
-  '/lesson/:id/submit',
+  "/lesson/:id/submit",
   authService.protect,
-  authService.allowedTo('user', 'admin'),
-  submitLessonAnswers,
+  authService.allowedTo("user", "admin"),
+  submitLessonAnswers
 );
 /////////////////////////////////////////////////////////////////////////
 //  course exam
 router.get(
-  '/course/:id',
+  "/course/:id",
   authService.protect,
-  authService.allowedTo('user', 'admin'),
+  authService.allowedTo("user", "admin"),
   checkCourseAccess,
-  courseExam,
+  courseExam
 );
 router.post(
-  '/course/:id/submit',
+  "/course/:id/submit",
   authService.protect,
-  authService.allowedTo('user', 'admin'),
-  submitCourseAnswers,
+  authService.allowedTo("user", "admin"),
+  submitCourseAnswers
 );
 /////////////////////////////////////////////////////////////////////////
 //  placement exam
-router.get('/placement/:id', authService.protect, placementExam);
+router.get("/placement/:id", authService.protect, placementExam);
 router.post(
-  '/placement/:id/submit',
+  "/placement/:id/submit",
   authService.protect,
-  submitCoursePlacementAnswers,
+  submitCoursePlacementAnswers
 );
 
 module.exports = router;

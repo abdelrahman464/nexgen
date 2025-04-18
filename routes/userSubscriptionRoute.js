@@ -11,7 +11,7 @@ router
   .route("/")
   .get(
     authServices.protect,
-    authServices.allowedTo("user"),
+    authServices.allowedTo("user", "admin"),
     userSubscriptionService.createFilterObj,
     userSubscriptionService.getMySubscriptions
   );

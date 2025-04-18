@@ -11,6 +11,7 @@ const authServices = require("../services/authServices");
 const {
   uploadMedia,
   resize,
+  checkUserSubscription,
   filterStatus,
   assignIds,
   filterOnUserRole,
@@ -60,7 +61,7 @@ router
   .post(
     authServices.protect,
     authServices.allowedTo("admin", "user"),
-    isUserSubscribed,
+    checkUserSubscription,
     uploadMedia,
     resize,
     // hasInvitor,

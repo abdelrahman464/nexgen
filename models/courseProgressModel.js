@@ -31,7 +31,7 @@ const courseProgressSchema = new mongoose.Schema(
           enum: ["failed", "Completed"],
           default: "Completed",
         },
-        passAnalytics: Boolean, // to detect if student has uploaded analytic doc to be corrected 
+        passAnalytics: Boolean, // to detect if student has uploaded analytic doc to be corrected
         examScore: { type: Number, default: 0 },
         attemptDate: { type: Date, default: Date.now },
         wrongAnswers: [
@@ -43,6 +43,7 @@ const courseProgressSchema = new mongoose.Schema(
       },
     ],
     certificate: {
+      ID: { type: String },
       isDeserve: { type: Boolean, default: false },
       isTake: { type: Boolean, default: false },
       file: { type: String },
@@ -52,23 +53,23 @@ const courseProgressSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const setCertificateFileURL = (doc) => {
-  //return image base url + image name
-  if (doc.certificate.file) {
-    const certificateFileUrl = `${process.env.BASE_URL}/certificate/${doc.certificate.file}`;
-    doc.certificate.file = certificateFileUrl;
-  }
-};
-//after initialize the doc in db
-// check if the document contains image
-// it work with findOne,findAll,update
-courseProgressSchema.post("init", (doc) => {
-  setCertificateFileURL(doc);
-});
-// it work with create
-courseProgressSchema.post("save", (doc) => {
-  setCertificateFileURL(doc);
-});
+// const setCertificateFileURL = (doc) => {
+//   //return image base url + image name
+//   if (doc.certificate.file) {
+//     const certificateFileUrl = `${process.env.BASE_URL}/certificate/${doc.certificate.file}`;
+//     doc.certificate.file = certificateFileUrl;
+//   }
+// };
+// //after initialize the doc in db
+// // check if the document contains image
+// // it work with findOne,findAll,update
+// courseProgressSchema.post("init", (doc) => {
+//   setCertificateFileURL(doc);
+// });
+// // it work with create
+// courseProgressSchema.post("save", (doc) => {
+//   setCertificateFileURL(doc);
+// });
 
 // ^find => it mean if part of of teh word contains find
 courseProgressSchema.pre(/^find/, function (next) {

@@ -1,5 +1,10 @@
 const mongoose = require('mongoose');
 
+//** 
+// @desc : each package avail users to attend (lives) only , not any thing else
+// @desc : each package is related to one course only
+// @desc : we handle package subscription in userSubscriptionModel.js
+// **/
 const packageSchema = new mongoose.Schema(
   {
     course: {

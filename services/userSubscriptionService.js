@@ -53,3 +53,40 @@ exports.getMySubscriptions = factory.getALl(UserSubscription);
 //   }
 //   next();
 // });
+//-----------------------
+exports.checkUserSubscription = async (user, course = null) => {
+  const filter = {
+    user: user._id,
+  };
+  let courseTitle;
+  if (course) {
+    const package = await Package.findOne({ course: course }).select(
+      "_id course"
+    );
+    if (!package) {
+      throw new Error(`Package not found for course ${course}`);
+    }
+    filter.package = package._id;
+
+    courseTitle = package.course.title.en;
+  }
+  const subscription = await UserSubscription.findOne({
+    filter,
+  });
+
+  if (!subscription) {
+    const errMessage = course
+      ? `you are not subscribed to package for course ${courseTitle}`
+      : `you are not subscribed to any package`;
+    throw new Error(errMessage);
+  }
+
+  const now = new Date();
+  if (subscription.endDate.getTime() < now) {
+    const errMessage = `your subscribtion to package for course ${courseTitle} has expired`;
+
+    throw new Error(errMessage);
+  }
+
+  return true; // Valid subscription found
+};

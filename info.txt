@@ -102,3 +102,19 @@ cron jobs
 prerequests
 -examService.js
 -marketingAnalyticsService.js
+
+
+
+----------------
+1- make `checkSubscription` (userId,courseId=null) => check existance for specific sub or any sub
+implemented :  true 
+
+2- use this func before
+    - creating training  => done
+    - get posts
+
+3- make migration script => kick end_subscription out from chat 
+ implemented : true
+ tested: false
+NOTE: make sure in case of update subscription to add user to chat if not exist 
+4- make cron-job with it      

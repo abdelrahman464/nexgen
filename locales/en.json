@@ -53,5 +53,9 @@
     "idUploaded": "ID document uploaded successfully",
     "notificationBellActivated": "Notification bell activated",
     "notificationBellDeactivated": "Notification bell deactivated"
+  },
+  "postService":{
+    "hasNoCourses":"this page is for paid courses's posts only and you have no paid courses"
   }
+  
 }

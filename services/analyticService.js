@@ -10,6 +10,7 @@ const factory = require("./handllerFactory");
 const { uploadMixOfFiles } = require("../middlewares/uploadImageMiddleware");
 const Lesson = require("../models/lessonModel");
 const _ = require("lodash");
+const { checkUserSubscription } = require("./userSubscriptionService");
 
 exports.uploadMedia = uploadMixOfFiles([
   {
@@ -89,6 +90,17 @@ exports.resize = asyncHandler(async (req, res, next) => {
 
 //   next();
 // });
+exports.checkUserSubscription = async (req, res, next) => {
+  try {
+    if (req.user.role === "admin") {
+      return next();
+    }
+    await checkUserSubscription(req.user._id);
+    return next();
+  } catch (err) {
+    return next(new ApiError(err.message, 500));
+  }
+};
 //----- filters
 //3
 exports.filterOnUserRole = (req, res, next) => {
