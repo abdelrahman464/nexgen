@@ -62,7 +62,7 @@ NotificationSchema.pre(/^find/, function (next) {
 
   next();
 });
-const setCourseImageURL = (doc) => {
+const setImageURL = (doc) => {
   //return image base url + iamge name
   const folder = doc.type === 'order' ? 'orders' : 'certificate';
   if (doc.file) {
@@ -74,11 +74,11 @@ const setCourseImageURL = (doc) => {
 // check if the document contains image
 // it work with findOne,findAll,update
 NotificationSchema.post('init', (doc) => {
-  setCourseImageURL(doc);
+  setImageURL(doc);
 });
 // it work with create
 NotificationSchema.post('save', (doc) => {
-  setCourseImageURL(doc);
+  setImageURL(doc);
 });
 
 NotificationSchema.post('save', async (doc) => {

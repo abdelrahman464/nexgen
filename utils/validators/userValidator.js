@@ -164,20 +164,7 @@ exports.actionOnIdDocumentValidator = [
     .withMessage('Action is required')
     .isIn(['verified', 'rejected'])
     .withMessage('Invalid action'),
-  //check unique idNumber and name
-  body('idNumber')
-    .notEmpty()
-    .withMessage('Id number is required')
-    .isNumeric()
-    .withMessage('Id number must be a number')
-    .custom(async (val) => {
-      const user = await User.findOne({ idNumber: val });
-      if (user) {
-        return Promise.reject(new Error('Id number already in use'));
-      }
-      return true;
-    }),
-  body('name').notEmpty().withMessage('Name is required'),
+ 
 
   validatorMiddleware,
 ];

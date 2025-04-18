@@ -26,6 +26,7 @@ const {
   uploadCertificateFile,
   storeCertificateFile,
   giveCertificate,
+  getCertificate,
 } = require('../services/courseService');
 const authServices = require('../services/authServices');
 // nested routes
@@ -118,5 +119,7 @@ router
     storeCertificateFile,
     giveCertificate,
   );
+
+router.get('/getCertificate/:id', authServices.protect, getCertificate);
 
 module.exports = router;

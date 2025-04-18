@@ -18,6 +18,12 @@ const courseSchema = new mongoose.Schema(
       required: true,
       i18n: true,
     },
+    //use this field to know how many starts in certificate image
+    rating: {
+      type: Number,
+      default: 0,
+      required: true,
+    },
     description: {
       type: String,
       required: true,

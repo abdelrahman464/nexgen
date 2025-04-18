@@ -247,7 +247,7 @@ exports.getSectionLessons = async (req, res, next) => {
             (!_.has(lastLessonProgress, "passAnalytics") ||
               lastLessonProgress.passAnalytics)
           ) {
-            console.log("hey22");
+            
             currentLessonOrder += 1;
           }
         }
