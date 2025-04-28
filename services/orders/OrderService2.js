@@ -11,6 +11,7 @@ const CourseProgress = require("../../models/courseProgressModel");
 const { calculateProfits } = require("../marketing/marketingService");
 const { availUserToReview } = require("../userService");
 const { checkExistingPaidOrder } = require("./OrderService");
+const { subscribeToFreePackage } = require("../userSubscriptionService");
 
 /** 
  i will write here some things that i may forget about business logic 
@@ -320,5 +321,30 @@ exports.purchaseForUser = async (req, res, next) => {
       status: "failed",
       message: error.message,
     });
+  }
+};
+//------------------------------------------------------------------------
+exports.createUnPaidOrder = async (req, res, next) => {
+  const { id: courseId } = req.params;
+  const userId = req.user._id;
+  try {
+    const course = await Course.findById(courseId);
+    if (!course) next(new Error("Course not found"));
+    if (course.price && course.price > 0) next(new Error("Course is not free"));
+
+    const result = await checkSpecificOrderExistance({
+      user: userId,
+      course: courseId,
+    });
+    if (result) next(new Error("you already have this course"));
+    await createOrder(userId, courseId, 0, false);
+    await createCourseProgress(userId, courseId);
+    await subscribeToFreePackage(courseId, userId);
+    res.status(200).json({
+      status: "success",
+      message: "Order created successfully",
+    });
+  } catch (error) {
+    next(new Error(error.message));
   }
 };

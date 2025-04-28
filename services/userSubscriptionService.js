@@ -3,6 +3,7 @@ const Package = require("../models/packageModel");
 const UserSubscription = require("../models/userSubscriptionModel");
 const ApiError = require("../utils/apiError");
 const factory = require("./handllerFactory");
+const OrderService = require("./orders/OrderService");
 
 //@desc : add subscriber to collection manually
 exports.AddsubscriberToCollection = asyncHandler(async (req, res, next) => {
@@ -59,34 +60,81 @@ exports.checkUserSubscription = async (user, course = null) => {
     user: user._id,
   };
   let courseTitle;
+
   if (course) {
     const package = await Package.findOne({ course: course }).select(
       "_id course"
     );
     if (!package) {
-      throw new Error(`Package not found for course ${course}`);
+      throw new Error(`no package exists for courseId: ${course}`);
     }
     filter.package = package._id;
-
     courseTitle = package.course.title.en;
+
+    const packageSubscription = await UserSubscription.findOne(filter);
+    if (!packageSubscription) {
+      throw new Error(
+        `you are not subscribed to package for course ${courseTitle}`
+      );
+    }
+    const now = new Date();
+    if (packageSubscription.endDate.getTime() < now) {
+      const errMessage = `your subscribtion to package for course ${courseTitle} has expired`;
+      throw new Error(errMessage);
+    }
+  } else {
+    const allUserSubscribtions = await UserSubscription.find({
+      user: user._id,
+    }).sort({
+      endDate: -1,
+    });
+
+    if (allUserSubscribtions.length === 0) {
+      throw new Error(`you are not subscribed to any package`);
+    }
+    const lastSubscription = allUserSubscribtions[0];
+    const now = new Date();
+    if (lastSubscription.endDate.getTime() < now) {
+      const errMessage = `your lastSubscription has been expired`;
+      throw new Error(errMessage);
+    }
   }
-  const subscription = await UserSubscription.findOne({
-    filter,
-  });
-
-  if (!subscription) {
-    const errMessage = course
-      ? `you are not subscribed to package for course ${courseTitle}`
-      : `you are not subscribed to any package`;
-    throw new Error(errMessage);
-  }
-
-  const now = new Date();
-  if (subscription.endDate.getTime() < now) {
-    const errMessage = `your subscribtion to package for course ${courseTitle} has expired`;
-
-    throw new Error(errMessage);
-  }
-
   return true; // Valid subscription found
 };
+//--------------------------------
+exports.subscribeToFreePackage = async (courseId, userId) => {
+  try {
+    const package = await Package.findOne({ course: courseId }).select(
+      "_id price subscriptionDurationDays"
+    );
+    if (!package) {
+      return;
+    }
+    if (package.price && package.price > 0) {
+      return;
+    }
+    // const isUserSubscribed = await UserSubscription.findOne({
+    //   user: userId,
+    //   package: package._id,
+    // });
+    // if (isUserSubscribed) {
+    //   return;
+    // }
+    const startDate = new Date();
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + package.subscriptionDurationDays);
+
+    await UserSubscription.create({
+      user: userId,
+      package: package._id,
+      startDate,
+      endDate,
+    });
+    await OrderService.makeSureUserInChat(package._id, userId);
+    return;
+  } catch (error) {
+    console.log(`subscribeToFreePackage \nerror: ${error.message}`);
+    return;
+  }
+};
+//680d051cf1cfb2c30b2b1497  delete all chats related to this package

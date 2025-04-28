@@ -203,11 +203,11 @@ exports.signup = asyncHandler(async (req, res, next) => {
       emailVerificationExpires: Date.now() + 10 * 60 * 1000, // 10 minutes from now
     },
   );
-  // await sendEmail({
-  //   to: user.email,
-  //   subject: "Your Email Verification Code (valid for 10 minutes)",
-  //   html: htmlEmail,
-  // });
+  await sendEmail({
+    to: user.email,
+    subject: "Your Email Verification Code (valid for 10 minutes)",
+    html: htmlEmail,
+  });
 
   // generate token
   const token = generateToken(user._id);

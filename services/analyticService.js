@@ -11,6 +11,7 @@ const { uploadMixOfFiles } = require("../middlewares/uploadImageMiddleware");
 const Lesson = require("../models/lessonModel");
 const _ = require("lodash");
 const { checkUserSubscription } = require("./userSubscriptionService");
+const Course = require("../models/courseModel");
 
 exports.uploadMedia = uploadMixOfFiles([
   {
@@ -95,7 +96,14 @@ exports.checkUserSubscription = async (req, res, next) => {
     if (req.user.role === "admin") {
       return next();
     }
-    await checkUserSubscription(req.user._id);
+    let course = null;
+    const { lesson } = req.query;
+    if (lesson) {
+      const courseDoc = await Lesson.findOne({ _id: lesson });
+      if (!courseDoc) return next(new ApiError("Lesson not found", 404));
+      course = courseDoc.course._id;
+    }
+    await checkUserSubscription(req.user._id, course);
     return next();
   } catch (err) {
     return next(new ApiError(err.message, 500));
@@ -169,12 +177,19 @@ exports.getAll = factory.getALl(Analytic);
 exports.getOne = factory.getOne(Analytic);
 //assignIds
 exports.createOne = async (req, res, next) => {
-  if (req.body.lesson) {
+  const { lesson: lessonId } = req.query;
+
+  if (lessonId) {
     //step 1: check if the lesson exists
-    const lesson = await Lesson.findById(req.body.lesson);
+    const lesson = await Lesson.findById(lessonId);
     if (!lesson) {
       return next(
         new ApiError(res.__("errors.Not-Found", { document: "lesson" }), 404)
+      );
+    }
+    if (!lesson.course) {
+      return next(
+        new ApiError(`this lesson don't belong to specific course`, 404)
       );
     }
     //step 2: check if the lesson is required to have an analytic
@@ -187,7 +202,7 @@ exports.createOne = async (req, res, next) => {
     let flag = false;
     if (userCourseProgress && userCourseProgress.progress.length !== 0) {
       userCourseProgress.progress.map((obj) => {
-        if (obj.lesson._id?.toString() === req.body.lesson.toString()) {
+        if (obj.lesson?._id?.toString() === lessonId.toString()) {
           obj.passAnalytics = true;
           flag = true;
         }
@@ -195,7 +210,7 @@ exports.createOne = async (req, res, next) => {
     }
     if (flag) await userCourseProgress.save();
   }
-
+  req.body.lesson = lessonId;
   return factory.createOne(Analytic)(req, res, next);
 };
 //check if the user is the owner or marketer

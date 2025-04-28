@@ -1,37 +1,46 @@
 {
-	"errors": {
-		"Not-Authorized": "غير مصرح لك بأداء هذا الإجراء {{action}}",
-		"Duplicate": "موجود بالفعل",
-		"Not-Found": "{{document}} غير موجود"
-	},
-	"analytics-errors": {
-		"hasNoInvitor": "غير مسموح لك بسبب عدم وجود مدرب لك",
-		"Un-Authorized-Invitor": "غير مسموح لك بسبب عدم كونك مدربه",
-		"Not-Found": " لم يتم العثور علي أي تحليلات ",
-		"One-Not-Found": "لم يتم العثور علي تحليل للمعرف المعطي"
-	},
-	"user-errors": {
-		"unSubscribe": "غير مسموح لك بسبب عدم اشتراكك ب اي باقه"
-	},
-	"coupon-errors": {
-		"Not-Found": "هذا الكوبون غير موجود",
-		"unActive": "هذا الكوبون لم يتم قبوله بعد    ",
-		"Expired": "لقد وصل هذا الكوبون لعدد استخداماته القصوي ",
-		"Un-Authorized": "غير مسموح لك ب استخدام هذا الكوبون لانه ليس ملك مدربك"
-	},
-	"marketing-errors": {
-		"marketLog-Not-Found": "لم يتم العثور علي بيانات التسويق الخاصه بك",
-		"No-Profits-Found": "لا يوجد ارباح للسحب",
-		"balance-Not-Enough": "رصيدك غير كافي",
-		"No-Team-Members": "لم يتم العثور علي اعضاء في فريقك"
-	},
-	"marketing-error": {
-		"marketLog-Not-Found": "marketing-error.marketLog-Not-Found"
-	},
-	"lives-errors": {
-		"No-Subscription": "ليس لديك اي اشتراكات"
-	},
-	"postService": {
-		"hasNoCourses": "هذه الصفحة مخصصة فقط لمنشورات الدورات المدفوعة وليس لديك دورات مدفوعة"
-	}
+  "errors": {
+    "Not-Authorized": "غير مصرح لك بأداء هذا الإجراء {{action}}",
+    "Duplicate": "موجود بالفعل",
+    "Not-Found": "{{document}} غير موجود"
+  },
+  "analytics-errors": {
+    "hasNoInvitor": "غير مسموح لك بسبب عدم وجود مدرب لك",
+    "Un-Authorized-Invitor": "غير مسموح لك بسبب عدم كونك مدربه",
+    "Not-Found": " لم يتم العثور علي أي تحليلات ",
+    "One-Not-Found": "لم يتم العثور علي تحليل للمعرف المعطي"
+  },
+  "user-errors": {
+    "unSubscribe": "غير مسموح لك بسبب عدم اشتراكك ب اي باقه"
+  },
+  "coupon-errors": {
+    "Not-Found": "هذا الكوبون غير موجود",
+    "unActive": "هذا الكوبون لم يتم قبوله بعد    ",
+    "Expired": "لقد وصل هذا الكوبون لعدد استخداماته القصوي ",
+    "Un-Authorized": "غير مسموح لك ب استخدام هذا الكوبون لانه ليس ملك مدربك"
+  },
+  "marketing-errors": {
+    "marketLog-Not-Found": "لم يتم العثور علي بيانات التسويق الخاصه بك",
+    "No-Profits-Found": "لا يوجد ارباح للسحب",
+    "balance-Not-Enough": "رصيدك غير كافي",
+    "No-Team-Members": "لم يتم العثور علي اعضاء في فريقك"
+  },
+  "marketing-error": {
+    "marketLog-Not-Found": "marketing-error.marketLog-Not-Found"
+  },
+  "lives-errors": {
+    "No-Subscription": "ليس لديك اي اشتراكات"
+  },
+  "postService": {
+    "hasNoCourses": "هذه الصفحة مخصصة فقط لمنشورات الدورات المدفوعة وليس لديك دورات مدفوعة"
+  },
+  "package-errors": {
+    "Not-Found": "لم يتم العثور علي باقه",
+    "not-free": "هذه الباقه ليست مجانيه"
+  },
+  "subscription-messages": {
+    "Not-Found": "لم يتم العثور علي اشتراكك",
+    "already-subscribed": "لقد قمت بالاشتراك بالفعل",
+    "successfully-subscribed": "تم الاشتراك بنجاح"
+  }
 }

@@ -24,7 +24,7 @@
     "balance-Not-Enough": "your balance is not enough",
     "No-Team-Members": "No team members found"
   },
- 
+
   "user-errors": {
     "unSubscribe": "Unauthorized action , You are not subscribed to any package",
     "alreadyFollowing": "You are already following this user",
@@ -54,8 +54,16 @@
     "notificationBellActivated": "Notification bell activated",
     "notificationBellDeactivated": "Notification bell deactivated"
   },
-  "postService":{
-    "hasNoCourses":"this page is for paid courses's posts only and you have no paid courses"
+  "postService": {
+    "hasNoCourses": "this page is for paid courses's posts only and you have no paid courses"
+  },
+  "package-errors": {
+    "Not-Found": "package not found",
+    "not-free": "this package is not free"
+  },
+  "subscription-messages": {
+    "Not-Found": "your subscription not found",
+    "already-subscribed": "you are already subscribed",
+    "successfully-subscribed": "successfully subscribed"
   }
-  
 }

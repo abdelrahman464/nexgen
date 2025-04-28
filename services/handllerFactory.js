@@ -48,6 +48,15 @@ exports.getOne = (Model, populationOpt) => async (req, res, next) => {
       req.locale
     );
     localizedResult.translationTitle = title;
+    if (document.description) {
+      localizedResult.translationDescription = document.description;
+    }
+    if (document.highlights) {
+      localizedResult.translationHighlights = document.highlights;
+    }
+    if (document.content) {
+      localizedResult.translationContent = document.content;
+    }
 
     res.status(200).json({ data: localizedResult });
   } catch (error) {

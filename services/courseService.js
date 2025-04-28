@@ -226,6 +226,17 @@ exports.getCourseById = asyncHandler(async (req, res, next) => {
     course,
     req.locale,
   );
+  const { title } = course;
+  localizedResult.translationTitle = title;
+  if (course.description) {
+    localizedResult.translationDescription = course.description;
+  }
+  if (course.highlights) {
+    localizedResult.translationHighlights = course.highlights;
+  }
+  if (course.content) {
+    localizedResult.translationContent = course.content;
+  }
   return res.status(200).json({
     status: 'success',
     data: localizedResult,

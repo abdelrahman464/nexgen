@@ -133,45 +133,119 @@ exports.processFiles = asyncHandler(async (req, res, next) => {
 //filter to get allowed posts for each user
 exports.createFilterObjAllowedCoursePosts = asyncHandler(
   async (req, res, next) => {
-    let filterObject = {};
-
-    //if role is user
-    if (req.user.role === "user") {
-      // all courses that the logged user is subscripe in
-      const filter = {
-        user: req.user._id,
-      };
-      // to optimize query if search is for specific course ( watch & learn :) )
-      if (req.query.course) {
-        filter.course = req.query.course;
+    try {
+      const { course } = req.params;
+      if (!course) {
+        return next(new ApiError("courseId is required", 400));
       }
-      //get all courses that user is subscribed in by getting all course progress that user have and extract the coursesIds from there
-      const userCoursesProgress =
-        await CourseProgress.find(filter).select("_id course");
 
-      if (userCoursesProgress.length === 0) {
-        return next(new ApiError(res.__("postService.hasNoCourses"), 404));
+      //if role is user
+      if (req.user.role !== "user") {
+        const package = await Package.findOne({ course: course }).select(
+          "_id course"
+        );
+        if (!package) {
+          return next(new ApiError("No package found for this course", 404));
+        }
+        //-------------------------------------------------------------
+        const userSubscription = await UserSubscription.findOne({
+          user: req.user._id,
+          package: package._id,
+        }).select("_id package");
+
+        if (!userSubscription) {
+          const {
+            course: {
+              title: { en: courseTitle },
+            },
+          } = package;
+          return next(
+            new ApiError(
+              `You are not subscribed to ${courseTitle} package`,
+              404
+            )
+          );
+        }
+        if (userSubscription.endDate.getTime() < Date.now()) {
+          const {
+            course: {
+              title: { en: courseTitle },
+            },
+          } = package;
+          return next(
+            new ApiError(
+              `Your subscription to ${courseTitle} package has been expired`,
+              404
+            )
+          );
+        }
+        //------------------------------------------------------------
       }
-      const coursesIds = userCoursesProgress.map((course) =>
-        mongoose.Types.ObjectId(course.course)
+      req.filterObj = { sharedTo: "course", course: course };
+      return next();
+    } catch (error) {
+      return next(
+        new ApiError(
+          `An error occurred while processing your request ${error.message}`,
+          500
+        )
       );
-
-      filterObject = {
-        sharedTo: "course",
-        course: { $in: coursesIds },
-      };
     }
-    //if role is admin
-    if (req.user.role === "admin") {
-      filterObject = {
-        sharedTo: "course",
-      };
-    }
-
-    req.filterObj = filterObject;
-    next();
   }
 );
+//-------------------------------------------------------
+//filter to get analytics post  s only
+exports.createFilterObjPackagesPosts = asyncHandler(async (req, res, next) => {
+  try {
+    const { package } = req.params;
+    if (!package) {
+      return next(new ApiError("packageId is required", 400));
+    }
+    if (req.user.role === "user") {
+      const userSubscription = await UserSubscription.findOne({
+        user: req.user._id,
+        package: package._id,
+      }).select("_id package");
+
+      if (!userSubscription) {
+        const {
+          course: {
+            title: { en: courseTitle },
+          },
+        } = package;
+        return next(
+          new ApiError(`You are not subscribed to ${courseTitle} package`, 404)
+        );
+      }
+      if (userSubscription.endDate.getTime() < Date.now()) {
+        const {
+          course: {
+            title: { en: courseTitle },
+          },
+        } = package;
+        return next(
+          new ApiError(
+            `Your subscription to ${courseTitle} package has been expired`,
+            404
+          )
+        );
+      }
+    }
+
+    req.filterObj = {
+      sharedTo: "package",
+      package: package,
+    };
+    return next();
+  } catch (err) {
+    return next(
+      new ApiError(
+        `An error occurred while processing your request ${err.message}`,
+        500
+      )
+    );
+  }
+});
 //-------------------------------------------------------------------------------------------------
 //filter to get public posts only
 exports.createFilterObjHomePosts = async (req, res, next) => {
@@ -206,65 +280,7 @@ exports.createFilterObjHomePosts = async (req, res, next) => {
   req.filterObj = filterObject;
   next();
 };
-//filter to get analytics post  s only
-exports.createFilterObjPackagesPosts = asyncHandler(async (req, res, next) => {
-  const filterObject = {
-    sharedTo: "package",
-  };
-  let packageFilterIds;
-  if (req.query.packages) {
-    packageFilterIds = req.query.packages
-      .split(",")
-      .map((packageId) => mongoose.Types.ObjectId(packageId));
-  }
-  if (req.user.role === "user") {
-    // all packages that suscripe in
-    const userSubscriptions = await UserSubscription.find({
-      user: req.user._id,
-    }).select("_id package");
 
-    if (userSubscriptions.length === 0) {
-      return res.status(400).json({
-        status: "failed",
-        message: "No valid packages found in your subscriptions.",
-      });
-    }
-
-    let packageIds = userSubscriptions.map((pack) =>
-      pack.package._id.toString()
-    );
-
-    // If there are package filters, ensure they are within the user's subscriptions
-    if (packageFilterIds) {
-      packageFilterIds = packageFilterIds.filter((packageId) =>
-        packageIds.includes(packageId.toString())
-      );
-    }
-    // Apply the filtered package IDs to the filter object
-    if (packageFilterIds) {
-      packageFilterIds = packageFilterIds.map((packageId) =>
-        mongoose.Types.ObjectId(packageId)
-      );
-      filterObject.package = { $in: packageFilterIds };
-    } else {
-      packageIds = packageIds.map((packageId) =>
-        mongoose.Types.ObjectId(packageId)
-      );
-      // If no package filter is provided, only include packages the user is subscribed to
-      filterObject.package = { $in: packageIds };
-    }
-  }
-
-  if (req.user.role === "admin") {
-    if (packageFilterIds) {
-      packageFilterIds.map((packageId) => mongoose.Types.ObjectId(packageId));
-      filterObject.package = { $in: packageFilterIds };
-    }
-  }
-  console.log(filterObject);
-  req.filterObj = filterObject;
-  next();
-});
 exports.convertToArray = (req, res, next) => {
   if (req.body.package) {
     // If it's not an array, convert it to an array

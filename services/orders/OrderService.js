@@ -316,7 +316,7 @@ const createPackageOrderHandler = async (paymentDetails) => {
     //   await createCourseProgress(user._id, package.course._id);
     // }
 
-    await availUserToReview(user._id);
+    // await availUserToReview(user._id);
     await calculateProfits({
       email: user.email,
       amount: price,
@@ -715,7 +715,7 @@ const getOrdersByMonth = async (req, res) => {
   }
 };
 //------------------
-exports.makeSureUserInChat = async (packageId, userId) => {
+const makeSureUserInChat = async (packageId, userId) => {
   const package = await Package.findById(packageId).select("course");
   if (!package) {
     return;
@@ -725,6 +725,7 @@ exports.makeSureUserInChat = async (packageId, userId) => {
     "participants.user": userId,
   }).select("_id");
   if (chat) {
+    console.log("user already in chat");
     return;
   }
   await Chat.findOneAndUpdate(
@@ -746,4 +747,5 @@ module.exports = {
   checkExistingPaidOrder,
   getOrderStatistics,
   getOrdersByMonth,
+  makeSureUserInChat,
 };

@@ -247,7 +247,6 @@ exports.getSectionLessons = async (req, res, next) => {
             (!_.has(lastLessonProgress, "passAnalytics") ||
               lastLessonProgress.passAnalytics)
           ) {
-            
             currentLessonOrder += 1;
           }
         }
@@ -428,6 +427,13 @@ exports.getLessonById = asyncHandler(async (req, res, next) => {
         _id: req.user._id,
         email: req.user.email,
       });
+    }
+    if (lesson.title) {
+      localizedLesson.translationTitle = lesson.title;
+    }
+
+    if (lesson.description) {
+      localizedLesson.translationDescription = lesson.description;
     }
 
     return res.status(200).json({
