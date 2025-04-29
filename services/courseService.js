@@ -208,7 +208,9 @@ exports.getMyCourses = asyncHandler(async (req, res, next) => {
 });
 
 // Get all courses
-exports.getAllCourses = factory.getALl(Course);
+exports.getAllCourses = factory.getALl(Course, 'Course', [
+  { path: 'instructor', select: 'name email profileImg' },
+]);
 
 // Get a specific course by ID
 // exports.getCourseById = factory.getOne(Course, "reviews", "instructor");

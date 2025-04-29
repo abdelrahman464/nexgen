@@ -15,7 +15,7 @@ const coursePackageSchema = new mongoose.Schema(
     },
     description: { type: String, required: true, i18n: true },
     highlights: [{ type: Object, i18n: true }],
-
+    image: String,
     price: {
       type: Number,
       required: [true, 'Package price is required'],
@@ -34,5 +34,23 @@ const coursePackageSchema = new mongoose.Schema(
 coursePackageSchema.pre(/^find/, function (next) {
   this.populate({ path: 'courses', select: 'title' });
   next();
+});
+
+const setCourseImageURL = (doc) => {
+  //return image base url + image name
+  if (doc.image) {
+    const CourseImageURL = `${process.env.BASE_URL}/coursesPackages/${doc.image}`;
+    doc.image = CourseImageURL;
+  }
+};
+//after intialize the doc in db
+// check if the document contains image
+// it work with findOne,findAll,update
+coursePackageSchema.post('init', (doc) => {
+  setCourseImageURL(doc);
+});
+// it work with create
+coursePackageSchema.post('save', (doc) => {
+  setCourseImageURL(doc);
 });
 module.exports = mongoose.model('CoursePackage', coursePackageSchema);

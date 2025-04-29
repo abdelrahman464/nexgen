@@ -31,6 +31,10 @@ exports.uploadImages = uploadMixOfFiles([
     maxCount: 1,
   },
   {
+    name: 'signatureImage',
+    maxCount: 1,
+  },
+  {
     name: 'idDocuments',
     maxCount: 3,
   },
@@ -76,6 +80,13 @@ exports.resizeImage = async (req, res, next) => {
       req.files.profileImg ? req.files.profileImg[0] : null,
       '',
       'profileImg',
+    );
+
+    // Process signature image
+    await processImage(
+      req.files.signatureImage ? req.files.signatureImage[0] : null,
+      '',
+      'signatureImage',
     );
 
     // Process cover image
@@ -397,7 +408,7 @@ exports.getUser = async (req, res, next) => {
       user = await User.findById(req.params.id);
     } else {
       user = await User.findById(req.params.id).select(
-        'name email profileImg authToReview coverImg role timeSpent isMarketer isInstructor isCustomerService startMarketing idNumber phone country idVerification note',
+        'name email profileImg authToReview coverImg role timeSpent isMarketer isInstructor isCustomerService startMarketing idNumber phone country idVerification note signatureImage',
       );
     }
     if (!user) {

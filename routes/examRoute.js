@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const { checkCourseAccess } = require('../utils/validators/lessonsValidator');
-
+const { checkInstructorAccess } = require('../utils/validators/examValidator');
 const authService = require('../services/authServices');
 const {
   createExam,
@@ -51,16 +51,12 @@ router
   .route('/:examId/questions/:questionId')
   .put(
     authService.protect,
-    authService.allowedTo('admin'),
+    checkInstructorAccess,
     uploadQuestionAndOptions,
     processQuestionImages,
     updateQuestionInExam,
   )
-  .delete(
-    authService.protect,
-    authService.allowedTo('admin'),
-    removeQuestionsFromExam,
-  );
+  .delete(authService.protect, checkInstructorAccess, removeQuestionsFromExam);
 
 router
   .route('/userScore/:courseId/:userId')
@@ -70,7 +66,7 @@ router
   .route('/courses/:courseId')
   .get(
     authService.protect,
-    authService.allowedTo('admin'),
+    checkInstructorAccess,
     createFilterObj('course'),
     getExams,
   );
@@ -78,7 +74,7 @@ router
   .route('/placements/:courseId')
   .get(
     authService.protect,
-    authService.allowedTo('admin'),
+    checkInstructorAccess,
     createFilterObj('placement'),
     getExams,
   );
@@ -86,22 +82,17 @@ router
   .route('/lessons/:lessonId')
   .get(
     authService.protect,
-    authService.allowedTo('admin'),
+    checkInstructorAccess,
     createFilterObj('lesson'),
     getExams,
   );
 
-router.post(
-  '/',
-  authService.protect,
-  authService.allowedTo('admin'),
-  createExam,
-);
+router.post('/', authService.protect, checkInstructorAccess, createExam);
 
 router.put(
   '/:examId/questions',
   authService.protect,
-  authService.allowedTo('user', 'admin'),
+  checkInstructorAccess,
   uploadQuestionAndOptions,
   processQuestionImages,
   addQuestionToExam,
@@ -109,8 +100,8 @@ router.put(
 
 router
   .route('/:id')
-  .get(authService.protect, authService.allowedTo('admin'), getExam)
-  .delete(authService.protect, authService.allowedTo('admin'), deleteExam);
+  .get(authService.protect, checkInstructorAccess, getExam)
+  .delete(authService.protect, checkInstructorAccess, deleteExam);
 
 /////////////////////////////////////////////////////////////////////////
 //start lesson exam
