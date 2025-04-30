@@ -313,13 +313,13 @@ exports.getLessonPerformance = asyncHandler(async (req, res, next) => {
       (p) => _.get(p, 'lesson._id')?.toString() === lessonId,
     );
     //return Lesson_exam_object
-    console.log(lessonExamResult);
     if (!lessonExamResult) {
       return next(new ApiError('Lesson progress not found', 404));
     }
     const lessonQuestions =
       await this.checkExamQuestionsStatus(lessonExamResult);
 
+    console.log('lessonQuestions', lessonQuestions);
     return res.status(200).json({
       status: 'success',
       lessonQuestions,
@@ -603,7 +603,7 @@ exports.submitLessonAnswers = async (req, res, next) => {
       examScore: examResult.score,
       attemptDate: new Date(),
       wrongAnswers: examResult.wrongAnswers.map((wa) => ({
-        question: wa.questionId,
+        question: wa.question,
         answer: wa.answer,
       })),
     };
