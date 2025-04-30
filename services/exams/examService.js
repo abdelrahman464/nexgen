@@ -291,7 +291,7 @@ exports.getCourseProgress = asyncHandler(async (req, res, next) => {
   }
 });
 //--------------------------------------------------
-//@route   GET /getLessonPerformance/:userId/:lessonId
+//@route   GET /getLessonPerformance/:lessonId/:userId
 //@desc    Get lesson Questions and user performance
 //@access  Private(owner || admin)
 exports.getLessonPerformance = asyncHandler(async (req, res, next) => {
@@ -313,15 +313,18 @@ exports.getLessonPerformance = asyncHandler(async (req, res, next) => {
       (p) => _.get(p, 'lesson._id')?.toString() === lessonId,
     );
     //return Lesson_exam_object
-    // console.log(lessonExamResult);
+    console.log(lessonExamResult);
     if (!lessonExamResult) {
       return next(new ApiError('Lesson progress not found', 404));
     }
-    // console.log(lessonExamResult);
     const lessonQuestions =
-      await this.checkLessonQuestionsStatus(lessonExamResult);
+      await this.checkExamQuestionsStatus(lessonExamResult);
 
-    return res.status(200).json({ status: 'success', lessonQuestions });
+    return res.status(200).json({
+      status: 'success',
+      lessonQuestions,
+      wrongAnswers: lessonExamResult.wrongAnswers,
+    });
   } catch (err) {
     next(new ApiError(err.message, 500));
   }
@@ -330,7 +333,7 @@ exports.getLessonPerformance = asyncHandler(async (req, res, next) => {
 //@route   ----
 //@desc    check Lesson Questions Status whether it is correct or not , if not add property wrongAnswer that inform client if it is wrong
 //@access  internal function
-exports.checkLessonQuestionsStatus = async (lessonExamResult) => {
+exports.checkExamQuestionsStatus = async (lessonExamResult) => {
   // Get all questions of this lesson
   const lessonExam = await Exam.findOne({
     lesson: lessonExamResult.lesson._id,
@@ -341,7 +344,6 @@ exports.checkLessonQuestionsStatus = async (lessonExamResult) => {
   const lessonExamQuestions = lessonExam.questions.map((question) =>
     question.toObject(),
   );
-
   // Iterate over questions and find wrong answered question
   lessonExamQuestions.forEach((question) => {
     const wrongAnsweredQuestion = lessonExamResult.wrongAnswers.find(
@@ -375,10 +377,14 @@ exports.getCoursePerformance = asyncHandler(async (req, res, next) => {
       return next(new ApiError("You didn't take final exam", 404));
     }
 
-    const lessonQuestions =
+    const courseQuestions =
       await this.checkCourseQuestionsStatus(courseExamResult);
 
-    return res.status(200).json({ status: 'success', lessonQuestions });
+    return res.status(200).json({
+      status: 'success',
+      courseQuestions,
+      wrongAnswers: courseExamResult.wrongAnswers,
+    });
   } catch (err) {
     next(new ApiError(err.message, 500));
   }
