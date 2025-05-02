@@ -730,18 +730,21 @@ exports.submitCourseAnswers = async (req, res, next) => {
     ).toFixed(2);
     // Check if the user deserves a certificate
     if (totalCourseExamsPercentage >= 90 && passed) {
-      console.log(' course.rating ', course.rating);
-      const certificate = await generateCertificate(
-        req.user.name,
-        course.title[req.user.lang],
-        Number(course.rating) || 3,
-        req.user.lang,
-      );
+      console.log('course.rating', course.rating);
+      const certificateId = mongoose.Types.ObjectId();
+      const certificateDetails = {
+        studentName: req.user.name,
+        courseName: course.title[req.user.lang],
+        rating: Number(course.rating) || 3,
+        certificateId: certificateId.toString(),
+        language: req.user.lang,
+      };
+      const certificate = await generateCertificate(certificateDetails);
       await CourseProgress.findOneAndUpdate(
         { user: req.user._id, course: exam.course },
         {
           $set: {
-            'certificate._id': mongoose.Types.ObjectId(),
+            'certificate._id': certificateId,
             'certificate.isDeserve': true,
             'certificate.file': certificate,
             'certificate.isTake': true,
