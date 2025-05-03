@@ -139,7 +139,7 @@ fs.ensureDirSync(config.outputFolder);
  */
 async function generateQRCode(certificateId, size, color, background) {
   // Create URL for certificate verification
-  const verificationUrl = `https://api.nexgen-academy.com/api/v1/courses/getCertificate/${certificateId}`;
+  const verificationUrl = `http://nexgen-academy.com/en/certificate/${certificateId}`;
 
   return new Promise((resolve, reject) => {
     bwipjs.toBuffer(
