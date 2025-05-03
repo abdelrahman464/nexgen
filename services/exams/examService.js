@@ -735,8 +735,10 @@ exports.submitCourseAnswers = async (req, res, next) => {
       const certificateDetails = {
         studentName: req.user.name,
         courseName: course.title[req.user.lang],
+        courseDescription: course.certificateDescription[req.user.lang],
         rating: Number(course.rating) || 3,
         certificateId: certificateId.toString(),
+        signatureImageUrl: req.user.signatureImage,
         language: req.user.lang,
       };
       const certificate = await generateCertificate(certificateDetails);
@@ -768,7 +770,7 @@ exports.submitCourseAnswers = async (req, res, next) => {
         file: certificate,
         message: {
           en: `User ${req.user.name} has earned a certificate for the course ${course.title.en}.`,
-          ar: `لقد حصل ${req.user.name} علي شهادة إتمام ${course.title.en}`,
+          ar: `لقد حصل ${req.user.name} علي شهادة إتمام ${course.title.ar}`,
         },
       });
     }

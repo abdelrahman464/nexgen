@@ -24,6 +24,11 @@ const courseSchema = new mongoose.Schema(
       default: 0,
       required: true,
     },
+    certificateDescription: {
+      type: String,
+      required: true,
+      i18n: true,
+    },
     description: {
       type: String,
       required: true,
@@ -107,7 +112,7 @@ courseSchema.pre(/^find/, function (next) {
   next();
 });
 const setCourseImageURL = (doc) => {
-  //return image base url + iamge name
+  //return image base url + image name
   if (doc.image) {
     const CourseImageURL = `${process.env.BASE_URL}/courses/${doc.image}`;
     doc.image = CourseImageURL;

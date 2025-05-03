@@ -535,6 +535,7 @@ exports.updateLoggedUserData = async (req, res, next) => {
     const updateData = {
       profileImg: req.body.profileImg,
       coverImg: req.body.coverImg,
+      signatureImage: req.body.signatureImage,
       bio: req.body.bio,
     };
 

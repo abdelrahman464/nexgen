@@ -120,6 +120,6 @@ router
     giveCertificate,
   );
 
-router.get('/getCertificate/:id', authServices.protect, getCertificate);
+router.get('/getCertificate/:id',  getCertificate);
 
 module.exports = router;

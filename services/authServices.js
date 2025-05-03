@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
@@ -11,7 +12,7 @@ const generateToken = require('../utils/generateToken');
 const {
   getMarketerFromInvitationKey,
 } = require('./marketing/marketingAnalyticsService');
-
+const { generateCertificate } = require('../utils/generateCertificate');
 
 // @desc    User Register,login with Google
 // @route   POST /api/v1/auth/google
@@ -205,7 +206,7 @@ exports.signup = asyncHandler(async (req, res, next) => {
   );
   await sendEmail({
     to: user.email,
-    subject: "Your Email Verification Code (valid for 10 minutes)",
+    subject: 'Your Email Verification Code (valid for 10 minutes)',
     html: htmlEmail,
   });
 
@@ -219,20 +220,40 @@ exports.signup = asyncHandler(async (req, res, next) => {
 //@route POST /api/v1/auth/login
 //@access public
 exports.login = asyncHandler(async (req, res, next) => {
+  const certificateId = mongoose.Types.ObjectId();
+
+  const certificate = await generateCertificate({
+    studentName: 'John Doe',
+    courseName: 'Advanced Web Development',
+    courseDescription: `
+      For successfully completing all four levels of the trading courses and passing the comprehensive assessments with distinction. The student has demonstrated exceptional skill and dedication by accurate analyses, showcasing a strong commitment and a deep understanding conducting 200 of advanced trading concepts and analytical methods.
+
+      This remarkable achievement reflects the student’s hard work and determination, and we are honored to be part of this journey.
+
+      We congratulate you on this outstanding success and look forward to witnessing your continued growth and accomplishments in your professional career.نية القادمة`,
+    rating: 4,
+    certificateId: certificateId.toString(),
+    signatureImageUrl:
+      'http://localhost:8000/users/signatureImage-faa4b7b2-1cf0-45ba-b981-cfd28abe4280-1746298997965.png',
+    language: 'en', // or "ar" for Arabic
+  });
+
+  res.status(200).json({ certificate });
+
   //  check if password and email in the body
   //  check if user exist & check if password is correct
-  const user = await User.findOne({ email: req.body.email });
-  if (!user || !(await bcrypt.compare(req.body.password, user.password))) {
-    return next(new ApiError('incorrect password or email', 401));
-  }
-  // generate token
-  const token = generateToken(user._id);
+  // const user = await User.findOne({ email: req.body.email });
+  // if (!user || !(await bcrypt.compare(req.body.password, user.password))) {
+  //   return next(new ApiError('incorrect password or email', 401));
+  // }
+  // // generate token
+  // const token = generateToken(user._id);
 
-  //exclude sensitive data
-  user.idDocuments = undefined;
+  // //exclude sensitive data
+  // user.idDocuments = undefined;
 
-  // send response to client side
-  res.status(200).json({ data: user, token });
+  // // send response to client side
+  // res.status(200).json({ data: user, token });
 });
 
 //@desc make sure user is logged in
