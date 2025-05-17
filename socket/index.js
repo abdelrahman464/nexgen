@@ -143,13 +143,13 @@ function initSocket(server) {
                 monthlyStartDate = new Date(monthlyStartDate);
               }
 
-              // Check if the session falls within the current 30-day period
-              const daysDifference = Math.floor(
-                (now - monthlyStartDate) / (1000 * 60 * 60 * 24),
-              );
+              // Check if we're in a different month than the monthlyStartDate
+              const isDifferentMonth =
+                now.getFullYear() !== monthlyStartDate.getFullYear() ||
+                now.getMonth() !== monthlyStartDate.getMonth();
 
-              if (daysDifference >= 1) {
-                // Reset monthly time and start a new 30-day period
+              if (isDifferentMonth) {
+                // Reset monthly time and start a new monthly period
                 monthlyTimeSpent = sessionDuration; // Only the current session duration
                 monthlyStartDate = now;
               } else {
@@ -168,7 +168,7 @@ function initSocket(server) {
                   $inc: { 'timeSpent.totalTimeSpent': sessionDuration },
                 },
                 { new: true }, // Return the updated document if needed
-              );
+              )
             }
           } catch (error) {
             console.error(
