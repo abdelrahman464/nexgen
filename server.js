@@ -116,9 +116,9 @@ const { initSocket } = require("./socket/index");
 initSocket(server);
 
 //schedule the cron job
-const { invoicesCronJob } = require("./utils/cronJob/automatedTasks");
+const { cronJobs } = require("./utils/cronJob/automatedTasks");
 
-invoicesCronJob();
+cronJobs();
 
 // invoicesCronJob();
 //handle Rejection out side express
