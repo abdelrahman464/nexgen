@@ -1,9 +1,9 @@
-const asyncHandler = require("express-async-handler");
-const Package = require("../models/packageModel");
-const UserSubscription = require("../models/userSubscriptionModel");
-const ApiError = require("../utils/apiError");
-const factory = require("./handllerFactory");
-const OrderService = require("./orders/OrderService");
+const asyncHandler = require('express-async-handler');
+const Package = require('../models/packageModel');
+const UserSubscription = require('../models/userSubscriptionModel');
+const ApiError = require('../utils/apiError');
+const factory = require('./handllerFactory');
+const OrderService = require('./orders/OrderService');
 
 //@desc : add subscriber to collection manually
 exports.AddsubscriberToCollection = asyncHandler(async (req, res, next) => {
@@ -12,7 +12,7 @@ exports.AddsubscriberToCollection = asyncHandler(async (req, res, next) => {
 
   const package = await Package.findById(packageId);
   if (!package) {
-    return next(new ApiError("Collection Not Found", 404));
+    return next(new ApiError('Collection Not Found', 404));
   }
 
   const startDate = new Date();
@@ -63,7 +63,7 @@ exports.checkUserSubscription = async (user, course = null) => {
 
   if (course) {
     const package = await Package.findOne({ course: course }).select(
-      "_id course"
+      '_id course',
     );
     if (!package) {
       throw new Error(`no package exists for courseId: ${course}`);
@@ -74,7 +74,7 @@ exports.checkUserSubscription = async (user, course = null) => {
     const packageSubscription = await UserSubscription.findOne(filter);
     if (!packageSubscription) {
       throw new Error(
-        `you are not subscribed to package for course ${courseTitle}`
+        `you are not subscribed to package for course ${courseTitle}`,
       );
     }
     const now = new Date();
@@ -105,7 +105,7 @@ exports.checkUserSubscription = async (user, course = null) => {
 exports.subscribeToFreePackage = async (courseId, userId) => {
   try {
     const package = await Package.findOne({ course: courseId }).select(
-      "_id price subscriptionDurationDays"
+      '_id price subscriptionDurationDays',
     );
     if (!package) {
       return;
@@ -131,10 +131,9 @@ exports.subscribeToFreePackage = async (courseId, userId) => {
       endDate,
     });
     await OrderService.makeSureUserInChat(package._id, userId);
-    return;
   } catch (error) {
     console.log(`subscribeToFreePackage \nerror: ${error.message}`);
-    return;
   }
 };
 //680d051cf1cfb2c30b2b1497  delete all chats related to this package
+// you can not do this , because chat related with course Not package

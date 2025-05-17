@@ -183,6 +183,7 @@ exports.getUsersWithoutCourse = async (req, res, next) => {
                 _id: 1,
                 name: 1,
                 email: 1,
+                country: 1,
                 profileImg: {
                   $cond: {
                     if: {
@@ -250,6 +251,7 @@ exports.getUsersCourse = async (req, res, next) => {
           _id: 1,
           name: 1,
           email: 1,
+          country: 1,
           profileImg: {
             $cond: {
               if: {
@@ -306,6 +308,7 @@ exports.getPurchasersUsersAndNon = async (req, res, next) => {
                 _id: 1,
                 name: 1,
                 email: 1,
+                country: 1,
                 orderCount: { $size: '$userOrders' }, // Optional: to show the number of orders
                 // Add other user fields as needed
               },

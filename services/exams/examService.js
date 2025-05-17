@@ -307,19 +307,24 @@ exports.getLessonPerformance = asyncHandler(async (req, res, next) => {
       return next(new ApiError('Course progress not found', 404));
     }
     const { progress } = courseProgress;
-    // res.json({ status: "success", data: courseProgress });
-    const lessonExamResult = _.find(
-      progress,
-      (p) => _.get(p, 'lesson._id')?.toString() === lessonId,
+    //get the completed lesson object Not failed lessons
+    const lessonExamResult = _.maxBy(
+      progress.filter(
+        (p) =>
+          _.get(p, 'lesson._id')?.toString() === lessonId &&
+          p.status === 'Completed',
+      ),
+      (p) => new Date(p.attemptDate),
     );
     //return Lesson_exam_object
     if (!lessonExamResult) {
       return next(new ApiError('Lesson progress not found', 404));
     }
+
     const lessonQuestions =
       await this.checkExamQuestionsStatus(lessonExamResult);
 
-    console.log('lessonQuestions', lessonQuestions);
+    // console.log('lessonQuestions', lessonQuestions);
     return res.status(200).json({
       status: 'success',
       lessonQuestions,

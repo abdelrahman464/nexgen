@@ -1,11 +1,11 @@
-const express = require("express");
+const express = require('express');
 const {
   purchaseForUserValidator,
   queryParamsValidator,
   isAuthToView,
   checkExistingPaidOrder,
-} = require("../utils/validators/orderValidator");
-const authServices = require("../services/authServices");
+} = require('../utils/validators/orderValidator');
+const authServices = require('../services/authServices');
 const {
   findSpecificOrder,
   findAllOrders,
@@ -15,7 +15,7 @@ const {
   // createCourseOrder,
   // createCoursePackageOrder,
   // createPackageOrder,
-} = require("../services/orders/OrderService");
+} = require('../services/orders/OrderService');
 // ---------------------  Cryptomus  ---------------------
 const {
   coursePackageCheckoutSessionPlisio,
@@ -23,7 +23,7 @@ const {
   packageCheckoutSessionPlisio,
   plisioWebhook,
   plisioPaymentCallback,
-} = require("../services/orders/plisio");
+} = require('../services/orders/plisio');
 //-----------------------Lahza---------------------------
 const {
   courseCheckoutSessionLahza,
@@ -31,12 +31,12 @@ const {
   coursePackageCheckoutSessionLahza,
   LahzaPaymentCallback,
   lahzaWebhook,
-} = require("../services/orders/lahza");
+} = require('../services/orders/lahza');
 // ---------------------  purchase For User  ---------------------
 const {
   purchaseForUser,
   createUnPaidOrder,
-} = require("../services/orders/OrderService2");
+} = require('../services/orders/OrderService2');
 
 //configure Router
 const router = express.Router();
@@ -56,99 +56,100 @@ const router = express.Router();
 
 // purchase for user
 router.put(
-  "/purchaseForUser",
+  '/purchaseForUser',
   authServices.protect,
-  authServices.allowedTo("admin"),
+  authServices.allowedTo('admin'),
   purchaseForUserValidator,
-  purchaseForUser
+  purchaseForUser,
 );
-router.put("/createUnPaidOrder/:id", authServices.protect, createUnPaidOrder);
+// free courses
+router.put('/createUnPaidOrder/:id', authServices.protect, createUnPaidOrder);
 //-------------------------------------------
 //-----------CRUD Operations-----------------
 router
-  .route("/")
+  .route('/')
   .get(
     authServices.protect,
-    authServices.allowedTo("user", "admin"),
+    authServices.allowedTo('user', 'admin'),
     queryParamsValidator,
     isAuthToView,
     filterOrders,
-    findAllOrders
+    findAllOrders,
   );
 router.get(
-  "/statistics",
+  '/statistics',
   authServices.protect,
-  authServices.allowedTo("admin"),
-  getOrderStatistics
+  authServices.allowedTo('admin'),
+  getOrderStatistics,
 );
 router.get(
-  "/byMonth",
+  '/byMonth',
   authServices.protect,
-  authServices.allowedTo("admin"),
-  getOrdersByMonth
+  authServices.allowedTo('admin'),
+  getOrdersByMonth,
 );
 router
-  .route("/:id")
+  .route('/:id')
   .get(
     authServices.protect,
-    authServices.allowedTo("admin", "user"),
-    findSpecificOrder
+    authServices.allowedTo('admin', 'user'),
+    findSpecificOrder,
   );
 //--------------------Plisio----------------
-router.post("/plisio/payment/callback", plisioPaymentCallback);
+router.post('/plisio/payment/callback', plisioPaymentCallback);
 router.put(
-  "/plisio/courseCheckout/:courseId",
+  '/plisio/courseCheckout/:courseId',
   authServices.protect,
-  authServices.allowedTo("user", "admin"),
+  authServices.allowedTo('user', 'admin'),
   checkExistingPaidOrder,
-  courseCheckoutSessionPlisio
+  courseCheckoutSessionPlisio,
 );
 router.put(
-  "/plisio/coursePackageCheckout/:coursePackageId",
+  '/plisio/coursePackageCheckout/:coursePackageId',
   authServices.protect,
-  authServices.allowedTo("user", "admin"),
+  authServices.allowedTo('user', 'admin'),
   checkExistingPaidOrder,
-  coursePackageCheckoutSessionPlisio
+  coursePackageCheckoutSessionPlisio,
 );
 router.put(
-  "/plisio/packageCheckout/:packageId",
+  '/plisio/packageCheckout/:packageId',
   authServices.protect,
-  authServices.allowedTo("user", "admin"),
+  authServices.allowedTo('user', 'admin'),
   checkExistingPaidOrder,
-  packageCheckoutSessionPlisio
+  packageCheckoutSessionPlisio,
 );
 router.post(
-  "/webhook/plisio",
-  express.raw({ type: "application/json" }),
-  plisioWebhook
+  '/webhook/plisio',
+  express.raw({ type: 'application/json' }),
+  plisioWebhook,
 );
 //-----------------LAHZA-----------------
-router.get("/lahza/payment/callback", LahzaPaymentCallback);
+router.get('/lahza/payment/callback', LahzaPaymentCallback);
 router.put(
-  "/lahza/courseCheckout/:courseId",
+  '/lahza/courseCheckout/:courseId',
   authServices.protect,
-  authServices.allowedTo("user", "admin"),
+  authServices.allowedTo('user', 'admin'),
   checkExistingPaidOrder,
-  courseCheckoutSessionLahza
+  courseCheckoutSessionLahza,
 );
 router.put(
-  "/lahza/coursePackageCheckout/:coursePackageId",
+  '/lahza/coursePackageCheckout/:coursePackageId',
   authServices.protect,
-  authServices.allowedTo("user", "admin"),
+  authServices.allowedTo('user', 'admin'),
   checkExistingPaidOrder,
-  coursePackageCheckoutSessionLahza
+  coursePackageCheckoutSessionLahza,
 );
 router.put(
-  "/lahza/packageCheckout/:packageId",
+  '/lahza/packageCheckout/:packageId',
   authServices.protect,
-  authServices.allowedTo("user", "admin"),
+  authServices.allowedTo('user', 'admin'),
   checkExistingPaidOrder,
-  packageCheckoutSessionLahza
+  packageCheckoutSessionLahza,
 );
 router.post(
-  "/webhook/lahza",
-  express.raw({ type: "application/json" }),
-  lahzaWebhook
+  '/webhook/lahza',
+  express.raw({ type: 'application/json' }),
+  lahzaWebhook,
 );
 
 module.exports = router;
