@@ -1,21 +1,21 @@
-const sharp = require("sharp");
-const fs = require("fs-extra");
-const path = require("path");
-const bwipjs = require("bwip-js");
-const axios = require("axios");
+const sharp = require('sharp');
+const fs = require('fs-extra');
+const path = require('path');
+const bwipjs = require('bwip-js');
+const axios = require('axios');
 
 // Configuration
 const config = {
   // Template paths - now with different paths for each language
   templates: {
-    en: path.join(__dirname, "..", "assets", "certificate_template_en.png"),
-    ar: path.join(__dirname, "..", "assets", "certificate_template_ar.png"),
+    en: path.join(__dirname, '..', 'assets', 'certificate_template_en.png'),
+    ar: path.join(__dirname, '..', 'assets', 'certificate_template_ar.png'),
   },
 
   // Star image path
-  starImage: path.join(__dirname, "..", "assets", "star.png"),
+  starImage: path.join(__dirname, '..', 'assets', 'star.png'),
   // Output settings
-  outputFolder: path.join(__dirname, "..", "uploads", "certificate"),
+  outputFolder: path.join(__dirname, '..', 'uploads', 'certificate'),
   imageDimensions: {
     width: 1263,
     height: 893,
@@ -26,12 +26,12 @@ const config = {
     en: {
       position: { x: 588, y: 335 },
       fontSize: 43,
-      color: "#1d5a9b",
+      color: '#1d5a9b',
     },
     ar: {
       position: { x: 588, y: 335 },
       fontSize: 43,
-      color: "#1d5a9b",
+      color: '#1d5a9b',
     },
   },
 
@@ -40,12 +40,12 @@ const config = {
     en: {
       position: { x: 588, y: 640 },
       fontSize: 32,
-      color: "#fff",
+      color: '#fff',
     },
     ar: {
       position: { x: 588, y: 640 },
       fontSize: 32,
-      color: "#fff",
+      color: '#fff',
     },
   },
 
@@ -54,14 +54,14 @@ const config = {
     en: {
       position: { x: 588, y: 400 },
       fontSize: 20,
-      color: "#1d5a9b",
+      color: '#1d5a9b',
       maxWidth: 1100, // Maximum width for text wrapping
       lineHeight: 25, // Line height for multi-line descriptions
     },
     ar: {
       position: { x: 588, y: 400 },
       fontSize: 25,
-      color: "#1d5a9b",
+      color: '#1d5a9b',
       maxWidth: 1100,
       lineHeight: 28,
     },
@@ -72,14 +72,14 @@ const config = {
     en: {
       position: { x: 265, y: 800 },
       fontSize: 28,
-      color: "#1d5a9b",
-      format: "en-GB",
+      color: '#1d5a9b',
+      format: 'en-GB',
     },
     ar: {
       position: { x: 265, y: 800 },
       fontSize: 28,
-      color: "#1d5a9b",
-      format: "ar-SA",
+      color: '#1d5a9b',
+      format: 'ar-SA',
     },
   },
 
@@ -102,14 +102,14 @@ const config = {
     en: {
       position: { x: 1000, y: 100 },
       size: 130,
-      color: "507cbf",
-      background: "FFFFFF",
+      color: '507cbf',
+      background: 'FFFFFF',
     },
     ar: {
       position: { x: 1000, y: 100 },
       size: 130,
-      color: "507cbf",
-      background: "FFFFFF",
+      color: '507cbf',
+      background: 'FFFFFF',
     },
   },
 
@@ -144,7 +144,7 @@ async function generateQRCode(certificateId, size, color, background) {
   return new Promise((resolve, reject) => {
     bwipjs.toBuffer(
       {
-        bcid: "qrcode", // Barcode type
+        bcid: 'qrcode', // Barcode type
         text: verificationUrl, // URL to encode in QR
         scale: 3, // Scale factor
         height: 10, // Bar height in millimeters
@@ -160,7 +160,7 @@ async function generateQRCode(certificateId, size, color, background) {
           // Resize the QR code to the specified size
           sharp(png).resize(size, size).toBuffer().then(resolve).catch(reject);
         }
-      }
+      },
     );
   });
 }
@@ -172,7 +172,7 @@ async function generateQRCode(certificateId, size, color, background) {
  * @returns {Array<string>} - Array of lines
  */
 function wrapText(text, maxWidth) {
-  const words = text.split(" ");
+  const words = text.split(' ');
   const lines = [];
   let currentLine = words[0];
 
@@ -193,17 +193,17 @@ async function generateCertificate(certificateDetails) {
   const {
     studentName,
     courseName,
-    courseDescription = "", // New parameter for course description
+    courseDescription = '', // New parameter for course description
     rating,
     certificateId,
-    signatureImageUrl, // URL for the signature image
-    language = "en",
+    language = 'en',
   } = certificateDetails;
+  let { signatureImageUrl } = certificateDetails;
   try {
     // Validate language and get the appropriate template
-    if (!["en", "ar"].includes(language)) {
+    if (!['en', 'ar'].includes(language)) {
       throw new Error(
-        'Unsupported language. Only "en" and "ar" are supported.'
+        'Unsupported language. Only "en" and "ar" are supported.',
       );
     }
 
@@ -211,41 +211,42 @@ async function generateCertificate(certificateDetails) {
     const templatePath = config.templates[language];
     if (!fs.existsSync(templatePath)) {
       throw new Error(
-        `Certificate template for language "${language}" not found at path: ${templatePath}`
+        `Certificate template for language "${language}" not found at path: ${templatePath}`,
       );
     }
 
     // Check if star image exists
     if (!fs.existsSync(config.starImage)) {
-      throw new Error("Star image not found!");
+      throw new Error('Star image not found!');
     }
 
     // Validate signature image URL
     if (!signatureImageUrl) {
-      throw new Error("Signature image URL is required");
+      signatureImageUrl =
+        'https://api.nexgen-academy.com/users/signatureImage-42760dce-b1e1-4b14-b791-1b0e2bcd15aa-1746300472928.webp';
     }
 
     // Validate rating
     if (rating < 1 || rating > 5) {
-      throw new Error("Rating must be between 1 and 5");
+      throw new Error('Rating must be between 1 and 5');
     }
 
     // Validate certificateId
     if (!certificateId) {
-      throw new Error("Certificate ID is required for QR code generation");
+      throw new Error('Certificate ID is required for QR code generation');
     }
 
     // Create output filename
     const outputFilename = `certificate_${studentName.replace(
       /\s+/g,
-      "_"
-    )}_${language}-${courseName.replace(/\s+/g, "_")}-${Date.now()}.png`;
+      '_',
+    )}_${language}-${courseName.replace(/\s+/g, '_')}-${Date.now()}.png`;
     const outputPath = path.join(config.outputFolder, outputFilename);
 
     // Format the course description with line breaks if needed
     const maxCharsPerLine = Math.floor(
       config.courseDescription[language].maxWidth /
-        (config.courseDescription[language].fontSize * 0.6)
+        (config.courseDescription[language].fontSize * 0.6),
     );
     const wrappedDescription = wrapText(courseDescription, maxCharsPerLine);
 
@@ -256,18 +257,18 @@ async function generateCertificate(certificateDetails) {
     const year = date.getFullYear();
 
     const currentDate =
-      language === "ar"
+      language === 'ar'
         ? `${day}/${month}/${year}`
         : date.toLocaleDateString(config.date[language].format, {
-            numberingSystem: "latn",
+            numberingSystem: 'latn',
           });
 
     // Build description text with proper positioning for multiple lines
-    let descriptionSvg = "";
+    let descriptionSvg = '';
     wrappedDescription.forEach((line, index) => {
       const yPos = Math.round(
         config.courseDescription[language].position.y +
-          index * config.courseDescription[language].lineHeight
+          index * config.courseDescription[language].lineHeight,
       );
 
       descriptionSvg += `
@@ -320,38 +321,38 @@ async function generateCertificate(certificateDetails) {
             : 0;
           const centerOffset = Math.round(
             (i - Math.floor(rating / 2)) * config.rating[language].starSpacing +
-              centerShift
+              centerShift,
           );
           return {
             input: await sharp(config.starImage)
               .resize(
                 config.rating[language].starSize,
-                config.rating[language].starSize
+                config.rating[language].starSize,
               )
               .toBuffer(),
             top: Math.round(
               config.rating[language].position.y -
-                config.rating[language].starSize / 2
+                config.rating[language].starSize / 2,
             ),
             left: Math.round(
               config.rating[language].position.x +
                 centerOffset -
-                config.rating[language].starSize / 2
+                config.rating[language].starSize / 2,
             ),
           };
-        })
+        }),
     );
 
     // Generate QR code with custom colors and verification URL
     const qrCodeSize = config.qrCode[language].size;
-    const qrColor = config.qrCode[language].color.replace("#", "");
+    const qrColor = config.qrCode[language].color.replace('#', '');
     const qrBackground = config.qrCode[language].background;
 
     const qrCodeBuffer = await generateQRCode(
       certificateId,
       qrCodeSize,
       qrColor,
-      qrBackground
+      qrBackground,
     );
 
     // Add QR code to composite overlays
@@ -365,19 +366,19 @@ async function generateCertificate(certificateDetails) {
 
     let signatureBuffer;
     try {
-      const response = await axios.get(signatureImageUrl, {
-        responseType: "arraybuffer",
+      const response = await axios.get(finalSignatureUrl, {
+        responseType: 'arraybuffer',
       });
       signatureBuffer = await sharp(Buffer.from(response.data))
         .resize(
           config.signature[language].size.width,
           config.signature[language].size.height,
-          { fit: "inside" }
+          { fit: 'inside' },
         )
         .toBuffer();
     } catch (error) {
       throw new Error(
-        `Failed to download or process signature image: ${error.message}`
+        `Failed to download or process signature image: ${error.message}`,
       );
     }
 
@@ -386,11 +387,11 @@ async function generateCertificate(certificateDetails) {
       input: signatureBuffer,
       top: Math.round(
         config.signature[language].position.y -
-          config.signature[language].size.height / 2
+          config.signature[language].size.height / 2,
       ),
       left: Math.round(
         config.signature[language].position.x -
-          config.signature[language].size.width / 2
+          config.signature[language].size.width / 2,
       ),
     };
 
@@ -409,11 +410,11 @@ async function generateCertificate(certificateDetails) {
       .toFile(outputPath);
 
     console.log(
-      `Certificate generated successfully for ${studentName} in ${language} language with course description and signature. QR code links to: https://api.nexgen-academy.com/api/v1/courses/getCertificate/${certificateId}`
+      `Certificate generated successfully for ${studentName} in ${language} language with course description and signature. QR code links to: https://api.nexgen-academy.com/api/v1/courses/getCertificate/${certificateId}`,
     );
     return outputFilename;
   } catch (error) {
-    console.error("Error generating certificate:", error);
+    console.error('Error generating certificate:', error);
     throw error;
   }
 }

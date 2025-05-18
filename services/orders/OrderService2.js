@@ -37,7 +37,6 @@ async function createOrder(userId, courseId, price, isPaid) {
     paymentMethodType: isPaid ? 'manual' : null,
     paidAt: isPaid ? Date.now() : null,
   });
-
   if (!order) throw new Error("Couldn't create order");
   return order;
 }
@@ -349,4 +348,3 @@ exports.createUnPaidOrder = async (req, res, next) => {
     next(new Error(error.message));
   }
 };
-
