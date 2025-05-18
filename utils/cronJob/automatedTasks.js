@@ -5,11 +5,21 @@ const {
   createCommissionInvoice,
 } = require("../../services/marketing/marketingInvoicesService");
 const Order = require("../../models/orderModel");
+const { kickUnsubscribedUsersJob } = require("../migrationScripts");
 
-exports.invoicesCronJob = () => {
+
+
+
+
+exports.cronJobs = () => {
   cron.schedule("0 0 0 1 * *", () => {
     console.log("Running a task at the first second of each month");
     this.resetMarketLogs();
+  });
+  cron.schedule("0 * * * *", async () => {
+    console.log("Running kickUnsubscribedUsers cron job...");
+    const result = await kickUnsubscribedUsersJob();
+    console.log("Cron job finished:", result);
   });
 };
 
