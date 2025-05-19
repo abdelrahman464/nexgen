@@ -35,7 +35,6 @@ const userSchema = new mongoose.Schema(
     idVerification: {
       type: String,
       enum: ['pending', 'verified', 'rejected'],
-      default: 'pending',
     },
     note: {
       type: String,
