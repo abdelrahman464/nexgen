@@ -44,7 +44,7 @@ coursePackageSchema.pre(/^find/, function (next) {
 const setCourseImageURL = (doc) => {
   //return image base url + image name
   if (doc.image) {
-    const CourseImageURL = `${process.env.BASE_URL}/coursesPackages/${doc.image}`;
+    const CourseImageURL = `${process.env.BASE_URL}/coursePackages/${doc.image}`;
     doc.image = CourseImageURL;
   }
 };

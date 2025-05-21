@@ -440,24 +440,30 @@ exports.getCourseDetails = asyncHandler(async (req, res, next) => {
               },
               then: 0,
               else: {
-                $multiply: [
+                $round: [
+                  // Round to 2 decimal places
                   {
-                    $divide: [
+                    $multiply: [
                       {
-                        $add: [
-                          '$userTotalExamScore',
-                          { $ifNull: ['$score', 0] },
+                        $divide: [
+                          {
+                            $add: [
+                              '$userTotalExamScore',
+                              { $ifNull: ['$score', 0] },
+                            ],
+                          },
+                          {
+                            $add: [
+                              { $sum: '$progress.possibleGrade' },
+                              '$finalExamGrade',
+                            ],
+                          },
                         ],
                       },
-                      {
-                        $add: [
-                          { $sum: '$progress.possibleGrade' },
-                          '$finalExamGrade',
-                        ],
-                      },
+                      100,
                     ],
                   },
-                  100,
+                  2,
                 ],
               },
             },

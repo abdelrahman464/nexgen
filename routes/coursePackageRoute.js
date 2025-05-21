@@ -1,36 +1,43 @@
-const express = require("express");
+const express = require('express');
 
-const coursePackage = require("../services/coursePackageServices");
+const coursePackageValidator = require('../utils/validators/coursePackageValidator');
+const coursePackage = require('../services/coursePackageServices');
 
-const authServices = require("../services/authServices");
+const authServices = require('../services/authServices');
 
 const router = express.Router();
 
 router
-  .route("/")
+  .route('/')
   .get(coursePackage.getCoursePackages)
   .post(
     authServices.protect,
-    authServices.allowedTo("admin"),
-    coursePackage.createCoursePackage
+    authServices.allowedTo('admin'),
+    coursePackage.uploadCoursePackageImage,
+    coursePackage.resizeImage,
+    coursePackageValidator.createCoursePackageValidator,
+    coursePackage.createCoursePackage,
   );
 router
-  .route("/:id")
+  .route('/:id')
   .get(coursePackage.getCoursePackage)
   .put(
     authServices.protect,
-    authServices.allowedTo("admin"),
-    coursePackage.updateCoursePackage
+    authServices.allowedTo('admin'),
+    coursePackage.uploadCoursePackageImage,
+    coursePackage.resizeImage,
+    coursePackageValidator.updateCoursePackageValidator,
+    coursePackage.updateCoursePackage,
   )
   .delete(
     authServices.protect,
-    authServices.allowedTo("admin"),
-    coursePackage.deleteCoursePackage
+    authServices.allowedTo('admin'),
+    coursePackage.deleteCoursePackage,
   );
 router
-  .route("/:packageId")
+  .route('/:packageId')
   .get(
-    authServices.allowedTo("admin"),
-    coursePackage.findUniqueUsersByPackageId
+    authServices.allowedTo('admin'),
+    coursePackage.findUniqueUsersByPackageId,
   );
 module.exports = router;

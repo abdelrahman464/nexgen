@@ -24,6 +24,7 @@ const packageSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    image: String,
     price: {
       type: Number,
       required: [true, 'Package price is required'],
@@ -50,5 +51,22 @@ packageSchema.pre(/^find/, function (next) {
   });
 
   next();
+});
+const setImageURL = (doc) => {
+  //return image base url + image name
+  if (doc.image) {
+    const imageURL = `${process.env.BASE_URL}/packages/${doc.image}`;
+    doc.image = imageURL;
+  }
+};
+//after intialize the doc in db
+// check if the document contains image
+// it work with findOne,findAll,update
+packageSchema.post('init', (doc) => {
+  setImageURL(doc);
+});
+// it work with create
+packageSchema.post('save', (doc) => {
+  setImageURL(doc);
 });
 module.exports = mongoose.model('Package', packageSchema);

@@ -1,10 +1,47 @@
 const mongoose = require('mongoose');
+const sharp = require('sharp');
+const { v4: uuidv4 } = require('uuid');
 const ApiError = require('../utils/apiError');
 const factory = require('./handllerFactory');
 const Package = require('../models/packageModel');
 const Post = require('../models/postModel');
 const UserSubscription = require('../models/userSubscriptionModel');
+const { uploadSingleFile } = require('../middlewares/uploadImageMiddleware');
 
+//upload course image
+exports.uploadPackageImage = uploadSingleFile('image');
+//image processing
+exports.resizeImage = async (req, res, next) => {
+  const { file } = req; // Access the uploaded file
+  if (file) {
+    const fileExtension = file.originalname.substring(
+      file.originalname.lastIndexOf('.'),
+    ); // Extract file extension
+    const newFileName = `package-${uuidv4()}-${Date.now()}${fileExtension}`; // Generate new file name
+
+    // Check if the file is an image for the profile picture
+    if (file.mimetype.startsWith('image/')) {
+      // Process and save the image file using sharp for resizing, conversion, etc.
+      const filePath = `uploads/packages/${newFileName}`;
+
+      await sharp(file.buffer)
+        .toFormat('webp') // Convert to WebP
+        .webp({ quality: 95 })
+        .toFile(filePath);
+
+      // Update the req.body to include the path for the new  package image
+      req.body.image = newFileName;
+    } else {
+      return next(
+        new ApiError(
+          'Unsupported file type. Only images are allowed for package.',
+          400,
+        ),
+      );
+    }
+  }
+  next();
+};
 exports.convertToArray = (req, res, next) => {
   if (req.body.highlights) {
     // If it's not an array, convert it to an array

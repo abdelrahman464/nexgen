@@ -15,6 +15,8 @@ router
   .post(
     authServices.protect,
     authServices.allowedTo('admin'),
+    packageService.uploadPackageImage,
+    packageService.resizeImage,
     packageService.convertToArray,
     createPackageValidator,
     packageService.createOne,
@@ -25,6 +27,8 @@ router
   .put(
     authServices.protect,
     authServices.allowedTo('admin'),
+    packageService.uploadPackageImage,
+    packageService.resizeImage,
     packageIdValidator,
     packageService.convertToArray,
     updatePackageValidator,
