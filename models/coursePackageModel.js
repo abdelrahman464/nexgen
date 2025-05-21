@@ -13,6 +13,11 @@ const coursePackageSchema = new mongoose.Schema(
       required: [true, 'Package title is required'],
       i18n: true,
     },
+    slug: {
+      type: String,
+      required: true,
+      lowercase: true,
+    },
     description: { type: String, required: true, i18n: true },
     highlights: [{ type: Object, i18n: true }],
     image: String,

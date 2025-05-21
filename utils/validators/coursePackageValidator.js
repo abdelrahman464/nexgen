@@ -1,4 +1,5 @@
 const { body, check } = require('express-validator');
+const slugify = require('slugify');
 const validatorMiddleware = require('../../middlewares/validatorMiddleware');
 const ApiError = require('../apiError');
 
@@ -9,7 +10,11 @@ exports.createCoursePackageValidator = [
     .isString()
     .withMessage(`en title must be a string.`)
     .isLength({ min: 3 })
-    .withMessage(`en title must be at least 3 chars`),
+    .withMessage(`en title must be at least 3 chars`)
+    .custom((val, { req }) => {
+      req.body.slug = slugify(val);
+      return true;
+    }),
 
   body('title.ar')
     .isString()
