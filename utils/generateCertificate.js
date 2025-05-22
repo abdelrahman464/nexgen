@@ -366,7 +366,7 @@ async function generateCertificate(certificateDetails) {
 
     let signatureBuffer;
     try {
-      const response = await axios.get(finalSignatureUrl, {
+      const response = await axios.get(signatureImageUrl, {
         responseType: 'arraybuffer',
       });
       signatureBuffer = await sharp(Buffer.from(response.data))
