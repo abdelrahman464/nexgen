@@ -173,11 +173,11 @@ exports.getCourseLessons = async (req, res, next) => {
       ) {
         currentLessonOrder += 1;
       }
-      console.log('currentLessonOrder', currentLessonOrder);
       //---------------
       // Update accessibleLessons based on currentLessonOrder
       accessibleLessons = lessons.map((lesson) => {
         if (lesson.order > currentLessonOrder) lesson.videoUrl = undefined;
+        if (lesson.order < currentLessonOrder) lesson.completed = true;
         return lesson;
       });
     }
@@ -376,8 +376,8 @@ async function getVideoData(videoId, user) {
 
   // Custom watermark configuration
   const payload = {
-    ttl: 300, // OTP valid for 5 minutes
-    // whitelisthref: 'nexgen-academy.com',
+    ttl: 3600, // OTP valid for 60 minutes
+    whitelisthref: 'nexgen-academy.com',
     userId: user._id,
     annotate: JSON.stringify([
       {
