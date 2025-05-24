@@ -12,7 +12,8 @@ const generateToken = require('../utils/generateToken');
 const {
   getMarketerFromInvitationKey,
 } = require('./marketing/marketingAnalyticsService');
-const { generateCertificate } = require('../utils/generateCertificate');
+const CourseProgress = require('../models/courseProgressModel');
+const Lesson = require('../models/lessonModel');
 
 // @desc    User Register,login with Google
 // @route   POST /api/v1/auth/google
@@ -284,13 +285,17 @@ exports.protect = asyncHandler(async (req, res, next) => {
     return next(new ApiError('You Are Not Active', 405));
   }
 
-  if (
-    currentUser.idVerification !== 'verified' &&
-    currentUser.role !== 'admin'
-  ) {
+  // if (
+  //   currentUser.idVerification !== 'verified' &&
+  //   currentUser.role !== 'admin'
+  // ) {
+  //   return next(new ApiError('You Are Not Verified Your ID Document', 406));
+  // }
+  //id verification
+  const isUserNeedToVerifyId = await checkIfUserNeedToVerifyId(currentUser);
+  if (isUserNeedToVerifyId) {
     return next(new ApiError('You Are Not Verified Your ID Document', 406));
   }
-  //id verification
   //add user to request
   //to use this in authorization
   // check if user is already registered
@@ -742,5 +747,55 @@ exports.getLoggedUserData = async (req, res, next) => {
     });
   } catch (err) {
     next(new ApiError(err.message, 400));
+  }
+};
+
+//check if user need to verify his id
+//check if user completed 50% of any random course he enrolled in
+const checkIfUserNeedToVerifyId = async (user) => {
+  // Admin users never need verification
+  if (user.role === 'admin') {
+    return false;
+  }
+
+  // If user is already verified, no need to check
+  if (user.idVerification === 'verified') {
+    return false;
+  }
+
+  try {
+    // Find the user's course progress
+    const courseProgress = await CourseProgress.findOne({
+      user: user._id,
+    })
+      .select('course progress')
+      .lean();
+
+    // If no course progress exists, no verification needed yet
+    if (!courseProgress) {
+      return false;
+    }
+
+    // Count total lessons in the course
+    const totalLessons = await Lesson.countDocuments({
+      course: courseProgress.course,
+    }).lean();
+
+    // If no lessons exist in course, no verification needed
+    if (!totalLessons || totalLessons === 0) {
+      return false;
+    }
+
+    // Calculate completed lessons
+    const completedLessons = courseProgress.progress.filter(
+      (lesson) => lesson.status === 'Completed',
+    ).length;
+    // Check if completed at least 50% of lessons
+    const hasCompletedHalf = completedLessons >= Math.ceil(totalLessons / 2);
+    return hasCompletedHalf;
+  } catch (err) {
+    console.error('Error in checkIfUserNeedToVerifyId:', err);
+    // Fail-safe: return true to require verification if any error occurs
+    return true;
   }
 };
