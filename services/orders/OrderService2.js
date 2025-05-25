@@ -328,18 +328,19 @@ exports.createUnPaidOrder = async (req, res, next) => {
   const userId = req.user._id;
   try {
     const course = await Course.findById(courseId);
-    if (!course) next(new Error('Course not found'));
-    if (course.price && course.price > 0) next(new Error('Course is not free'));
+    if (!course) return next(new Error('Course not found'));
+    if (course.price && course.price > 0)
+      return next(new Error('Course is not free'));
 
     const result = await checkSpecificOrderExistance({
       user: userId,
       course: courseId,
     });
-    if (result) next(new Error('you already have this course'));
+    if (result) return next(new Error('you already have this course'));
     await createOrder(userId, courseId, 0, false);
     await createCourseProgress(userId, courseId);
     await addUserToGroupChat(userId, courseId);
-    await subscribeUserToPackage(userId, course._id);
+    await subscribeUserToPackage(userId, courseId);
     res.status(200).json({
       status: 'success',
       message: 'Order created successfully',
