@@ -546,7 +546,8 @@ exports.updateLoggedUserData = async (req, res, next) => {
       profileImg: req.body.profileImg,
       coverImg: req.body.coverImg,
       signatureImage: req.body.signatureImage,
-      bio: req.body.bio,
+      bio: req.body.bio, 
+      lang:req.body.lang
     };
 
     if (!user.country && req.body.country) {
