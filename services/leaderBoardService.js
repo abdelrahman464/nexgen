@@ -90,8 +90,9 @@ exports.getLeaderBoard = async (req, res) => {
   const { year, month } = req.query;
   filter.year = year ? year : new Date().getFullYear();
   filter.month = month ? month : new Date().getMonth() + 1;
-  const leaderBoard = await LeaderBoard.findOne(filter);
+  const leaderBoard = await LeaderBoard.findOne(filter).lean();
   if (!leaderBoard)
     return res.status(404).json({ message: "No Leader Board Found" });
+
   return res.status(200).json({ status: `success`, leaderBoard });
 };

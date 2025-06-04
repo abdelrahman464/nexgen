@@ -1,16 +1,24 @@
+const { cp } = require("fs-extra");
 const MarketingLog = require("../../models/MarketingModel");
 const {
   getInstructorProfitsInvoices,
   updateInstructorProfitsInvoiceStatus,
 } = require("../instructorProfitsService");
 const { getMonthMoney } = require("./marketingService");
+const { orders } = require("@paypal/checkout-server-sdk");
 
 //1
 const getProfitsInvoices = async (status) => {
   try {
+    console.log("status", status);
     const requestedInvoices = await MarketingLog.find({
       "invoices.status": status,
-    }).populate("marketer", "name email profileImg");
+    })
+      .populate("marketer", "name email profileImg")
+      .populate({
+        path: "invoices.orders",
+        select: "user course coursePackage package totalOrderPrice",
+      });
     // return res.json(requestedInvoices);
     if (requestedInvoices.length === 0) {
       return [];
@@ -191,9 +199,12 @@ exports.createProfitsInvoice = async (marketLog) => {
   //4-calculate the available profits
   const availableProfits = profits - takenProfits;
   //5- create the invoice
+  const ordersIds = sales?.map((sale) => sale.order);
   const invoice = {
     totalSalesMoney: totalSalesMoney.toFixed(2),
     mySales: sales.length,
+    createdBy: "system",
+    orders: ordersIds,
     profitPercentage,
     profits: availableProfits,
     desc: `final invoice for month ${new Date().getMonth()}`,

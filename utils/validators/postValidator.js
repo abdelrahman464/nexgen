@@ -2,6 +2,9 @@ const { check } = require("express-validator");
 const validatorMiddleware = require("../../middlewares/validatorMiddleware");
 const Order = require("../../models/orderModel");
 const ApiError = require("../apiError");
+const {
+  checkUserSubscription,
+} = require("../../services/userSubscriptionService");
 
 exports.processPostValidator = [
   check("id").isMongoId().withMessage("Invalid Requst id format"),
@@ -34,17 +37,11 @@ exports.getPostValidator = [
 exports.checkCourseAuthority = async (req, res, next) => {
   if (req.user.role === "admin" || req.body.sharedTo === "profile")
     return next();
-
-  const order = await Order.find({
-    user: req.user._id,
-    course: { $in: req.body.course },
-  });
-
-  if (order.length !== req.body.course.length) {
-    return next(
-      new ApiError("you are not member of all of these courses", 403)
-    );
+  let course = null;
+  if (req.body.course) {
+    course = req.body.course;
   }
+  await checkUserSubscription(req.user._id, course);
 
   return next();
 };

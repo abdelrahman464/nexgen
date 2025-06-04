@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { create } = require("./postModel");
 
 //when return his unDirect transaction
 //loop on this array and return his total profits
@@ -85,6 +86,13 @@ const MarketingLogsSchema = new mongoose.Schema(
           type: Date,
           default: new Date(),
         },
+        createdBy: { type: String },
+        orders: [
+          {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Order",
+          },
+        ],
         status: {
           type: String,
           Enum: ["pending", "paid"],
