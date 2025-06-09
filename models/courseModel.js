@@ -10,8 +10,6 @@ const courseSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
     },
-    // finalExam: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam' },
-    // placementExam: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam' },
     //i18n
     title: {
       type: String,
@@ -97,7 +95,6 @@ const courseSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    timeseries: true,
     // to enable vitual population
     toJSON: { virtuals: true },
     toObject: { virtuals: true },

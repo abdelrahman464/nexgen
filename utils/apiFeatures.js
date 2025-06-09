@@ -6,7 +6,7 @@ class ApiFeatures {
 
   filter() {
     const queryStringObj = { ...this.queryStr };
-    const excludesFields = ["page", "sort", "limit", "fields"];
+    const excludesFields = ['page', 'sort', 'limit', 'fields'];
     excludesFields.forEach((field) => delete queryStringObj[field]);
 
     let queryStr = JSON.stringify(queryStringObj);
@@ -18,20 +18,20 @@ class ApiFeatures {
 
   sort() {
     if (this.queryStr.sort) {
-      const sortBy = this.queryStr.sort.split(".").join(" ");
+      const sortBy = this.queryStr.sort.split('.').join(' ');
       this.mongooseQuery = this.mongooseQuery.sort(sortBy);
     } else {
-      this.mongooseQuery = this.mongooseQuery.sort("-createdAt");
+      this.mongooseQuery = this.mongooseQuery.sort('-createdAt');
     }
     return this;
   }
 
   limitFields() {
     if (this.queryStr.fields) {
-      const fields = this.queryStr.fields.split(",").join(" ");
+      const fields = this.queryStr.fields.split(',').join(' ');
       this.mongooseQuery = this.mongooseQuery.select(fields);
     } else {
-      this.mongooseQuery = this.mongooseQuery.select("-__v");
+      this.mongooseQuery = this.mongooseQuery.select('-__v');
     }
     return this;
   }
@@ -39,10 +39,10 @@ class ApiFeatures {
   search(modelName) {
     if (this.queryStr.keyword) {
       let query = {};
-      if (modelName === "User") {
-        query = { name: { $regex: this.queryStr.keyword, $options: "i" } };
+      if (modelName === 'User') {
+        query = { name: { $regex: this.queryStr.keyword, $options: 'i' } };
       } else {
-        query = { title: { $regex: this.queryStr.keyword, $options: "i" } };
+        query = { title: { $regex: this.queryStr.keyword, $options: 'i' } };
       }
       this.mongooseQuery = this.mongooseQuery.find(query);
     }

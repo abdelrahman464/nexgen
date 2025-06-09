@@ -393,7 +393,7 @@ dir="${lang === "ar" ? "rtl" : "ltr"}"
     <div class="container">
         <div class="header">
             <div class="logo">
-                <img src="https://nexgen-academy.com/logos/visa.png" alt="NextGen Academy" />
+                <img src=${process.env.LOGO_URL} alt="NextGen Academy" />
             </div>
             <h1>
             ${lang === "ar" ? "تذكير للبث المباشر" : "Live Session Reminder"}

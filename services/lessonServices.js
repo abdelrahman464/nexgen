@@ -377,7 +377,7 @@ async function getVideoData(videoId, user) {
   // Custom watermark configuration
   const payload = {
     ttl: 3600, // OTP valid for 60 minutes
-    whitelisthref: 'nexgen-academy.com',
+    // whitelisthref: 'nexgen-academy.com',
     userId: user._id,
     annotate: JSON.stringify([
       {
