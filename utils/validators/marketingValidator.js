@@ -1,4 +1,4 @@
-const { check, query } = require("express-validator");
+const { check, body } = require("express-validator");
 const validatorMiddleware = require("../../middlewares/validatorMiddleware");
 const ApiError = require("../apiError");
 const MarketLog = require("../../models/MarketingModel");
@@ -53,5 +53,36 @@ exports.modifyInvitationKeysValidator = [
       }
     }),
   //catch error
+  validatorMiddleware,
+];
+
+exports.validateProfitCalculation = [
+  check("profitsCalculationMethod")
+    .optional()
+    .isIn(["manual", "auto"]) // Allowed values
+    .withMessage('Calculation method must be either "manual" or "auto"'),
+
+  check("profitPercentage")
+    .if(body("profitsCalculationMethod").equals("manual"))
+    .notEmpty()
+    .withMessage("Profit percentage is required for manual calculation")
+    .isFloat({ gt: 0 })
+    .withMessage("Profit percentage must be greater than 0"),
+
+  check("commissionsProfitsCalculationMethod")
+    .optional()
+    .isIn(["manual", "auto"]) // Allowed values
+    .withMessage(
+      'commissionsProfitsCalculationMethod must be either "manual" or "auto"'
+    ),
+
+  check("commissionsProfitsPercentage")
+    .if(body("commissionsProfitsCalculationMethod").equals("manual"))
+    .notEmpty()
+    .withMessage(
+      "commissionsProfitsPercentage is required for manual calculation"
+    )
+    .isFloat({ gt: 0 })
+    .withMessage("commissionsProfitsPercentage must be greater than 0"),
   validatorMiddleware,
 ];

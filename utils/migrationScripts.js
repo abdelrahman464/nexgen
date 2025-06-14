@@ -1,6 +1,8 @@
 const UserSubscription = require("../models/userSubscriptionModel");
 const Chat = require("../models/ChatModel");
 const Notification = require("../models/notificationModel");
+const MarketLog = require("../models/MarketingModel");
+const Order = require("../models/orderModel");
 
 // exports.addCertificatesToUsers = async (req, res) => {
 //   try {
@@ -190,5 +192,50 @@ exports.kickUnSubscribedUsers = async (req, res) => {
       status: "fail",
       message: err.message,
     });
+  }
+};
+//=================
+// Migration script to update orders with marketerId from MarketLog 
+exports.updateOrdersWithMarketerId = async (req, res) => {
+  try {
+    // 1. Find MarketLogs where sales array is not empty
+    const marketLogs = await MarketLog.find({
+      "sales.0": { $exists: true }, // Sales array has at least one element
+    });
+
+    if (marketLogs.length === 0) {
+      console.log("No MarketLogs with sales found.");
+      return;
+    }
+
+    // 2. Process each MarketLog
+    for (const log of marketLogs) {
+      const { marketer, sales } = log;
+
+      if (!marketer || !sales || sales.length === 0) continue;
+
+      // 3. Extract all orderIds from sales
+      const orderIds = sales.map((sale) => sale.order);
+
+      if (orderIds.length === 0) {
+        console.log(`No valid orderIds found for MarketLog ${log._id}`);
+        continue;
+      }
+
+      // 4. Update orders with marketerId
+      const result = await Order.updateMany(
+        { _id: { $in: orderIds } },
+        { $set: { marketer } }
+      );
+
+      console.log(
+        `Updated ${result.modifiedCount} orders for MarketLog ${log._id} with marketerId ${marketer}`
+      );
+    }
+
+    console.log("Script completed successfully.");
+    return res.json({ msg: "Orders updated successfully." });
+  } catch (error) {
+    console.error("Error:", error);
   }
 };

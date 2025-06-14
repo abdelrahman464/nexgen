@@ -19,6 +19,8 @@ const {
   createCoursePackageOrderHandler,
 } = require("./OrderService");
 
+const { validateCoupon } = require("../couponService");
+
 const createPlisioTransaction = async (options) => {
   try {
     const params = {

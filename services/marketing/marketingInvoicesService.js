@@ -1,5 +1,6 @@
 const { cp } = require("fs-extra");
 const MarketingLog = require("../../models/MarketingModel");
+const Order = require("../../models/orderModel");
 const {
   getInstructorProfitsInvoices,
   updateInstructorProfitsInvoiceStatus,
@@ -8,7 +9,7 @@ const { getMonthMoney } = require("./marketingService");
 const { orders } = require("@paypal/checkout-server-sdk");
 
 //1
-const getProfitsInvoices = async (status) => {
+const getProfitsInvoices = async (status, lang = "ar") => {
   try {
     console.log("status", status);
     const requestedInvoices = await MarketingLog.find({
@@ -30,6 +31,12 @@ const getProfitsInvoices = async (status) => {
       marketer: log.marketer,
       invoices: log.invoices.filter((invoice) => invoice.status === status),
     }));
+
+    invoices.map((invoice) => {
+      if (invoice.orders) {
+        orders = Order.schema.methods.toJSONLocalizedOnly(document, lang);
+      }
+    });
     //send the response
     return {
       status: "success",
@@ -78,7 +85,7 @@ exports.getAllRequestedInvoices = async (req, res) => {
     if (req.query.invoiceType === "wallet") {
       result = await getWalletInvoices(status);
     } else if (req.query.invoiceType === "profit") {
-      result = await getProfitsInvoices(status);
+      result = await getProfitsInvoices(status, req.locale);
     } else if (req.query.invoiceType === "instructorProfits") {
       result = await getInstructorProfitsInvoices(status);
     }

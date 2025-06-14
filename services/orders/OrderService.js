@@ -75,7 +75,8 @@ const checkExistingPaidOrder = async (userId) => {
 };
 
 async function createOrder(orderDetails) {
-  const { userId, itemId, price, method, itemType, couponName } = orderDetails;
+  const { userId, marketer, itemId, price, method, itemType, couponName } =
+    orderDetails;
   //to avoid duplication of orders
   let order;
   let flag = false;
@@ -92,6 +93,7 @@ async function createOrder(orderDetails) {
   if (!order) {
     order = await Order.create({
       user: userId,
+      marketer,
       [itemType]: itemId,
       totalOrderPrice: price,
       isPaid: true,
@@ -197,6 +199,7 @@ const createCourseOrderHandler = async (paymentDetails) => {
   if (!course || !user) throw new Error("Course or user not found");
   const orderDetails = {
     userId: user._id,
+    marketer: user.invitor,
     itemId: course._id,
     price,
     method,
@@ -286,6 +289,7 @@ const createPackageOrderHandler = async (paymentDetails) => {
 
   const orderDetails = {
     userId: user._id,
+    marketer: user.invitor,
     itemId: package._id,
     price,
     method,
@@ -352,6 +356,7 @@ const createCoursePackageOrderHandler = async (paymentDetails) => {
 
   const orderDetails = {
     userId: user._id,
+    marketer: user.invitor,
     itemId: coursePackage._id,
     price,
     method,

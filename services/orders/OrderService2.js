@@ -1,17 +1,17 @@
-const asyncHandler = require('express-async-handler');
-const Order = require('../../models/orderModel');
-const Course = require('../../models/courseModel');
-const Package = require('../../models/packageModel');
-const CoursePackage = require('../../models/coursePackageModel');
-const UserSubscription = require('../../models/userSubscriptionModel');
-const User = require('../../models/userModel');
-const Chat = require('../../models/ChatModel');
-const Notification = require('../../models/notificationModel');
-const CourseProgress = require('../../models/courseProgressModel');
-const { calculateProfits } = require('../marketing/marketingService');
-const { availUserToReview } = require('../userService');
-const { checkExistingPaidOrder } = require('./OrderService');
-const { subscribeToFreePackage } = require('../userSubscriptionService');
+const asyncHandler = require("express-async-handler");
+const Order = require("../../models/orderModel");
+const Course = require("../../models/courseModel");
+const Package = require("../../models/packageModel");
+const CoursePackage = require("../../models/coursePackageModel");
+const UserSubscription = require("../../models/userSubscriptionModel");
+const User = require("../../models/userModel");
+const Chat = require("../../models/ChatModel");
+const Notification = require("../../models/notificationModel");
+const CourseProgress = require("../../models/courseProgressModel");
+const { calculateProfits } = require("../marketing/marketingService");
+const { availUserToReview } = require("../userService");
+const { checkExistingPaidOrder } = require("./OrderService");
+const { subscribeToFreePackage } = require("../userSubscriptionService");
 
 /** 
  i will write here some things that i may forget about business logic 
@@ -25,16 +25,17 @@ const checkSpecificOrderExistance = async (filter) => {
   return false;
 };
 
-async function createOrder(userId, courseId, price, isPaid) {
+async function createOrder(userId, courseId, price, isPaid, marketer = null) {
   let isResale;
   if (isPaid) isResale = await checkExistingPaidOrder(userId);
   const order = await Order.create({
     user: userId,
+    marketer,
     course: courseId,
     totalOrderPrice: price,
     isPaid: isPaid,
     isResale,
-    paymentMethodType: isPaid ? 'manual' : null,
+    paymentMethodType: isPaid ? "manual" : null,
     paidAt: isPaid ? Date.now() : null,
   });
   if (!order) throw new Error("Couldn't create order");
@@ -60,7 +61,7 @@ async function addUserToGroupChat(userId, courseId) {
   const chat = await Chat.findOneAndUpdate(
     { course: courseId, isGroupChat: true },
     { $push: { participants: { user: userId, isAdmin: false } } },
-    { new: true },
+    { new: true }
   );
   //send notification
   await Notification.create({
@@ -70,7 +71,7 @@ async function addUserToGroupChat(userId, courseId) {
       ar: `${chat.groupName} تمت اضافتك الى المجموعة `,
     },
     chat: chat._id,
-    type: 'chat',
+    type: "chat",
   });
 }
 
@@ -96,12 +97,12 @@ const createCoursePackageOrder = async (id, userId, isPaid) => {
     user: userId,
     coursePackage: id,
   });
-  if (result) throw new Error('Order already exists');
+  if (result) throw new Error("Order already exists");
   const coursePackage = await CoursePackage.findById(id);
-  if (!coursePackage) throw new Error('CoursePackage not found');
+  if (!coursePackage) throw new Error("CoursePackage not found");
 
   const user = await User.findById(userId);
-  if (!user) throw new Error('User not found');
+  if (!user) throw new Error("User not found");
 
   const coursePackagePrice = coursePackage.priceAfterDiscount
     ? coursePackage.priceAfterDiscount
@@ -111,11 +112,12 @@ const createCoursePackageOrder = async (id, userId, isPaid) => {
   if (isPaid) isResale = await checkExistingPaidOrder(userId);
   const order = await Order.create({
     user: user._id,
+    marketer: user.invitor, 
     coursePackage: coursePackage._id,
     totalOrderPrice: coursePackagePrice,
     isPaid: isPaid,
     isResale,
-    paymentMethodType: isPaid ? 'manual' : null,
+    paymentMethodType: isPaid ? "manual" : null,
     paidAt: isPaid ? Date.now() : null,
   });
 
@@ -135,7 +137,7 @@ const createCoursePackageOrder = async (id, userId, isPaid) => {
       const chat = await Chat.findOneAndUpdate(
         { course: courseId, isGroupChat: true },
         { $push: { participants: { user: user._id, isAdmin: false } } },
-        { new: true },
+        { new: true }
       );
       if (chat) {
         await Notification.create({
@@ -145,7 +147,7 @@ const createCoursePackageOrder = async (id, userId, isPaid) => {
             ar: `${chat.groupName} تمت اضافتك الى المجموعة `,
           },
           chat: chat._id,
-          type: 'chat',
+          type: "chat",
         });
       }
 
@@ -162,7 +164,7 @@ const createCoursePackageOrder = async (id, userId, isPaid) => {
           endDate,
         });
       }
-    }),
+    })
   );
   //avail user to review
   await availUserToReview(user._id);
@@ -170,7 +172,7 @@ const createCoursePackageOrder = async (id, userId, isPaid) => {
     const data = {
       email: user.email,
       amount: coursePackagePrice,
-      itemType: 'package',
+      itemType: "package",
       order: order._id,
       item: coursePackage.title,
     };
@@ -186,12 +188,12 @@ const createPackageOrder = asyncHandler(async (id, userId, isPaid) => {
     package: id,
     endDate: { $gte: new Date() }, // Check if the package is still valid
   });
-  if (result) throw new Error('Order already exists');
+  if (result) throw new Error("Order already exists");
   const package = await Package.findById(id);
-  if (!package) throw new Error('Package not found');
+  if (!package) throw new Error("Package not found");
 
   const user = await User.findById(userId);
-  if (!user) throw new Error('User not found');
+  if (!user) throw new Error("User not found");
 
   const packagePrice = package.priceAfterDiscount
     ? package.priceAfterDiscount
@@ -201,11 +203,12 @@ const createPackageOrder = asyncHandler(async (id, userId, isPaid) => {
   if (isPaid) isResale = await checkExistingPaidOrder(userId);
   const order = await Order.create({
     user: user._id,
+    marketer: user.invitor, // Assuming invitor is the marketer
     package: package._id,
     totalOrderPrice: packagePrice,
     isPaid: isPaid,
     isResale,
-    paymentMethodType: isPaid ? 'manual' : null,
+    paymentMethodType: isPaid ? "manual" : null,
     paidAt: isPaid ? Date.now() : null,
     // paypalOrderId: paypalOrderId  // Adding the PayPal order ID to the order document
   });
@@ -235,7 +238,7 @@ const createPackageOrder = asyncHandler(async (id, userId, isPaid) => {
       endDate,
     });
     //if package type is course => let  gave course to user
-    if (package.type === 'course') {
+    if (package.type === "course") {
       await createCourseProgress(user._id, package.course._id);
     }
 
@@ -248,7 +251,7 @@ const createPackageOrder = asyncHandler(async (id, userId, isPaid) => {
     const data = {
       email: user.email,
       amount: packagePrice,
-      itemType: 'package',
+      itemType: "package",
       order: order._id,
       item: package.title,
     };
@@ -263,7 +266,7 @@ const createCourseOrder = async (id, userId, isPaid) => {
       user: userId,
       course: id,
     });
-    if (result) throw new Error('Order already exists');
+    if (result) throw new Error("Order already exists");
     const [course, user] = await Promise.all([
       Course.findById(id),
       User.findById(userId),
@@ -272,7 +275,13 @@ const createCourseOrder = async (id, userId, isPaid) => {
       ? course.priceAfterDiscount
       : course.price;
 
-    const order = await createOrder(user._id, course._id, coursePrice, isPaid);
+    const order = await createOrder(
+      user._id,
+      course._id,
+      coursePrice,
+      isPaid,
+      user.invitor
+    );
     await createCourseProgress(user._id, course._id);
     await addUserToGroupChat(user._id, course._id);
     await subscribeUserToPackage(user._id, course._id);
@@ -287,7 +296,7 @@ const createCourseOrder = async (id, userId, isPaid) => {
       await calculateProfits({
         email: user.email,
         amount: coursePrice,
-        itemType: 'course',
+        itemType: "course",
         item: course.title,
         order: order._id,
         instructorId: instructorId,
@@ -302,22 +311,22 @@ exports.purchaseForUser = async (req, res, next) => {
   try {
     const { type, id, userId, isPaid } = req.body;
 
-    if (type === 'course') {
+    if (type === "course") {
       await createCourseOrder(id, userId, isPaid);
-    } else if (type === 'package') {
+    } else if (type === "package") {
       await createPackageOrder(id, userId, isPaid);
-    } else if (type === 'coursePackage') {
+    } else if (type === "coursePackage") {
       await createCoursePackageOrder(id, userId, isPaid);
     } else {
-      throw new Error('Invalid order type');
+      throw new Error("Invalid order type");
     }
     res.status(200).json({
-      status: 'success',
-      message: 'Order created successfully',
+      status: "success",
+      message: "Order created successfully",
     });
   } catch (error) {
     res.status(400).json({
-      status: 'failed',
+      status: "failed",
       message: error.message,
     });
   }
@@ -328,22 +337,22 @@ exports.createUnPaidOrder = async (req, res, next) => {
   const userId = req.user._id;
   try {
     const course = await Course.findById(courseId);
-    if (!course) return next(new Error('Course not found'));
+    if (!course) return next(new Error("Course not found"));
     if (course.price && course.price > 0)
-      return next(new Error('Course is not free'));
+      return next(new Error("Course is not free"));
 
     const result = await checkSpecificOrderExistance({
       user: userId,
       course: courseId,
     });
-    if (result) return next(new Error('you already have this course'));
+    if (result) return next(new Error("you already have this course"));
     await createOrder(userId, courseId, 0, false);
     await createCourseProgress(userId, courseId);
     await addUserToGroupChat(userId, courseId);
     await subscribeUserToPackage(userId, courseId);
     res.status(200).json({
-      status: 'success',
-      message: 'Order created successfully',
+      status: "success",
+      message: "Order created successfully",
     });
   } catch (error) {
     next(new Error(error.message));

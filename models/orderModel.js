@@ -7,6 +7,10 @@ const OrderSchema = new mongoose.Schema(
       ref: "User",
       required: [true, "order must be belong to user"],
     },
+    marketer: {
+      type: mongoose.Schema.ObjectId,
+      ref: "User",
+    },
     description: String,
     course: {
       type: mongoose.Schema.ObjectId,
@@ -47,6 +51,10 @@ const OrderSchema = new mongoose.Schema(
 
 OrderSchema.pre(/^find/, function (next) {
   this.populate({ path: "user", select: "_id name phone email " })
+    .populate({
+      path: "marketer",
+      select: "name email",
+    })
     .populate({
       path: "course",
       select: "title -category price",

@@ -207,13 +207,14 @@ exports.getMyCourses = asyncHandler(async (req, res, next) => {
   });
 });
 
-// Get all courses
-// exports.getAllCourses = factory.getALl(Course, 'Course', [
-//   { path: 'instructor', select: 'name email profileImg' },
-// ]);
-exports.getAllCourses = async (req, res) => {
-  const couses;
+exports.filterActiveCourses = (req, res, next) => {
+  req.filterObj = { status: "active" };
+  next();
 };
+// Get all courses
+exports.getAllCourses = factory.getALl(Course, "Course", [
+  { path: "instructor", select: "name email profileImg" },
+]);
 
 // Get a specific course by ID
 // exports.getCourseById = factory.getOne(Course, "reviews", "instructor");

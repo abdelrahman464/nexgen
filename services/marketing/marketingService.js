@@ -155,7 +155,7 @@ exports.calculateProfits = async (
     const data = {
       marketerId: marketerMarketLog.marketer,
       purchaser: user._id,
-      order:details.order,
+      order: details.order,
       amount: details.amount,
       itemType: details.itemType,
       item: details.item,
@@ -164,12 +164,20 @@ exports.calculateProfits = async (
     };
 
     //7- calculate the percentage
-    const profitPercentage = this.detectPercentage(
-      marketerMarketLog.role,
-      data.totalSalesMoney
-    );
+    let profitPercentage;
+    if (
+      marketerMarketLog.profitsCalculationMethod &&
+      marketerMarketLog.profitsCalculationMethod == "manual"
+    ) {
+      profitPercentage = marketerMarketLog.profitPercentage;
+    } else {
+      profitPercentage = this.detectPercentage(
+        marketerMarketLog.role,
+        data.totalSalesMoney
+      );
+    }
     //8- update marketLog with this sale
-
+    console.log(profitPercentage);
     await updateSellerSales(data, profitPercentage);
     //9- update current user object in his head.transaction (not sure about this approach till now)
     if (marketerMarketLog.role !== "head" && marketerMarketLog.invitor) {
@@ -208,12 +216,22 @@ const updateHeadCommission = async (data) => {
     marketer: invitorId,
   });
   if (!headMarketLog) {
-    console.warn(`head not found will giving him the commission`);
+    console.warn(`head not found`);
     return;
   }
-  const profit =
-    ((headMarketLog.profitPercentage - marketerProfitsPercentage) / 100) *
-    marketerTotalSalesMoney;
+  //----------------------------------------
+  let commissionsProfitsPercentage;
+  if (
+    headMarketLog.commissionsProfitsCalculationMethod &&
+    headMarketLog.commissionsProfitsCalculationMethod === "manual"
+  ) {
+    commissionsProfitsPercentage = headMarketLog.commissionsProfitsPercentage;
+  } else {
+    commissionsProfitsPercentage =
+      headMarketLog.profitPercentage - marketerProfitsPercentage;
+  }
+  //--------------------------------------
+  const profit = (commissionsProfitsPercentage / 100) * marketerTotalSalesMoney;
 
   let hasBeenUpdated = false;
   headMarketLog.commissions.map((commission) => {
@@ -656,4 +674,40 @@ const setProfileImageURL = (doc) => {
   }
 
   return doc;
+};
+//========================================
+exports.updateMarketLogProfitsCalculationMethod = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const marketLog = await MarketingLog.findOne({ _id: id });
+    if (!marketLog) {
+      return res
+        .status(404)
+        .json({ status: "failed", msg: "MarketLog not found" });
+    }
+    const { profitsCalculationMethod, commissionsProfitsCalculationMethod } =
+      req.body;
+
+    let { profitPercentage, commissionsProfitsPercentage } = req.body;
+
+    if (profitsCalculationMethod == "auto") {
+      const { role, totalSalesMoney } = marketLog;
+      profitPercentage = this.detectPercentage(role, totalSalesMoney);
+    }
+    await MarketingLog.findOneAndUpdate(
+      { _id: id },
+      {
+        profitsCalculationMethod,
+        profitPercentage,
+        commissionsProfitsCalculationMethod,
+        commissionsProfitsPercentage,
+      }
+    );
+    return res.status(200).json({
+      status: "success",
+      msg: "MarketLog profits calculation method updated successfully",
+    });
+  } catch (error) {
+    return res.status(500).json({ status: "failed", msg: error.message });
+  }
 };

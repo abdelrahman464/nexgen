@@ -28,12 +28,21 @@ const MarketingLogsSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    profitsCalculationMethod: {
+      type: String,
+    },
     profitPercentage: {
       type: Number,
     },
     profits: {
       type: Number,
       default: 0,
+    },
+    commissionsProfitsCalculationMethod: {
+      type: String,
+    },
+    commissionsProfitsPercentage: {
+      type: Number,
     },
     withdrawals: { type: Number, default: 0 },
     clicks: [

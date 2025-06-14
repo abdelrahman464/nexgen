@@ -8,12 +8,14 @@ const {
   createInvoice,
   setPaymentDetails,
   modifyInvitationKeys,
+  updateMarketLogProfitsCalculationMethod,
 } = require("../services/marketing/marketingService");
 
 const {
   checkAuthority,
   createInvoiceValidator,
   modifyInvitationKeysValidator,
+  validateProfitCalculation,
 } = require("../utils/validators/marketingValidator");
 
 const router = express.Router();
@@ -39,6 +41,14 @@ router.get(
   authServices.protect,
   authServices.allowedTo("user", "admin"),
   getMarketerChildren
+);
+
+router.patch(
+  "/updateMarketLogProfitsCalculationMethod/:id", //id is the marketer id
+  authServices.protect,
+  authServices.allowedTo("admin"),
+  validateProfitCalculation,
+  updateMarketLogProfitsCalculationMethod
 );
 
 router.put(
