@@ -163,24 +163,49 @@ exports.getCourseLessons = async (req, res, next) => {
       let lastLessonProgress = this.getLastLessonExamOrder(
         userCourseProgress.progress
       );
+
       lastLessonProgress = lastLessonProgress.toObject();
+
       //------------
       let currentLessonOrder = lastLessonProgress.lesson.order || 0;
-      if (
-        lastLessonProgress.status === "Completed" &&
-        (!_.has(lastLessonProgress, "passAnalytics") ||
-          lastLessonProgress.passAnalytics)
-      ) {
+      const conditions = {
+        isCompleted: lastLessonProgress.status === "Completed",
+        hasPassedAnalytics: _.has(lastLessonProgress, "passAnalytics")
+          ? lastLessonProgress.passAnalytics
+          : undefined,
+      };
+
+      const canProgressToNextLesson =
+        conditions.isCompleted &&
+        (conditions.hasPassedAnalytics === undefined ||
+          conditions.hasPassedAnalytics);
+
+      if (canProgressToNextLesson) {
         currentLessonOrder += 1;
       }
       //---------------
       // Update accessibleLessons based on currentLessonOrder
+
       accessibleLessons = lessons.map((lesson) => {
         if (lesson.order > currentLessonOrder) lesson.videoUrl = undefined;
-        if (lesson.order < currentLessonOrder) lesson.completed = true;
+        if (lesson.order < currentLessonOrder) {
+          lesson.passedExam = true;
+          if (lesson.isRequireAnalytic) lesson.passedAnalyticsTask = true; // check if lesson require analytics (hashMap lessons by order)
+        }
+
+        if (lesson.order === currentLessonOrder && !canProgressToNextLesson) {
+          lesson.passedExam = conditions.isCompleted;
+          if (conditions.hasPassedAnalytics !== undefined) {
+            lesson.passedAnalyticsTask = conditions.hasPassedAnalytics;
+          }
+        } else if (lesson.order === currentLessonOrder) {
+          lesson.passedExam = false;
+          if (lesson.isRequireAnalytic) lesson.passedAnalyticsTask = false; // check if lesson require analytics (hashMap lessons by order)
+        }
+
         return lesson;
       });
-  
+
       if (lessons.length < currentLessonOrder) {
         canTakeFinalExam = true;
       }
@@ -243,22 +268,39 @@ exports.getSectionLessons = async (req, res, next) => {
         lastLessonProgress = lastLessonProgress.toObject();
 
         // Add null checks for lesson and order
-        let currentLessonOrder = 0;
-        if (lastLessonProgress && lastLessonProgress.lesson) {
-          currentLessonOrder = lastLessonProgress.lesson.order || 0;
+        let currentLessonOrder = lastLessonProgress.lesson.order || 0;
+        const conditions = {
+          isCompleted: lastLessonProgress.status === "Completed",
+          hasPassedAnalytics: _.has(lastLessonProgress, "passAnalytics")
+            ? lastLessonProgress.passAnalytics
+            : undefined,
+        };
 
-          if (
-            lastLessonProgress.status === "Completed" &&
-            (!_.has(lastLessonProgress, "passAnalytics") ||
-              lastLessonProgress.passAnalytics)
-          ) {
-            currentLessonOrder += 1;
-          }
+        const canProgressToNextLesson =
+          conditions.isCompleted &&
+          (conditions.hasPassedAnalytics === undefined ||
+            conditions.hasPassedAnalytics);
+
+        if (canProgressToNextLesson) {
+          currentLessonOrder += 1;
         }
-
         // Update accessibleLessons based on currentLessonOrder
         accessibleLessons = localizedLessons.map((lesson) => {
           if (lesson.order > currentLessonOrder) lesson.videoUrl = undefined;
+          if (lesson.order < currentLessonOrder) {
+            lesson.passedExam = true;
+            if (lesson.isRequireAnalytic) lesson.passedAnalyticsTask = true; // check if lesson require analytics (hashMap lessons by order)
+          }
+
+          if (lesson.order === currentLessonOrder && !canProgressToNextLesson) {
+            lesson.passedExam = conditions.isCompleted;
+            if (conditions.hasPassedAnalytics !== undefined) {
+              lesson.passedAnalyticsTask = conditions.hasPassedAnalytics;
+            }
+          } else if (lesson.order === currentLessonOrder) {
+            lesson.passedExam = false;
+            if (lesson.isRequireAnalytic) lesson.passedAnalyticsTask = false; // check if lesson require analytics (hashMap lessons by order)
+          }
           return lesson;
         });
         if (lessons.length < currentLessonOrder) {
@@ -501,6 +543,7 @@ exports.deleteLesson = factory.deleteOne(Lesson);
 exports.getLastLessonExamOrder = (progresses) => {
   let lastProgressIndex = 0;
   let lastOrder = 0;
+
   for (let i = 0; i < progresses.length; i += 1) {
     if (progresses[i].status === "Completed") {
       if (
@@ -512,5 +555,6 @@ exports.getLastLessonExamOrder = (progresses) => {
       }
     }
   }
+
   return progresses[lastProgressIndex];
 };
