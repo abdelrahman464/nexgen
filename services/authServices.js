@@ -767,6 +767,7 @@ const checkIfUserNeedToVerifyId = async (user) => {
     // Find the user's course progress
     const courseProgress = await CourseProgress.findOne({
       user: user._id,
+      course:"664697c2ecf273280314ecab"
     })
       .select("course progress")
       .lean();
