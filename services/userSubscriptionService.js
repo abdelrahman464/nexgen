@@ -3,7 +3,7 @@ const Package = require('../models/packageModel');
 const UserSubscription = require('../models/userSubscriptionModel');
 const ApiError = require('../utils/apiError');
 const factory = require('./handllerFactory');
-const OrderService = require('./orders/OrderService');
+const { addUserToGroupChatAndNotify } = require('./orders/OrderService');
 
 //@desc : add subscriber to collection manually
 exports.AddsubscriberToCollection = asyncHandler(async (req, res, next) => {
@@ -130,7 +130,9 @@ exports.subscribeToFreePackage = async (courseId, userId) => {
       startDate,
       endDate,
     });
-    await OrderService.makeSureUserInChat(package._id, userId);
+    // await OrderService.makeSureUserInChat(package._id, userId);
+    const packageData = await Package.findById(package._id).populate('course');
+    await addUserToGroupChatAndNotify(userId, packageData.course._id);
   } catch (error) {
     console.log(`subscribeToFreePackage \nerror: ${error.message}`);
   }
