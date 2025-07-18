@@ -7,10 +7,6 @@ const {
 const Order = require("../../models/orderModel");
 const { kickUnsubscribedUsersJob } = require("../migrationScripts");
 
-
-
-
-
 exports.cronJobs = () => {
   cron.schedule("0 0 0 1 * *", () => {
     console.log("Running a task at the first second of each month");
@@ -75,7 +71,12 @@ exports.resetMarketLogs = async () => {
       log.profits = 0;
       log.sales = [];
       log.commissions = [];
-      log.profitPercentage = log.role === "head" ? 20 : 10;
+      if (
+        log.profitsCalculationMethod &&
+        log.profitsCalculationMethod !== "manual"
+      ) {
+        log.profitPercentage = log.role === "head" ? 20 : 10;
+      }
       await log.save();
     });
 

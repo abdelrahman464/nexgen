@@ -928,3 +928,74 @@ exports.customerService = async (req, res, next) => {
     },
   });
 };
+
+//@desc Add user to all course chats and make them admin
+//@route POST /api/v1/chat/addUserToCourseChats
+//@access protected admin
+exports.addUserToCourseChats = asyncHandler(async (req, res, next) => {
+  try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({
+        status: "error",
+        message: "userId is required in request body",
+      });
+    }
+
+    // Find all chats that are course chats (either by type "course" or by having a course field)
+    const courseChats = await Chat.find({
+      $or: [{ type: "course" }, { course: { $exists: true, $ne: null } }],
+    });
+
+    if (courseChats.length === 0) {
+      return res.status(200).json({
+        status: "success",
+        message: "No course chats found",
+        data: { addedToChats: 0 },
+      });
+    }
+
+    // Add user to each course chat as admin
+    const updatePromises = courseChats.map(async (chat) => {
+      // Check if user is already a participant
+      const isAlreadyParticipant = chat.participants.some(
+        (participant) => String(participant.user) === String(userId)
+      );
+
+      if (!isAlreadyParticipant) {
+        // Add user as admin to the chat
+        await Chat.findByIdAndUpdate(
+          chat._id,
+          {
+            $addToSet: {
+              participants: {
+                user: userId,
+                isAdmin: true,
+              },
+            },
+          },
+          { new: true }
+        );
+        return true;
+      }
+      return false;
+    });
+
+    const results = await Promise.all(updatePromises);
+    const addedToChats = results.filter(Boolean).length;
+
+    res.status(200).json({
+      status: "success",
+      message: `User added to ${addedToChats} course chats as admin`,
+      data: {
+        userId,
+        addedToChats,
+        totalCourseChats: courseChats.length,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+//---------------------------

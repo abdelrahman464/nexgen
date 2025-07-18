@@ -122,6 +122,7 @@ exports.createCourse = asyncHandler(async (req, res) => {
       participants: [{ user: groupCreatorId, isAdmin: true }],
       isGroupChat: true,
       course: course._id,
+      type: "course",
       creator: req.user._id,
       groupName: groupNameAsCourse,
       description: groupDescriptionAsCourse,
