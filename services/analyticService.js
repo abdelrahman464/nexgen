@@ -209,8 +209,8 @@ exports.createOne = async (req, res, next) => {
       });
     }
     if (flag) await userCourseProgress.save();
+    req.body.lesson = lessonId;
   }
-  req.body.lesson = lessonId;
   return factory.createOne(Analytic)(req, res, next);
 };
 //check if the user is the owner or marketer
@@ -255,7 +255,8 @@ function filterAnalyticsDocs(analytics) {
 //---------------------------------------------------
 function toISOFormat(dateString) {
   // Parse the input date (MM/DD/YYYY)
-  const [day, month, year] = dateString.split("-").map(Number);
+  // const [day, month, year] = dateString.split("-").map(Number);
+  const [year, month, day] = dateString.split("-").map(Number);
   // Create a Date object
   const date = new Date(Date.UTC(year, month - 1, day));
   // Convert to ISO format
@@ -274,7 +275,7 @@ exports.getAnalyticsPerformance = async (req, res, next) => {
     user: userId,
     isPassed: true,
   });
-
+  
   const analyticsDocs = await Analytic.find({
     user: userId,
     createdAt: { $gte: startDate, $lte: endDate },

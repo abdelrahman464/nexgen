@@ -29,6 +29,7 @@
     "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.21",
     "lowdash": "^1.2.0",
+    "luxon": "^3.7.1",
     "moment": "^2.30.1",
     "mongoose": "^6.0.13",
     "mongoose-i18n-localize": "^0.3.0",

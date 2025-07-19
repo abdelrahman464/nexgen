@@ -1,47 +1,97 @@
-const { cp } = require("fs-extra");
 const MarketingLog = require("../../models/MarketingModel");
-const Order = require("../../models/orderModel");
 const {
   getInstructorProfitsInvoices,
   updateInstructorProfitsInvoiceStatus,
 } = require("../instructorProfitsService");
-const { getMonthMoney } = require("./marketingService");
-const { orders } = require("@paypal/checkout-server-sdk");
+const { getMonthMoney, getMonthBoundaries } = require("./marketingService");
 
 //1
 const getProfitsInvoices = async (status, lang = "ar") => {
   try {
-    console.log("status", status);
-    const requestedInvoices = await MarketingLog.find({
-      "invoices.status": status,
-    })
+    //getting marketLogs that contain invoices with the specified status
+    let marketLogs = await MarketingLog.find(
+      {
+        "invoices.status": status,
+      },
+      { marketer: 1, invoices: 1, role: 1, _id: 1 }
+    )
       .populate("marketer", "name email profileImg")
       .populate({
         path: "invoices.orders",
-        select: "user course coursePackage package totalOrderPrice",
-      });
-    // return res.json(requestedInvoices);
-    if (requestedInvoices.length === 0) {
+        select:
+          "user course coursePackage package totalOrderPrice paymentMethodType paidAt createdAt",
+      })
+      .lean();
+
+    if (marketLogs.length === 0) {
       return [];
     }
     // Filter only the invoices with the specified status
-    const invoices = requestedInvoices.map((log) => ({
+    marketLogs = marketLogs.map((log) => ({
       _id: log._id,
       role: log.role,
       marketer: log.marketer,
       invoices: log.invoices.filter((invoice) => invoice.status === status),
     }));
+    console.log(lang);
+    // Localize titles for each order in each invoice
 
-    invoices.map((invoice) => {
-      if (invoice.orders) {
-        orders = Order.schema.methods.toJSONLocalizedOnly(document, lang);
-      }
+    //translate item's title in each order and reform each order
+    marketLogs.forEach((log) => {
+      log.invoices?.forEach((invoice) => {
+        invoice.orderNum = invoice.orders?.length;
+        if (invoice.orders && Array.isArray(invoice.orders)) {
+          invoice.orders.forEach((order) => {
+            // Localize course title
+            if (order.course && order.course.title) {
+              delete order.course.category;
+              delete order.course.accessibleCourses;
+              order.course = {
+                ...order.course,
+                title:
+                  order.course.title[lang] ||
+                  order.course.title.ar ||
+                  order.course.title.en,
+              };
+            }
+
+            // Localize package title
+            if (order.package && order.package.title) {
+              delete order.package.course;
+              order.package = {
+                ...order.package,
+                title:
+                  order.package.title[lang] ||
+                  order.package.title.ar ||
+                  order.package.title.en,
+              };
+            }
+
+            // Localize coursePackage title and its courses
+            if (order.coursePackage && order.coursePackage.title) {
+              delete order.coursePackage.courses;
+              order.coursePackage = {
+                ...order.coursePackage,
+                title:
+                  order.coursePackage.title[lang] ||
+                  order.coursePackage.title.ar ||
+                  order.coursePackage.title.en,
+              };
+            }
+          });
+        }
+      });
     });
+
+    const invoicesNumber = marketLogs.reduce(
+      (acc, log) => acc + log.invoices.length,
+      0
+    );
     //send the response
     return {
       status: "success",
-      length: invoices.length,
-      data: invoices,
+      length: invoicesNumber,
+      data: marketLogs,
     };
   } catch (error) {
     throw new Error(error);
@@ -194,12 +244,15 @@ exports.createProfitsInvoice = async (marketLog) => {
   //1- check if he has sales
   if (!profits || profits === 0) return marketLog;
   //2- check if he has profits to be calculated
-  const result = await getMonthMoney(
+  const monthBoundaries = getMonthBoundaries();
+
+  let lastMonthAnalytics = getMonthMoney(
     marketLog.invoices,
-    new Date().getMonth() - 1 //last month , cause cron-job is running at the first day of the new month
+    monthBoundaries.lastMonth.firstDay,
+    monthBoundaries.lastMonth.lastDay
   );
 
-  const takenProfits = result.monthProfits;
+  const takenProfits = lastMonthAnalytics.monthProfits;
   //3- check if he has profits to be calculated
   if (profits === takenProfits) return marketLog;
 

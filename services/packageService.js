@@ -1,31 +1,31 @@
-const mongoose = require('mongoose');
-const sharp = require('sharp');
-const { v4: uuidv4 } = require('uuid');
-const ApiError = require('../utils/apiError');
-const factory = require('./handllerFactory');
-const Package = require('../models/packageModel');
-const Post = require('../models/postModel');
-const UserSubscription = require('../models/userSubscriptionModel');
-const { uploadSingleFile } = require('../middlewares/uploadImageMiddleware');
+const mongoose = require("mongoose");
+const sharp = require("sharp");
+const { v4: uuidv4 } = require("uuid");
+const ApiError = require("../utils/apiError");
+const factory = require("./handllerFactory");
+const Package = require("../models/packageModel");
+const Post = require("../models/postModel");
+const UserSubscription = require("../models/userSubscriptionModel");
+const { uploadSingleFile } = require("../middlewares/uploadImageMiddleware");
 
 //upload course image
-exports.uploadPackageImage = uploadSingleFile('image');
+exports.uploadPackageImage = uploadSingleFile("image");
 //image processing
 exports.resizeImage = async (req, res, next) => {
   const { file } = req; // Access the uploaded file
   if (file) {
     const fileExtension = file.originalname.substring(
-      file.originalname.lastIndexOf('.'),
+      file.originalname.lastIndexOf(".")
     ); // Extract file extension
     const newFileName = `package-${uuidv4()}-${Date.now()}${fileExtension}`; // Generate new file name
 
     // Check if the file is an image for the profile picture
-    if (file.mimetype.startsWith('image/')) {
+    if (file.mimetype.startsWith("image/")) {
       // Process and save the image file using sharp for resizing, conversion, etc.
       const filePath = `uploads/packages/${newFileName}`;
 
       await sharp(file.buffer)
-        .toFormat('webp') // Convert to WebP
+        .toFormat("webp") // Convert to WebP
         .webp({ quality: 95 })
         .toFile(filePath);
 
@@ -34,9 +34,9 @@ exports.resizeImage = async (req, res, next) => {
     } else {
       return next(
         new ApiError(
-          'Unsupported file type. Only images are allowed for package.',
-          400,
-        ),
+          "Unsupported file type. Only images are allowed for package.",
+          400
+        )
       );
     }
   }
@@ -54,7 +54,7 @@ exports.convertToArray = (req, res, next) => {
 //@desc get list of collections
 //@route GET /api/v1/collections
 //@access public
-exports.getAll = factory.getALl(Package, 'Package');
+exports.getAll = factory.getALl(Package, "Package");
 //@desc get specific collection by id
 //@route GET /api/v1/collections/:id
 //@access public
@@ -78,13 +78,13 @@ exports.deleteOne = async (req, res, next) => {
     await mongoose.connection.transaction(async (session) => {
       // Find and delete the course
       const package = await Package.findByIdAndDelete(req.params.id).session(
-        session,
+        session
       );
 
       // Check if course exists
       if (!package) {
         return next(
-          new ApiError(`package not found for this id ${req.params.id}`, 404),
+          new ApiError(`package not found for this id ${req.params.id}`, 404)
         );
       }
 
@@ -107,6 +107,6 @@ exports.deleteOne = async (req, res, next) => {
       return next(error);
     }
     // Handle other errors with a generic message
-    return next(new ApiError('Error during course deletion', 500));
+    return next(new ApiError("Error during course deletion", 500));
   }
 };

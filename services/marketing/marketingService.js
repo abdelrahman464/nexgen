@@ -5,11 +5,11 @@ const MarketingLog = require("../../models/MarketingModel");
 const Order = require("../../models/orderModel");
 const InstructorProfit = require("../../models/instructorProfitsModel");
 const { createMarketerGroupChat } = require("../ChatServices");
-const { addMarketerToLeaderBoard } = require("../leaderBoardService");
 const InstructorProfitService = require("../instructorProfitsService");
 const ApiError = require("../../utils/apiError");
 const { addMemberToChat } = require("../ChatServices");
 const _ = require("lodash");
+const { DateTime } = require("luxon");
 //when creating invoice check the date if same month   update invoice  if not create new one
 
 //1
@@ -82,25 +82,25 @@ const updateSellerSales = async (data, profitPercentage) => {
         sales: {
           purchaser: data.purchaser,
           order: data.order,
-          amount: data.amount,
+          amount: (data.amount || 0).toFixed(2),
           itemType: data.itemType,
           item: data.item || null,
         },
       },
       $set: {
-        totalSalesMoney: data.totalSalesMoney,
+        totalSalesMoney: (data.totalSalesMoney || 0).toFixed(2),
         profitPercentage,
-        profits: (data.totalSalesMoney * profitPercentage) / 100,
+        profits: ((data.totalSalesMoney * profitPercentage) / 100).toFixed(2),
       },
     }
   );
-  await addMarketerToLeaderBoard(data.marketerId, data.totalSalesMoney);
   console.log("updated successfully");
   return true;
   //**update the sales */
 };
 
 //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+// fot testing purpose
 exports.calculateProfitsManual = async (
   //don't forget to send amount here and email
   req,
@@ -177,7 +177,6 @@ exports.calculateProfits = async (
       );
     }
     //8- update marketLog with this sale
-    console.log(profitPercentage);
     await updateSellerSales(data, profitPercentage);
     //9- update current user object in his head.transaction (not sure about this approach till now)
     if (marketerMarketLog.role !== "head" && marketerMarketLog.invitor) {
@@ -190,7 +189,7 @@ exports.calculateProfits = async (
       });
     }
     //10- end of function , thank you :)
-    console.log("success");
+    console.log("(calculateProfits) completed");
     return true;
   } catch (error) {
     console.log("error from calculateProfits: ", error.message);
@@ -237,7 +236,7 @@ const updateHeadCommission = async (data) => {
   headMarketLog.commissions.map((commission) => {
     if (commission.member.toString() === marketerId.toString()) {
       //update data
-      commission.profit = profit;
+      commission.profit = profit.toFixed(2);
       commission.lastUpdate = new Date();
       hasBeenUpdated = true;
     }
@@ -252,7 +251,7 @@ const updateHeadCommission = async (data) => {
         $push: {
           commissions: {
             member: marketerId,
-            profit,
+            profit: profit.toFixed(2),
           },
         },
       }
@@ -295,24 +294,31 @@ exports.getMarketLog = async (req, res, next) => {
     marketLog.profits =
       marketLog.totalSalesMoney * (marketLog.profitPercentage / 100);
     //6- get withdrawals money in current money -----------------------
-    let result = await this.getMonthMoney(
+    const monthBoundaries = this.getMonthBoundaries();
+
+    let currentMonthAnalytics = await this.getMonthMoney(
       marketLog.invoices,
-      new Date().getMonth()
+      monthBoundaries.currentMonth.firstDay,
+      monthBoundaries.currentMonth.lastDay
     );
-    marketLog.withdrawals = result.monthProfits;
+    console.log(currentMonthAnalytics);
+    marketLog.withdrawals = currentMonthAnalytics.monthProfits;
     //7- calc what is available to withdraw
     marketLog.availableToWithdraw = marketLog.profits - marketLog.withdrawals;
     //8- get last month salesMoney and profits to calculate difference and performance----------------------
     if (marketLog.invoices.length !== 0) {
-      result = await this.getMonthMoney(
+      const lastMonthAnalytics = await this.getMonthMoney(
         marketLog.invoices,
-        new Date().getMonth() - 1 //last month
+        monthBoundaries.lastMonth.firstDay,
+        monthBoundaries.lastMonth.lastDay
       );
-      if (result.monthSalesMoney !== 0)
+      console.log(lastMonthAnalytics);
+      if (lastMonthAnalytics.monthSalesMoney !== 0)
         marketLog.salesMoneyDifference =
-          marketLog.totalSalesMoney - result.monthSalesMoney;
-      if (result.monthProfits !== 0)
-        marketLog.profitsDifference = marketLog.profits - result.monthProfits;
+          marketLog.totalSalesMoney - lastMonthAnalytics.monthSalesMoney;
+      if (lastMonthAnalytics.monthProfits !== 0)
+        marketLog.profitsDifference =
+          marketLog.profits - lastMonthAnalytics.monthProfits;
     }
 
     //7- check if the marketer is instructor to get his profits----------------------------
@@ -347,11 +353,15 @@ const createProfitsInvoice = async (marketLog, amount) => {
   const { profitPercentage, sales } = marketLog;
   //validation -----
   //1- check if he has profits to be calculated
-  const result = await this.getMonthMoney(
+  const monthBoundaries = this.getMonthBoundaries();
+
+  let lastMonthAnalytics = this.getMonthMoney(
     marketLog.invoices,
-    new Date().getMonth()
+    monthBoundaries.lastMonth.firstDay,
+    monthBoundaries.lastMonth.lastDay
   );
-  const takenProfits = result.monthProfits;
+
+  const takenProfits = lastMonthAnalytics.monthProfits;
 
   if (!profits || profits === 0 || profits === takenProfits) {
     return "marketing-errors.No-Profits-Found";
@@ -502,18 +512,24 @@ exports.detectPercentage = (role, totalSalesMoney) => {
 };
 //-------------------------------------
 //desc : this function return the total profits and total sales money from invoices for a specific month
-exports.getMonthMoney = async (invoices, month) => {
+exports.getMonthMoney = async (invoices, startDate, endDate) => {
   let monthProfits = 0;
   let monthSalesMoney = 0;
+
   invoices.map((invoice) => {
-    if (invoice.createdAt.getMonth() === month) {
+    // Convert ISO strings to Date objects for comparison
+    const startDateObj = new Date(startDate);
+    const endDateObj = new Date(endDate);
+
+    if (startDateObj <= invoice.createdAt && invoice.createdAt <= endDateObj) {
       monthProfits += invoice.profits;
       monthSalesMoney += invoice.totalSalesMoney;
     }
   });
+
   return { monthProfits, monthSalesMoney };
 };
-//-------------------------------------
+//------------------------------------------------------------
 //desc: set paymentDetails to marketLog
 exports.setPaymentDetails = async (req, res) => {
   try {
@@ -710,4 +726,24 @@ exports.updateMarketLogProfitsCalculationMethod = async (req, res) => {
   } catch (error) {
     return res.status(500).json({ status: "failed", msg: error.message });
   }
+};
+
+// General function to get current month and last month boundaries
+exports.getMonthBoundaries = () => {
+  const now = DateTime.now();
+
+  const currentMonth = {
+    firstDay: now.startOf("month").toISO(),
+    lastDay: now.endOf("month").toISO(),
+  };
+
+  const lastMonth = {
+    firstDay: now.minus({ months: 1 }).startOf("month").toISO(),
+    lastDay: now.minus({ months: 1 }).endOf("month").toISO(),
+  };
+
+  return {
+    currentMonth,
+    lastMonth,
+  };
 };

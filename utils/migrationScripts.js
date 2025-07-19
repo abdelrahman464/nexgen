@@ -147,23 +147,36 @@ exports.kickUnsubscribedUsersJob = async () => {
         });
 
         for (const chat of chats) {
-          const result = await Chat.updateOne(
-            { _id: chat._id },
-            { $pull: { participants: { user: doc.user._id } } }
+          // Check if the user is an admin in this chat
+          const userParticipant = chat.participants.find(
+            (participant) =>
+              participant.user.toString() === doc.user._id.toString()
           );
 
-          if (result.modifiedCount > 0) {
-            await Notification.create({
-              user: doc.user._id,
-              message: {
-                en: `You have been removed from the group ${chat.groupName}`,
-                ar: `تمت ازالتك من المجموعة ${chat.groupName}`,
-              },
-              type: "system",
-            });
+          // Only kick the user if they are not an admin
+          if (userParticipant && !userParticipant.isAdmin) {
+            const result = await Chat.updateOne(
+              { _id: chat._id },
+              { $pull: { participants: { user: doc.user._id } } }
+            );
 
-            processedCount++;
-            console.log(`Removed user ${doc.user._id} from chat ${chat._id}`);
+            if (result.modifiedCount > 0) {
+              await Notification.create({
+                user: doc.user._id,
+                message: {
+                  en: `You have been removed from the group ${chat.groupName}`,
+                  ar: `تمت ازالتك من المجموعة ${chat.groupName}`,
+                },
+                type: "system",
+              });
+
+              processedCount++;
+              console.log(`Removed user ${doc.user._id} from chat ${chat._id}`);
+            }
+          } else {
+            console.log(
+              `Skipped admin user ${doc.user._id} from chat ${chat._id}`
+            );
           }
         }
       } catch (err) {
@@ -195,7 +208,7 @@ exports.kickUnSubscribedUsers = async (req, res) => {
   }
 };
 //=================
-// Migration script to update orders with marketerId from MarketLog 
+// Migration script to update orders with marketerId from MarketLog
 exports.updateOrdersWithMarketerId = async (req, res) => {
   try {
     // 1. Find MarketLogs where sales array is not empty
