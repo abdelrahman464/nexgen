@@ -69,7 +69,7 @@ exports.checkUserSubscription = async (user, course = null) => {
       throw new Error(`no package exists for courseId: ${course}`);
     }
     filter.package = package._id;
-    courseTitle = package.course.title.en;
+    courseTitle = package.course?.title?.en;
 
     const packageSubscription = await UserSubscription.findOne(filter);
     if (!packageSubscription) {

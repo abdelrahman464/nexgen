@@ -140,7 +140,7 @@ exports.createFilterObjAllowedCoursePosts = asyncHandler(
       }
 
       //if role is user
-      if (req.user.role !== "user") {
+      if (req.user.role === "user") {
         const package = await Package.findOne({ course: course }).select(
           "_id course"
         );
@@ -197,35 +197,33 @@ exports.createFilterObjAllowedCoursePosts = asyncHandler(
 //filter to get analytics post  s only
 exports.createFilterObjPackagesPosts = asyncHandler(async (req, res, next) => {
   try {
-    const { package } = req.params;
-    if (!package) {
+    const { package: packageId } = req.params;
+    if (!packageId) {
       return next(new ApiError("packageId is required", 400));
     }
+    const package = await Package.findById(packageId).select("_id course");
+    if (!package) {
+      return next(new ApiError("package not found", 404));
+    }
+    const {
+      title: { en: packageTitle },
+    } = package;
+
     if (req.user.role === "user") {
       const userSubscription = await UserSubscription.findOne({
         user: req.user._id,
         package: package._id,
-      }).select("_id package");
+      }).select("_id package endDate");
 
       if (!userSubscription) {
-        const {
-          course: {
-            title: { en: courseTitle },
-          },
-        } = package;
         return next(
-          new ApiError(`You are not subscribed to ${courseTitle} package`, 404)
+          new ApiError(`You are not subscribed to ${packageTitle} package`, 404)
         );
       }
       if (userSubscription.endDate.getTime() < Date.now()) {
-        const {
-          course: {
-            title: { en: courseTitle },
-          },
-        } = package;
         return next(
           new ApiError(
-            `Your subscription to ${courseTitle} package has been expired`,
+            `Your subscription to ${packageTitle} package has been expired`,
             404
           )
         );
@@ -234,7 +232,7 @@ exports.createFilterObjPackagesPosts = asyncHandler(async (req, res, next) => {
 
     req.filterObj = {
       sharedTo: "package",
-      package: package,
+      package: { $in: [package._id] },
     };
     return next();
   } catch (err) {
@@ -337,7 +335,6 @@ async function fetchUsersFromTarget(target, ids) {
 
   return users.flat();
 }
-
 
 //@desc create post
 //@route POST api/v1/posts

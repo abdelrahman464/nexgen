@@ -137,6 +137,7 @@ exports.getTotalSalesAnalytics = async (req, res) => {
     if (req.query.month) {
       filter.createdAt = getMonthRange(req.query.month);
     }
+
     const orders = await Order.find(filter);
     //validation => if no orders return error
     if (orders.length === 0)
@@ -149,6 +150,7 @@ exports.getTotalSalesAnalytics = async (req, res) => {
 
     return res.status(200).json({
       status: "success",
+      month: req.query.month,
       totalSales: result.totalSales,
       team: users.length,
       currentMonthRegistrations: currentRegistrations,
@@ -176,17 +178,21 @@ exports.getItemAnalytics = async (req, res, next) => {
     const marketerId = req.query.marketerId || req.user._id;
     const itemId = req.params.id;
 
-    const users = await User.find({ invitor: marketerId }).select("_id");
+    const users = await User.find({
+      invitor: marketerId,
+    }).select("_id");
     if (users.length === 0)
       throw new ApiError(404, "No users found for this marketer");
 
     const usersIds = users.map((user) => user._id);
+
     //--------------------------------
     const givenPeriodOrders = await Order.find({
       user: { $in: usersIds },
       $or: [{ course: itemId }, { package: itemId }, { coursePackage: itemId }],
       paidAt: { $gte: startDate, $lte: endDate },
     });
+
     if (givenPeriodOrders.length === 0)
       return res.status(404).json({
         status: "failed",
@@ -224,15 +230,18 @@ exports.getItemAnalytics = async (req, res, next) => {
     //response
     return res.status(200).json({
       status: `success`,
+      startDate: req.query.startDate,
+      endDate: req.query.endDate,
       givenPeriodOrders,
-      givenPeriodSales,
+      givenPeriodSales: givenPeriodSales.toFixed(2),
       givenPeriodStudents: givenPeriodOrders.length,
-      oppositePeriodSales,
+      oppositePeriodSales: oppositePeriodSales.toFixed(2),
       oppositePeriodStudents: oppositePeriodOrders.length,
       //resales
-      givenPeriodResales: givenPeriodResalesObject.ResalesMoney,
+      givenPeriodResales: givenPeriodResalesObject.ResalesMoney.toFixed(2),
       givenPeriodResalesStudents: givenPeriodResalesObject.ResalesStudents,
-      oppositePeriodResales: oppositePeriodResalesObject.ResalesMoney,
+      oppositePeriodResales:
+        oppositePeriodResalesObject.ResalesMoney.toFixed(2),
       oppositePeriodResalesStudents:
         oppositePeriodResalesObject.ResalesStudents,
     });
@@ -241,6 +250,7 @@ exports.getItemAnalytics = async (req, res, next) => {
     res.status(statusCode).json({ status: "failed", error: err.message });
   }
 };
+//================================================
 
 const getResalesInfo = (specificPeriodOrders) => {
   let ResalesMoney = 0;

@@ -1,6 +1,5 @@
 const { check } = require("express-validator");
 const validatorMiddleware = require("../../middlewares/validatorMiddleware");
-const Order = require("../../models/orderModel");
 const ApiError = require("../apiError");
 const {
   checkUserSubscription,
@@ -35,13 +34,13 @@ exports.getPostValidator = [
 ];
 
 exports.checkCourseAuthority = async (req, res, next) => {
-  if (req.user.role === "admin" || req.body.sharedTo === "profile")
+  try {
+    if (req.user.role !== "admin" && req.body.sharedTo !== "profile") {
+      const { course } = req.body;
+      await checkUserSubscription(req.user._id, course);
+    }
     return next();
-  let course = null;
-  if (req.body.course) {
-    course = req.body.course;
+  } catch (err) {
+    return next(new ApiError(err.message, 400));
   }
-  await checkUserSubscription(req.user._id, course);
-
-  return next();
 };
