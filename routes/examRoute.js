@@ -87,7 +87,9 @@ router
     getExams,
   );
 
-router.post('/', authService.protect, checkInstructorAccess, createExam);
+
+// to create course exam or lesson exam or placement exam
+router.post('/', authService.protect,  , createExam);
 
 router.put(
   '/:examId/questions',

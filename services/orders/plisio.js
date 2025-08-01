@@ -139,7 +139,7 @@ exports.coursePackageCheckoutSessionPlisio = asyncHandler(
 
     const coursePackagePrice =
       coursePackage.priceAfterDiscount || coursePackage.price;
-    const totalOrderPrice = coursePackagePrice.toFixed(2);
+    let totalOrderPrice = coursePackagePrice.toFixed(2);
 
     if (req.body.couponName) {
       const coupon = await validateCoupon(req.body.couponName, user.invitor);

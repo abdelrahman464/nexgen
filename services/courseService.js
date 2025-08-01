@@ -17,6 +17,21 @@ const User = require("../models/userModel");
 const { uploadSingleFile } = require("../middlewares/uploadImageMiddleware");
 const { createOne, deleteOne } = require("./instructorProfitsService");
 
+exports.getInstructorCourses = asyncHandler(async (req, res, next) => {
+  req.filterObj = {
+    instructor: req.params.id || req.user._id,
+  };
+  if (
+    (req.user.role === "admin" || req.user.isInstructor) &&
+    req.query.status
+  ) {
+    req.filterObj.status = req.query.status;
+  } else {
+    req.filterObj.status = "active";
+  }
+  next();
+});
+
 //upload course image
 exports.uploadCourseImage = uploadSingleFile("image");
 //upload certificate file

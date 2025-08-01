@@ -6,6 +6,7 @@ const {
   updateCourseValidator,
   // checkCourseOwnership,
   addUserToCourseValidator,
+  checkCourseInstructorOrAdmin,
 } = require("../utils/validators/courseValidator");
 const {
   filterActiveCourses,
@@ -28,6 +29,7 @@ const {
   storeCertificateFile,
   giveCertificate,
   getCertificate,
+  getInstructorCourses,
 } = require("../services/courseService");
 const authServices = require("../services/authServices");
 // nested routes
@@ -71,6 +73,7 @@ router.get(
 // Get all active courses
 router.get("/", filterActiveCourses, getAllCourses);
 
+router.get("/instructorCourses/:id?", getInstructorCourses, getAllCourses);
 // Get a specific course by ID
 router.get("/:id", checkCourseIdParamValidator, getCourseById);
 
@@ -81,6 +84,7 @@ router.put(
   authServices.allowedTo("admin"),
   uploadCourseImage,
   resizeImage,
+  checkCourseInstructorOrAdmin,
   convertToArray,
   updateCourseValidator,
   updateCourse
