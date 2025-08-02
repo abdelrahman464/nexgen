@@ -1,9 +1,10 @@
-const mongoose = require("mongoose");
-const asyncHandler = require("express-async-handler");
-const ApiError = require("../utils/apiError");
-const Lesson = require("../models/lessonModel");
-const Section = require("../models/sectionModel");
-const factory = require("./handllerFactory");
+const mongoose = require('mongoose');
+const asyncHandler = require('express-async-handler');
+const ApiError = require('../utils/apiError');
+const Lesson = require('../models/lessonModel');
+const Section = require('../models/sectionModel');
+const factory = require('./handllerFactory');
+const Course = require('../models/courseModel');
 
 //@desc get list of sections
 //@route GET /api/v1/sections
@@ -14,16 +15,48 @@ exports.filterSectionsByCourse = async (req, res, next) => {
   next();
 };
 
-exports.getSections = factory.getALl(Section, "Section", {
-  path: "course",
-  select: "title -accessibleCourses -category",
+exports.getSections = factory.getALl(Section, 'Section', {
+  path: 'course',
+  select: 'title -accessibleCourses -category',
 });
 
 //@desc get specific Section by id
 //@route GET /api/v1/sections/:id
 //@access public
 exports.getSection = factory.getOne(Section);
-
+exports.isTheSectionInstructor = async (req, res, next) => {
+  if (req.user.role === 'admin') {
+    return next();
+  }
+  if (req.params.id) {
+    const section = await Section.findById(req.params.id);
+    if (!section) {
+      return next(new ApiError('Section not found', 404));
+    }
+    const course = await Course.findById(section.course);
+    if (!course) {
+      return next(new ApiError('Course not found', 404));
+    }
+    if (course.instructor.toString() !== req.user._id.toString()) {
+      return next(
+        new ApiError(`You are not the instructor of this course`, 404),
+      );
+    }
+  } else {
+    const course = await Course.findById(req.body.course);
+    console.log(req.body);
+    if (!course) {
+      return next(new ApiError('Course not found', 404));
+    }
+    console.log(course.instructor.toString(), req.user._id.toString());
+    if (course.instructor.toString() !== req.user._id.toString()) {
+      return next(
+        new ApiError(`You are not the instructor of this course`, 404),
+      );
+    }
+  }
+  next();
+};
 //@desc create Section
 //@route POST /api/v1/sections
 //@access private
@@ -38,31 +71,12 @@ exports.updateSection = factory.updateOne(Section);
 //@route DELETE /api/v1/sections/:id
 //@access private
 exports.deleteSection = asyncHandler(async (req, res, next) => {
-  await mongoose.connection
-    .transaction(async (session) => {
-      // Find and delete the Section
-      const section = await Section.findByIdAndDelete(req.params.id).session(
-        session
-      );
-
-      // Check if Section exists
-      if (!section) {
-        return next(
-          new ApiError(`Section not found for this id ${req.params.id}`, 404)
-        );
-      }
-
-      //delete all lessons in this section
-      await Lesson.deleteMany({ section: Section._id }).session(session);
-
-      // Return success response
-      res.status(204).send();
-    })
-    .catch((error) => {
-      // Handle any transaction-related errors
-      console.error("Transaction error:", error);
-      return next(new ApiError("Error during transaction", 500));
-    });
+  const lessons = await Lesson.find({ section: req.params.id });
+  if (lessons.length > 0) {
+    return next(new ApiError("You can't delete section that has lessons", 400));
+  }
+  await Section.findByIdAndDelete(req.params.id);
+  res.status(204).send();
 });
 
 //@desc update section with nested lesson management

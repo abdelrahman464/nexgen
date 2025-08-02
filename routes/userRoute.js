@@ -37,6 +37,7 @@ const {
   uploadIdDocument,
   moveOneUserToAnother,
   getInstructorBelongings,
+  getAllInstructorsWithBelongings,
 } = require('../services/userService');
 
 const router = express.Router();
@@ -164,9 +165,10 @@ router.put(
 router.post('/idDocument/upload', uploadImages, resizeImage, uploadIdDocument);
 
 router.get(
-  '/instructorBelongings/:id',
+  '/instructors/withBelongings',
   authServices.protect,
-  getInstructorBelongings,
+  authServices.allowedTo('admin'),
+  getAllInstructorsWithBelongings,
 );
 
 module.exports = router;

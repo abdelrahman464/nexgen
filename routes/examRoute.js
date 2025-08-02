@@ -30,6 +30,7 @@ const {
 const {
   checkLessonExamAccess,
 } = require('../utils/validators/lessonsValidator');
+// const { isInstructor } = require('../utils/public/publicValidator');
 
 router.get(
   '/courseProgress/:courseId/:userId',
@@ -87,9 +88,12 @@ router
     getExams,
   );
 
-
 // to create course exam or lesson exam or placement exam
-router.post('/', authService.protect,  , createExam);
+router.post(
+  '/',
+  authService.protect,
+  createExam,
+);
 
 router.put(
   '/:examId/questions',

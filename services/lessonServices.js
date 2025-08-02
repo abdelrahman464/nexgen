@@ -14,6 +14,7 @@ const CourseProgress = require('../models/courseProgressModel');
 const { uploadMixOfFiles } = require('../middlewares/uploadImageMiddleware');
 const ApiFeatures = require('../utils/apiFeatures');
 const Exam = require('../models/examModel');
+const Course = require('../models/courseModel');
 
 exports.uploadFiles = uploadMixOfFiles([
   {
@@ -102,6 +103,39 @@ exports.resizeFiles = asyncHandler(async (req, res, next) => {
 
   next();
 });
+
+exports.isTheLessonInstructor = async (req, res, next) => {
+  if (req.user.role === 'admin') {
+    return next();
+  }
+  if (req.params.id) {
+    const lesson = await Lesson.findById(req.params.id);
+    if (!lesson) {
+      return next(new ApiError('Lesson not found', 404));
+    }
+    const course = await Course.findById(lesson.course);
+    if (!course) {
+      return next(new ApiError('Course not found', 404));
+    }
+    if (course.instructor.toString() !== req.user._id.toString()) {
+      return next(
+        new ApiError(`You are not the instructor of this course`, 404),
+      );
+    }
+  } else {
+    const course = await Course.findById(req.body.course);
+    if (!course) {
+      return next(new ApiError('Course not found', 404));
+    }
+    console.log(course.instructor.toString(), req.user._id.toString());
+    if (course.instructor.toString() !== req.user._id.toString()) {
+      return next(
+        new ApiError(`You are not the instructor of this course`, 404),
+      );
+    }
+  }
+  next();
+};
 
 exports.setCourseIdToBody = (req, res, next) => {
   // Nested route
@@ -509,10 +543,8 @@ exports.updateLesson = factory.updateOne(Lesson);
 exports.deleteLesson = async (req, res, next) => {
   try {
     await mongoose.connection.transaction(async (session) => {
-      // Find and delete the lesson
-      const lesson = await Lesson.findByIdAndDelete(req.params.id).session(
-        session,
-      );
+      // Find the lesson first to check if it exists
+      const lesson = await Lesson.findById(req.params.id).session(session);
 
       // Check if lesson exists
       if (!lesson) {
@@ -521,24 +553,49 @@ exports.deleteLesson = async (req, res, next) => {
         );
       }
 
-      // Delete associated exams
-      await Promise.all([
-        Exam.deleteMany({ lesson: lesson._id }).session(session),
+      // Check if there are exams or course progress associated with this lesson
+      const [exam, courseProgress] = await Promise.all([
+        Exam.findOne({ lesson: lesson._id }).session(session),
+        CourseProgress.findOne({
+          'progress.lesson': lesson._id,
+        }).session(session),
       ]);
-    });
 
+      // If there are associated exams or progress and forceDelete is not true, prevent deletion
+      if ((exam || courseProgress) && !req.query.forceDelete) {
+        const errorMessage = exam
+          ? `There is an exam belongs to this lesson`
+          : `There is a course progress with this lesson`;
+        return next(new ApiError(errorMessage, 400));
+      }
+
+      // If forceDelete is true, delete associated exams and course progress first
+      if (req.query.forceDelete && (exam || courseProgress)) {
+        await Promise.all([
+          Exam.deleteMany({ lesson: lesson._id }).session(session),
+          CourseProgress.updateMany(
+            { 'progress.lesson': lesson._id },
+            { $pull: { progress: { lesson: lesson._id } } },
+          ).session(session),
+        ]);
+      }
+
+      // Now delete the lesson
+      await Lesson.findByIdAndDelete(req.params.id).session(session);
+    });
 
     // Return success response
     res.status(204).send();
   } catch (error) {
     // Handle any transaction-related errors
-
     if (error instanceof ApiError) {
       // Forward specific ApiError instances
       return next(error);
     }
     // Handle other errors with a generic message
-    return next(new ApiError(`Error during lesson deletion ${error}`, 500));
+    return next(
+      new ApiError(`Error during lesson deletion: ${error.message}`, 500),
+    );
   }
 };
 

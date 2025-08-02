@@ -21,6 +21,8 @@ const UserSubscription = require('../models/userSubscriptionModel');
 const { moveOrdersFromOneToOne } = require('./marketing/marketingService');
 const Article = require('../models/articalModel');
 const Package = require('../models/packageModel');
+const CoursePackage = require('../models/coursePackageModel');
+const Live = require('../models/liveModel');
 
 //upload user images
 exports.uploadImages = uploadMixOfFiles([
@@ -1020,25 +1022,108 @@ exports.moveOneUserToAnother = async (req, res, next) => {
 //@desc get all courses ,,Blogs ,packages that his course related to instructor
 //@route GET /api/v1/users/instructorBelongings/:id
 //@access private instructor,admin
-exports.getInstructorBelongings = async (req, res, next) => {
-  try {
-    if (req.user.isInstructor === true || req.user.role === 'admin') {
-      const courses = await Course.find({ instructor: req.params.id });
-      //  packages , orders belongs to his courses
-      const packages = await Package.find({ course: { $in: courses } });
-      const orders = await Order.find({ course: { $in: courses } });
-      //  articles belongs to him
-      const articles = await Article.find({ author: req.params.id });
 
-      res.status(200).json({
-        status: 'success',
-        data: { courses, articles, packages, orders },
-      });
-    } else {
+//@desc get all instructors with their belongings ordered by active courses first
+//@route GET /api/v1/users/instructors-with-belongings
+//@access private admin
+exports.getAllInstructorsWithBelongings = async (req, res, next) => {
+  try {
+    if (req.user.role !== 'admin') {
       return next(
         new ApiError('You are not authorized to access this resource', 403),
       );
     }
+
+    // Get all instructors
+    const instructors = await User.find({ isInstructor: true }).select(
+      'name email profileImg bio',
+    );
+
+    // Get belongings for each instructor and calculate active courses count
+    const instructorsWithBelongings = await Promise.all(
+      instructors.map(async (instructor) => {
+        // Get courses for this instructor
+        const courses = await Course.find({ instructor: instructor._id });
+
+        // Count active courses
+        const activeCoursesCount = courses.filter(
+          (course) => course.status === 'active',
+        ).length;
+
+        // Get packages related to instructor's courses
+        const courseIds = courses.map((course) => course._id);
+        const packages = await Package.find({ course: { $in: courseIds } });
+
+        // Get course packages that contain instructor's courses
+        const coursePackages = await CoursePackage.find({
+          courses: { $in: courseIds },
+        });
+
+        // Get orders for instructor's courses
+        const orders = await Order.find({ course: { $in: courseIds } });
+
+        // Get articles by this instructor
+        const articles = await Article.find({ author: instructor._id });
+
+        // Get live sessions by this instructor
+        const liveSessions = await Live.find({ instructor: instructor._id });
+
+        return {
+          instructor: {
+            _id: instructor._id,
+            name: instructor.name,
+            email: instructor.email,
+            profileImg: instructor.profileImg,
+            bio: instructor.bio,
+          },
+          belongings: {
+            courses: {
+              total: courses.length,
+              active: activeCoursesCount,
+              inactive: courses.length - activeCoursesCount,
+              list: courses,
+            },
+            packages: {
+              total: packages.length,
+              list: packages,
+            },
+            coursePackages: {
+              total: coursePackages.length,
+              list: coursePackages,
+            },
+            orders: {
+              total: orders.length,
+              list: orders,
+            },
+            articles: {
+              total: articles.length,
+              list: articles,
+            },
+            liveSessions: {
+              total: liveSessions.length,
+              list: liveSessions,
+            },
+          },
+          activeCoursesCount, // For sorting
+        };
+      }),
+    );
+
+    // Sort by active courses count (descending) - instructors with active courses come first
+    instructorsWithBelongings.sort(
+      (a, b) => b.activeCoursesCount - a.activeCoursesCount,
+    );
+
+    // Remove the sorting field from final response
+    const finalResponse = instructorsWithBelongings.map(
+      ({ activeCoursesCount, ...rest }) => rest,
+    );
+
+    res.status(200).json({
+      status: 'success',
+      results: finalResponse.length,
+      data: finalResponse,
+    });
   } catch (err) {
     next(new ApiError(err.message, 400));
   }

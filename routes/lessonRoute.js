@@ -21,6 +21,7 @@ const {
   setCourseIdToBody,
   getSectionLessons,
   getSectionLessonsInPublic,
+  isTheLessonInstructor,
 } = require('../services/lessonServices');
 
 const router = express.Router({ mergeParams: true });
@@ -63,11 +64,11 @@ router.get(
 router.post(
   '/',
   authServices.protect,
-  authServices.allowedTo('admin'),
   uploadFiles,
   resizeFiles,
   setCourseIdToBody,
   createLessonValidator,
+  isTheLessonInstructor,
   createLesson,
 );
 
@@ -75,11 +76,11 @@ router.post(
 router.put(
   '/:id',
   authServices.protect,
-  authServices.allowedTo('admin'),
   uploadFiles,
   resizeFiles,
   checkMongoId('id'),
   updateLessonValidator,
+  isTheLessonInstructor,
   updateLesson,
 );
 
@@ -87,8 +88,8 @@ router.put(
 router.delete(
   '/:id',
   authServices.protect,
-  authServices.allowedTo('admin'),
   checkMongoId('id'),
+  isTheLessonInstructor,
   deleteLesson,
 );
 
