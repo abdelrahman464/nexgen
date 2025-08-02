@@ -628,6 +628,7 @@ exports.getChatDetails = asyncHandler(async (req, res, next) => {
               else: null,
             },
           },
+          participantCount: { $size: "$participants" }
         },
       },
       {
@@ -639,6 +640,7 @@ exports.getChatDetails = asyncHandler(async (req, res, next) => {
           description: 1,
           archived: 1,
           lastMessage: 1,
+          participantCount: 1,
           _id: 1,
         },
       },
