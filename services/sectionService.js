@@ -1,9 +1,9 @@
-const asyncHandler = require("express-async-handler");
-const ApiError = require("../utils/apiError");
-const Lesson = require("../models/lessonModel");
-const Section = require("../models/sectionModel");
-const factory = require("./handllerFactory");
-const Course = require("../models/courseModel");
+const asyncHandler = require('express-async-handler');
+const ApiError = require('../utils/apiError');
+const Lesson = require('../models/lessonModel');
+const Section = require('../models/sectionModel');
+const factory = require('./handllerFactory');
+const Course = require('../models/courseModel');
 
 //@desc get list of sections
 //@route GET /api/v1/sections
@@ -14,9 +14,9 @@ exports.filterSectionsByCourse = async (req, res, next) => {
   next();
 };
 
-exports.getSections = factory.getALl(Section, "Section", {
-  path: "course",
-  select: "title -accessibleCourses -category",
+exports.getSections = factory.getALl(Section, 'Section', {
+  path: 'course',
+  select: 'title -accessibleCourses -category',
 });
 
 //@desc get specific Section by id
@@ -25,16 +25,19 @@ exports.getSections = factory.getALl(Section, "Section", {
 exports.getSection = factory.getOne(Section);
 
 exports.isTheSectionInstructor = async (req, res, next) => {
-  if (req.user.role === "admin") {
+  if (req.user.role === 'admin') {
     return next();
   }
-
+  if (!req.user.isInstructor) {
+    return next(new ApiError('You are not instructor', 404));
+  }
   let courseId;
   // Get course ID from section or request body
-  if (req.params.id) {
-    const section = await Section.findById(req.params.id);
+  const id = req.params.id || req.params.sectionId;
+  if (id) {
+    const section = await Section.findById(id);
     if (!section) {
-      return next(new ApiError("Section not found", 404));
+      return next(new ApiError('Section not found', 404));
     }
     courseId = section.course;
   } else {
@@ -44,11 +47,11 @@ exports.isTheSectionInstructor = async (req, res, next) => {
   // Check if course exists and user is the instructor
   const course = await Course.findById(courseId);
   if (!course) {
-    return next(new ApiError("Course not found", 404));
+    return next(new ApiError('Course not found', 404));
   }
 
   if (course.instructor.toString() !== req.user._id.toString()) {
-    return next(new ApiError("You are not the instructor of this course", 404));
+    return next(new ApiError('You are not the instructor of this course', 404));
   }
 
   next();

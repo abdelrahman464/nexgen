@@ -1,6 +1,8 @@
 const router = require('express').Router();
 const { checkCourseAccess } = require('../utils/validators/lessonsValidator');
-const { checkInstructorAccess } = require('../utils/validators/examValidator');
+const { isTheExamInstructor } = require('../utils/validators/examValidator');
+const { isTheCourseInstructor } = require('../services/courseService');
+const { isTheLessonInstructor } = require('../services/lessonServices');
 const authService = require('../services/authServices');
 const {
   createExam,
@@ -52,12 +54,12 @@ router
   .route('/:examId/questions/:questionId')
   .put(
     authService.protect,
-    checkInstructorAccess,
+    isTheExamInstructor,
     uploadQuestionAndOptions,
     processQuestionImages,
     updateQuestionInExam,
   )
-  .delete(authService.protect, checkInstructorAccess, removeQuestionsFromExam);
+  .delete(authService.protect, isTheExamInstructor, removeQuestionsFromExam);
 
 router
   .route('/userScore/:courseId/:userId')
@@ -67,7 +69,7 @@ router
   .route('/courses/:courseId')
   .get(
     authService.protect,
-    checkInstructorAccess,
+    isTheCourseInstructor,
     createFilterObj('course'),
     getExams,
   );
@@ -75,7 +77,7 @@ router
   .route('/placements/:courseId')
   .get(
     authService.protect,
-    checkInstructorAccess,
+    isTheCourseInstructor,
     createFilterObj('placement'),
     getExams,
   );
@@ -83,22 +85,18 @@ router
   .route('/lessons/:lessonId')
   .get(
     authService.protect,
-    checkInstructorAccess,
+    isTheLessonInstructor,
     createFilterObj('lesson'),
     getExams,
   );
 
 // to create course exam or lesson exam or placement exam
-router.post(
-  '/',
-  authService.protect,
-  createExam,
-);
+router.post('/', authService.protect, isTheExamInstructor, createExam);
 
 router.put(
   '/:examId/questions',
   authService.protect,
-  checkInstructorAccess,
+  isTheExamInstructor,
   uploadQuestionAndOptions,
   processQuestionImages,
   addQuestionToExam,
@@ -106,10 +104,11 @@ router.put(
 
 router
   .route('/:id')
-  .get(authService.protect, checkInstructorAccess, getExam)
-  .delete(authService.protect, checkInstructorAccess, deleteExam);
+  .get(authService.protect, isTheExamInstructor, getExam)
+  .delete(authService.protect, isTheExamInstructor, deleteExam);
 
 /////////////////////////////////////////////////////////////////////////
+//////////////////////////For Students///////////////////////////////////
 //start lesson exam
 router.get(
   '/lesson/:id',

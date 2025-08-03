@@ -270,7 +270,11 @@ exports.isTheCourseInstructor = async (req, res, next) => {
   if (req.user.role === 'admin') {
     return next();
   }
-  const course = await Course.findById(req.params.id);
+  if (!req.user.isInstructor) {
+    return next(new ApiError('You are not instructor', 404));
+  }
+  const id = req.params.id || req.params.courseId;
+  const course = await Course.findById(id);
   if (!course) {
     return next(new ApiError('Course not found', 404));
   }
