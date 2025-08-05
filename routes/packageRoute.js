@@ -11,7 +11,11 @@ const authServices = require('../services/authServices');
 const router = express.Router();
 router
   .route('/')
-  .get(packageService.getAll)
+  .get(
+    authServices.optionalAuth,
+    packageService.filterPackages,
+    packageService.getAll,
+  )
   .post(
     authServices.protect,
     authServices.allowedTo('admin'),

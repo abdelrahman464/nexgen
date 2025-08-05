@@ -9,7 +9,11 @@ const router = express.Router();
 
 router
   .route('/')
-  .get(coursePackage.getCoursePackages)
+  .get(
+    authServices.optionalAuth,
+    coursePackage.filterCoursePackages,
+    coursePackage.getCoursePackages,
+  )
   .post(
     authServices.protect,
     authServices.allowedTo('admin'),

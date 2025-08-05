@@ -18,6 +18,11 @@ const coursePackageSchema = new mongoose.Schema(
       required: true,
       lowercase: true,
     },
+    status: {
+      type: String,
+      enum: ['active', 'pending'],
+      default: 'pending',
+    },
     description: { type: String, required: true, i18n: true },
     highlights: [{ type: Object, i18n: true }],
     image: String,

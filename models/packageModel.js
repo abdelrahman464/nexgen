@@ -25,6 +25,11 @@ const packageSchema = new mongoose.Schema(
       required: true,
     },
     image: String,
+    status: {
+      type: String,
+      enum: ['active', 'pending'],
+      default: 'pending',
+    },
     price: {
       type: Number,
       required: [true, 'Package price is required'],
