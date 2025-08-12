@@ -51,27 +51,7 @@ exports.startMarketing = async (req, res) => {
   }
 };
 //--------------------------------------New One
-//make function to give instructor
-const giveInstructorPercentage = async (data) => {
-  try {
-    console.log("giving instructor percentage");
-    await InstructorProfit.findOneAndUpdate(
-      { instructor: data.instructorId },
-      {
-        $push: {
-          //70 => 18 , 30  , 22 wallet
-          profits: {
-            purchaser: data.childId,
-            course: data.item || null,
-            profit: (data.amount * 18) / 100,
-          },
-        },
-      }
-    );
-  } catch (error) {
-    console.log(error.message);
-  }
-};
+
 const updateSellerSales = async (data, profitPercentage) => {
   console.log("updating seller sales");
   //**update the sales */
@@ -131,9 +111,9 @@ exports.calculateProfits = async (
 ) => {
   try {
     //1- give instructor his profits if exist
-    if (details.instructorId && details.instructorId !== null) {
-      await giveInstructorPercentage(details);
-    }
+    // if (details.instructorId && details.instructorId !== null) {
+    //   await giveInstructorPercentage(details);
+    // }
     //2- get user by email
     const user = await User.findOne({ email: details.email }).select("invitor");
     //3-Validate the exist of user's invitor

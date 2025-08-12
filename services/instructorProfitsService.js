@@ -140,3 +140,27 @@ exports.updateInstructorProfitsInvoiceStatus = async (invoiceId, status) => {
   return true;
 };
 //---------------------------------------------------
+//make function to give instructor
+exports.giveInstructorHisCommission = async (data) => {
+  try {
+    console.log("giving instructor percentage");
+    const profit = (data.amount * data.instructorPercentage) / 100;
+    await InstructorProfit.findOneAndUpdate(
+      { instructor: data.instructorId },
+      {
+        $push: {
+          //70 => 18 , 30  , 22 wallet
+          commissions: {
+            order: data.order,
+            percentage: data.instructorPercentage,
+            profit,
+            createdAt: new Date(),
+          },
+        },
+      }
+    );
+    return;
+  } catch (error) {
+    console.log(error.message);
+  }
+};

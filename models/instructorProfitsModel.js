@@ -9,41 +9,40 @@ const InstructorProfitsSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
-    profits: [
+    commissions: [
       {
-        purchaser: {
-          //purchaser
+        order: {
           type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
+          ref: "Order",
         },
-        course: String,
+        percentage: Number,
         profit: Number,
-        Date: {
+        createdAt: {
           type: Date,
           default: new Date(),
         },
       },
     ],
+    //payment details for withdrawing profits
+    paymentMethod: {
+      type: String,
+    },
+    receiverAcc: {
+      type: String,
+    },
     //when we pay to marketer we save invoice here
     invoices: [
       {
         profits: Number,
         desc: String,
-        createdAt: {
-          type: Date,
-          default: new Date(),
-        },
         status: {
           type: String,
           Enum: ["unpaid", "paid"],
           default: "unpaid",
         },
-        //these two parameters
-        paymentMethod: {
-          type: String,
-        },
-        receiverAcc: {
-          type: String,
+        createdAt: {
+          type: Date,
+          default: new Date(),
         },
         paidAt: {
           type: Date,
