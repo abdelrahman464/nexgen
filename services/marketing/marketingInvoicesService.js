@@ -278,9 +278,9 @@ exports.createCommissionInvoice = async (marketLog) => {
   if (marketLog.commissions?.length === 0) return marketLog;
 
   let profits = 0;
-  //1-calculate the profits of his wallet
+  //1-calculate the profits of his wallet (ensure numeric addition)
   profits = marketLog.commissions.reduce(
-    (acc, commission) => acc + commission.profit,
+    (acc, commission) => acc + (Number(commission.profit) || 0),
     0
   );
   //4- create the invoice

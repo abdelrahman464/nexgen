@@ -392,7 +392,7 @@ const createWalletInvoice = async (marketLog, reqBody) => {
 
   //1-calculate the profits of his wallet
   for (const wallet of marketLog.wallet) {
-    profits += wallet.profit;
+    profits += Number(wallet.profit) || 0;
   }
   //3- calculate the start point of the invoice
   const startPointDate =
@@ -512,7 +512,7 @@ exports.detectPercentage = (role, totalSalesMoney) => {
 };
 //-------------------------------------
 //desc : this function return the total profits and total sales money from invoices for a specific month
-exports.getMonthMoney = async (invoices, startDate, endDate) => {
+exports.getMonthMoney = (invoices, startDate, endDate) => {
   let monthProfits = 0;
   let monthSalesMoney = 0;
 

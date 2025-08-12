@@ -8,8 +8,9 @@ const Order = require("../../models/orderModel");
 const { kickUnsubscribedUsersJob } = require("../migrationScripts");
 
 exports.cronJobs = () => {
+ 
   cron.schedule("0 0 0 1 * *", () => {
-    console.log("Running a task at the first second of each month");
+    console.log("calculating monthly invoices for marketers at the first second of each month");
     this.resetMarketLogs();
   });
   cron.schedule("0 * * * *", async () => {
