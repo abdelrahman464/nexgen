@@ -296,7 +296,7 @@ exports.getMarketLog = async (req, res, next) => {
     //6- get withdrawals money in current money -----------------------
     const monthBoundaries = this.getMonthBoundaries();
 
-    let currentMonthAnalytics = await this.getMonthMoney(
+    let currentMonthAnalytics =  this.getMonthMoney(
       marketLog.invoices,
       monthBoundaries.currentMonth.firstDay,
       monthBoundaries.currentMonth.lastDay
@@ -307,7 +307,7 @@ exports.getMarketLog = async (req, res, next) => {
     marketLog.availableToWithdraw = marketLog.profits - marketLog.withdrawals;
     //8- get last month salesMoney and profits to calculate difference and performance----------------------
     if (marketLog.invoices.length !== 0) {
-      const lastMonthAnalytics = await this.getMonthMoney(
+      const lastMonthAnalytics =  this.getMonthMoney(
         marketLog.invoices,
         monthBoundaries.lastMonth.firstDay,
         monthBoundaries.lastMonth.lastDay
