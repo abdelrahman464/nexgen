@@ -27,11 +27,10 @@ const courseSchema = new mongoose.Schema(
       default: 0,
       required: true,
     },
-    // certificateDescription: {
-    //   type: String,
-    //   required: true,
-    //   i18n: true,
-    // },
+    certificateDescription: {
+      type: String,
+      i18n: true,
+    },
     description: {
       type: String,
       required: true,

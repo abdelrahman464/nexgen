@@ -269,6 +269,11 @@ exports.getCourseById = asyncHandler(async (req, res, next) => {
   if (course.content) {
     localizedResult.translationContent = course.content;
   }
+  if (course.certificateDescription) {
+    localizedResult.translationCertificateDescription =
+      course.certificateDescription;
+  }
+
   return res.status(200).json({
     status: "success",
     data: localizedResult,
