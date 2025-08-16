@@ -5,11 +5,14 @@ const MarketingLog = require("../../models/MarketingModel");
 const Order = require("../../models/orderModel");
 const InstructorProfit = require("../../models/instructorProfitsModel");
 const { createMarketerGroupChat } = require("../ChatServices");
-const InstructorProfitService = require("../instructorProfitsService");
+const InstructorProfitService = require("./instructorProfitsService");
 const ApiError = require("../../utils/apiError");
 const { addMemberToChat } = require("../ChatServices");
 const _ = require("lodash");
 const { DateTime } = require("luxon");
+const {
+  createInstructorProfitsDocument,
+} = require("./instructorProfitsService");
 //when creating invoice check the date if same month   update invoice  if not create new one
 
 //1
@@ -17,9 +20,21 @@ const { DateTime } = require("luxon");
 //@access public
 exports.startMarketing = async (req, res) => {
   try {
+    const userId = req.params.userId;
+    if (req.query.type && req.query.type === "instructor") {
+      const result = await createInstructorProfitsDocument(userId);
+      if (typeof result === "string") {
+        return res.status(400).json({ status: "failed", msg: result });
+      }
+      return res.status(200).json({
+        msg: "success",
+        message: `this instructor can take profits now`,
+      });
+    }
+
     let role;
     if (!role || role === "customer") role = "marketer";
-    const userId = req.params.userId;
+
     const isMarketer = await MarketingLog.exists({ marketer: userId });
     //check existance
     //1- check if user already started marketing
@@ -51,27 +66,7 @@ exports.startMarketing = async (req, res) => {
   }
 };
 //--------------------------------------New One
-//make function to give instructor
-const giveInstructorPercentage = async (data) => {
-  try {
-    console.log("giving instructor percentage");
-    await InstructorProfit.findOneAndUpdate(
-      { instructor: data.instructorId },
-      {
-        $push: {
-          //70 => 18 , 30  , 22 wallet
-          profits: {
-            purchaser: data.childId,
-            course: data.item || null,
-            profit: (data.amount * 18) / 100,
-          },
-        },
-      }
-    );
-  } catch (error) {
-    console.log(error.message);
-  }
-};
+
 const updateSellerSales = async (data, profitPercentage) => {
   console.log("updating seller sales");
   //**update the sales */
@@ -130,11 +125,6 @@ exports.calculateProfits = async (
   details //email , amount , item
 ) => {
   try {
-    //1- give instructor his profits if exist
-    if (details.instructorId && details.instructorId !== null) {
-      await giveInstructorPercentage(details);
-    }
-    //2- get user by email
     const user = await User.findOne({ email: details.email }).select("invitor");
     //3-Validate the exist of user's invitor
     if (!user.invitor) {
@@ -430,24 +420,24 @@ const createWalletInvoice = async (marketLog, reqBody) => {
 exports.createInvoice = async (req, res, next) => {
   try {
     //1- Get all marketerLof data
-    const marketLog = await MarketingLog.findOne({ marketer: req.params.id });
-    //2- check existance
-    if (!marketLog) {
-      next(new ApiError(res.__(`marketing-error.marketLog-Not-Found`), 404));
-    }
 
-    const result = await createProfitsInvoice(marketLog, req.body.amount);
-    if (typeof result === "string") {
-      return next(new ApiError(res.__(result), 404));
-    }
+    if (!req.query.type || req.query.type === "marketer") {
+      const marketLog = await MarketingLog.findOne({ marketer: req.params.id });
+      //2- check existance
+      if (!marketLog) {
+        next(new ApiError(res.__(`marketing-error.marketLog-Not-Found`), 404));
+      }
 
-    //------------------------------------------------
-    // else if (req.query.invoiceType === "instructorProfits") {
-    //   await InstructorProfitService.createInstructorProfitsInvoice(
-    //     req.params.id,
-    //     req.body
-    //   );
-    // }
+      const result = await createProfitsInvoice(marketLog, req.body.amount);
+      if (typeof result === "string") {
+        return next(new ApiError(res.__(result), 404));
+      }
+    } else if (req.query.type === "instructor") {
+      await InstructorProfitService.createInstructorProfitsInvoice(
+        req.params.id,
+        req.body
+      );
+    }
     //4-return the response
     return res
       .status(200)
@@ -535,15 +525,24 @@ exports.setPaymentDetails = async (req, res) => {
   try {
     const { paymentMethod, receiverAcc } = req.body;
     const marketerId = req.params.id;
-    const marketLog = await MarketingLog.findOne({ marketer: marketerId });
-    if (!marketLog) {
-      throw new ApiError("No marketerLog found", 404);
+
+    if (req.query.type && req.query.type === "instructor") {
+      await InstructorProfitService.setInstructorProfitsPaymentDetails({
+        paymentMethod,
+        receiverAcc,
+        instructorId: marketerId,
+      });
+    } else {
+      const marketLog = await MarketingLog.findOne({ marketer: marketerId });
+      if (!marketLog) {
+        throw new ApiError("No marketerLog found", 404);
+      }
+      marketLog.paymentDetails = {
+        paymentMethod,
+        receiverAcc,
+      };
+      await marketLog.save();
     }
-    marketLog.paymentDetails = {
-      paymentMethod,
-      receiverAcc,
-    };
-    await marketLog.save();
     return res
       .status(200)
       .json({ status: "success", msg: "payment details added successfully" });

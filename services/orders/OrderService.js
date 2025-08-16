@@ -1,20 +1,20 @@
-const mongoose = require('mongoose');
-const factory = require('../handllerFactory');
-const Order = require('../../models/orderModel');
-const Course = require('../../models/courseModel');
-const Package = require('../../models/packageModel');
-const CoursePackage = require('../../models/coursePackageModel');
-const UserSubscription = require('../../models/userSubscriptionModel');
-const User = require('../../models/userModel');
-const Chat = require('../../models/ChatModel');
-const Notification = require('../../models/notificationModel');
-const CourseProgress = require('../../models/courseProgressModel');
-
-const { calculateProfits } = require('../marketing/marketingService');
-const { availUserToReview } = require('../userService');
-const { sendEmail } = require('../../utils/sendEmail');
-const { PDFGenerator } = require('../../utils/generatePdf');
-const { incrementCouponUsedTimes } = require('../couponService');
+const mongoose = require("mongoose");
+const factory = require("../handllerFactory");
+const Order = require("../../models/orderModel");
+const Course = require("../../models/courseModel");
+const Package = require("../../models/packageModel");
+const CoursePackage = require("../../models/coursePackageModel");
+const UserSubscription = require("../../models/userSubscriptionModel");
+const User = require("../../models/userModel");
+const Chat = require("../../models/ChatModel");
+const Notification = require("../../models/notificationModel");
+const CourseProgress = require("../../models/courseProgressModel");
+// const { calculateProfits } = require("../marketing/marketingService");
+const { availUserToReview } = require("../userService");
+const { sendEmail } = require("../../utils/sendEmail");
+const { PDFGenerator } = require("../../utils/generatePdf");
+const { incrementCouponUsedTimes } = require("../couponService");
+const { handleOrderCommissions } = require("../../helpers/marketingHelper");
 
 const filterOrders = async (req, res, next) => {
   const filterObject = {};
@@ -26,7 +26,7 @@ const filterOrders = async (req, res, next) => {
     delete newQuery.userId;
   }
   //2- if the user is trying to get their own orders
-  else if (req.user.role === 'user') {
+  else if (req.user.role === "user") {
     filterObject.user = req.user._id;
   }
 
@@ -115,6 +115,7 @@ async function createCourseProgress(userId, courseId) {
     course: courseId,
   });
   if (!existingProgress) {
+    console.log("course progress created");
     await CourseProgress.create({
       user: userId,
       course: courseId,
@@ -128,7 +129,7 @@ async function addUserToGroupChatAndNotify(userId, courseId) {
   const chat = await Chat.findOneAndUpdate(
     { course: courseId, isGroupChat: true },
     { $addToSet: { participants: { user: userId, isAdmin: false } } },
-    { new: true },
+    { new: true }
   );
 
   if (chat) {
@@ -139,7 +140,7 @@ async function addUserToGroupChatAndNotify(userId, courseId) {
         ar: `تمت اضافتك الى المجموعة ${chat.groupName}`,
       },
       chat: chat._id,
-      type: 'chat',
+      type: "chat",
     });
   }
 }
@@ -148,7 +149,7 @@ async function kickUserFromGroupChat(userId, courseId) {
   const chat = await Chat.findOneAndUpdate(
     { course: courseId, isGroupChat: true },
     { $pull: { participants: { user: userId } } },
-    { new: true },
+    { new: true }
   );
   if (chat) {
     await Notification.create({
@@ -157,7 +158,7 @@ async function kickUserFromGroupChat(userId, courseId) {
         en: `You have been removed from the group ${chat.groupName}`,
         ar: `تمت ازالتك من المجموعة ${chat.groupName}`,
       },
-      type: 'system',
+      type: "system",
     });
   }
 }
@@ -168,7 +169,7 @@ async function createOrUpdateSubscription(userId, packageId, durationDays) {
   const endDate = new Date(startDate);
   endDate.setDate(startDate.getDate() + durationDays);
 
-  const package = await Package.findById(packageId).populate('course');
+  const package = await Package.findById(packageId).populate("course");
   const subscription = await UserSubscription.findOne({
     user: userId,
     package: packageId,
@@ -198,14 +199,14 @@ const createCourseOrderHandler = async (paymentDetails) => {
     User.findOne({ email }),
     Package.findOne({ course: id }),
   ]);
-  if (!course || !user) throw new Error('Course or user not found');
+  if (!course || !user) throw new Error("Course or user not found");
   const orderDetails = {
     userId: user._id,
     marketer: user.invitor,
     itemId: course._id,
     price,
     method,
-    itemType: 'course',
+    itemType: "course",
     couponName,
   };
   let order = await createOrder(orderDetails);
@@ -213,10 +214,10 @@ const createCourseOrderHandler = async (paymentDetails) => {
   if (order) {
     // Populate the necessary fields
     order = await order.populate([
-      { path: 'user', select: '_id name phone email' },
-      { path: 'course', select: 'title -category' },
-      { path: 'coursePackage', select: 'title' },
-      { path: 'package', select: 'title' },
+      { path: "user", select: "_id name phone email" },
+      { path: "course", select: "title -category" },
+      { path: "coursePackage", select: "title" },
+      { path: "package", select: "title" },
     ]);
 
     //increment usedTimes of coupon after successful payment
@@ -231,23 +232,25 @@ const createCourseOrderHandler = async (paymentDetails) => {
       await createOrUpdateSubscription(
         user._id,
         package._id, // package id
-        4 * 30,
+        4 * 30
       ); // 4 months
     }
 
     await availUserToReview(user._id);
-    await calculateProfits({
+    const saleDetails = {
       email: user.email,
       amount: price,
       date: order.createdAt,
-      itemType: 'course',
+      itemType: "course",
       item: course.title,
       order: order._id,
       instructorId: course.instructorPercentage > 0 ? course.instructor : null,
-    });
+    };
+    // await calculateProfits(saleDetails);
+    await handleOrderCommissions(course, saleDetails);
     // Generate the PDF
     let pdfPath = await PDFGenerator.generateOrderPDF(order);
-    pdfPath = pdfPath.replace('uploads/orders/', '');
+    pdfPath = pdfPath.replace("uploads/orders/", "");
     await Notification.create({
       user: user._id,
       message: {
@@ -255,7 +258,7 @@ const createCourseOrderHandler = async (paymentDetails) => {
         ar: `لقد قمت بشراء الدورة ${course.title.ar} بنجاح اضغط هنا لتحميل الفاتورة`,
       },
       file: pdfPath,
-      type: 'order',
+      type: "order",
     });
 
     //  Send the email
@@ -287,7 +290,7 @@ const createPackageOrderHandler = async (paymentDetails) => {
     Package.findById(id),
     User.findOne({ email }),
   ]);
-  if (!package || !user) throw new Error('Package or user not found');
+  if (!package || !user) throw new Error("Package or user not found");
 
   const orderDetails = {
     userId: user._id,
@@ -295,7 +298,7 @@ const createPackageOrderHandler = async (paymentDetails) => {
     itemId: package._id,
     price,
     method,
-    itemType: 'package',
+    itemType: "package",
     couponName,
   };
 
@@ -303,10 +306,10 @@ const createPackageOrderHandler = async (paymentDetails) => {
   if (order) {
     // Populate the necessary fields
     order = await order.populate([
-      { path: 'user', select: '_id name phone email' },
-      { path: 'course', select: 'title -category' },
-      { path: 'coursePackage', select: 'title' },
-      { path: 'package', select: 'title' },
+      { path: "user", select: "_id name phone email" },
+      { path: "course", select: "title -category" },
+      { path: "coursePackage", select: "title" },
+      { path: "package", select: "title" },
     ]);
     //increment usedTimes of coupon after successful payment
     if (couponName) {
@@ -315,7 +318,7 @@ const createPackageOrderHandler = async (paymentDetails) => {
     await createOrUpdateSubscription(
       user._id,
       package._id,
-      package.subscriptionDurationDays,
+      package.subscriptionDurationDays
     );
 
     // if (package.type === 'course' && package.course) {
@@ -323,17 +326,18 @@ const createPackageOrderHandler = async (paymentDetails) => {
     // }
 
     // await availUserToReview(user._id);
-    await calculateProfits({
+    const saleDetails = {
       email: user.email,
       amount: price,
-      itemType: 'package',
+      itemType: "package",
       order: order._id,
       item: package.title,
-    });
-
+    };
+    // await calculateProfits(saleDetails);
+    await handleOrderCommissions(package, saleDetails);
     // Generate the PDF
     let pdfPath = await PDFGenerator.generateOrderPDF(order);
-    pdfPath = pdfPath.replace('uploads/orders/', '');
+    pdfPath = pdfPath.replace("uploads/orders/", "");
     await Notification.create({
       user: user._id,
       message: {
@@ -341,7 +345,7 @@ const createPackageOrderHandler = async (paymentDetails) => {
         ar: `لقد قمت بشراء الخدمه ${package.title.ar} بنجاح اضغط هنا لتحميل الفاتورة`,
       },
       file: pdfPath,
-      type: 'order',
+      type: "order",
     });
   }
 };
@@ -354,7 +358,7 @@ const createCoursePackageOrderHandler = async (paymentDetails) => {
     User.findOne({ email }),
   ]);
   if (!coursePackage || !user)
-    throw new Error('CoursePackage or user not found');
+    throw new Error("CoursePackage or user not found");
 
   const orderDetails = {
     userId: user._id,
@@ -362,7 +366,7 @@ const createCoursePackageOrderHandler = async (paymentDetails) => {
     itemId: coursePackage._id,
     price,
     method,
-    itemType: 'coursePackage',
+    itemType: "coursePackage",
     couponName,
   };
 
@@ -371,10 +375,10 @@ const createCoursePackageOrderHandler = async (paymentDetails) => {
   if (order) {
     // Populate the necessary fields
     order = await order.populate([
-      { path: 'user', select: '_id name phone email' },
-      { path: 'course', select: 'title -category' },
-      { path: 'coursePackage', select: 'title' },
-      { path: 'package', select: 'title' },
+      { path: "user", select: "_id name phone email" },
+      { path: "course", select: "title -category" },
+      { path: "coursePackage", select: "title" },
+      { path: "package", select: "title" },
     ]);
 
     //increment usedTimes of coupon after successful payment
@@ -391,20 +395,23 @@ const createCoursePackageOrderHandler = async (paymentDetails) => {
         if (package) {
           await createOrUpdateSubscription(user._id, package._id, 5 * 30); // 5 months
         }
-      }),
+      })
     );
 
     await availUserToReview(user._id);
-    await calculateProfits({
+    const saleDetails = {
       email: user.email,
       amount: price,
-      itemType: 'coursePackage',
+      itemType: "coursePackage",
       order: order._id,
       item: coursePackage.title,
-    });
+    };
+    // await calculateProfits(saleDetails);
+    await handleOrderCommissions(coursePackage, saleDetails);
+
     // Generate the PDF
     let pdfPath = await PDFGenerator.generateOrderPDF(order);
-    pdfPath = pdfPath.replace('uploads/orders/', '');
+    pdfPath = pdfPath.replace("uploads/orders/", "");
     await Notification.create({
       user: user._id,
       message: {
@@ -412,7 +419,7 @@ const createCoursePackageOrderHandler = async (paymentDetails) => {
         ar: `لقد قمت بشراء الباقه ${coursePackage.title.ar} بنجاح اضغط هنا لتحميل الفاتورة`,
       },
       file: pdfPath,
-      type: 'order',
+      type: "order",
     });
   }
 };
@@ -429,7 +436,7 @@ const getOrderStatistics = async (req, res) => {
       matchStage.package = mongoose.Types.ObjectId(req.query.packageId);
     } else if (req.query.coursePackageId) {
       matchStage.coursePackage = mongoose.Types.ObjectId(
-        req.query.coursePackageId,
+        req.query.coursePackageId
       );
     }
 
@@ -442,17 +449,17 @@ const getOrderStatistics = async (req, res) => {
         $group: {
           _id: null,
           totalOrders: { $sum: 1 },
-          totalRevenue: { $sum: '$totalOrderPrice' },
+          totalRevenue: { $sum: "$totalOrderPrice" },
           paidOrders: {
-            $sum: { $cond: ['$isPaid', 1, 0] },
+            $sum: { $cond: ["$isPaid", 1, 0] },
           },
           unpaidOrders: {
-            $sum: { $cond: ['$isPaid', 0, 1] },
+            $sum: { $cond: ["$isPaid", 0, 1] },
           },
           resaleOrders: {
-            $sum: { $cond: ['$isResale', 1, 0] },
+            $sum: { $cond: ["$isResale", 1, 0] },
           },
-          averageOrderValue: { $avg: '$totalOrderPrice' },
+          averageOrderValue: { $avg: "$totalOrderPrice" },
         },
       },
     ]);
@@ -468,22 +475,22 @@ const getOrderStatistics = async (req, res) => {
       {
         $group: {
           _id: {
-            year: { $year: '$paidAt' },
-            month: { $month: '$paidAt' },
+            year: { $year: "$paidAt" },
+            month: { $month: "$paidAt" },
           },
           orders: { $sum: 1 },
-          revenue: { $sum: '$totalOrderPrice' },
+          revenue: { $sum: "$totalOrderPrice" },
           paidOrders: {
-            $sum: { $cond: ['$isPaid', 1, 0] },
+            $sum: { $cond: ["$isPaid", 1, 0] },
           },
           resaleOrders: {
-            $sum: { $cond: ['$isResale', 1, 0] },
+            $sum: { $cond: ["$isResale", 1, 0] },
           },
-          averageOrderValue: { $avg: '$totalOrderPrice' },
+          averageOrderValue: { $avg: "$totalOrderPrice" },
         },
       },
       {
-        $sort: { '_id.year': -1, '_id.month': -1 },
+        $sort: { "_id.year": -1, "_id.month": -1 },
       },
     ]);
 
@@ -494,9 +501,9 @@ const getOrderStatistics = async (req, res) => {
       },
       {
         $group: {
-          _id: '$paymentMethodType',
+          _id: "$paymentMethodType",
           count: { $sum: 1 },
-          revenue: { $sum: '$totalOrderPrice' },
+          revenue: { $sum: "$totalOrderPrice" },
         },
       },
     ]);
@@ -506,12 +513,12 @@ const getOrderStatistics = async (req, res) => {
     const startOfMonth = new Date(
       currentDate.getFullYear(),
       currentDate.getMonth(),
-      1,
+      1
     );
     const endOfMonth = new Date(
       currentDate.getFullYear(),
       currentDate.getMonth() + 1,
-      0,
+      0
     );
 
     const dailyStats = await Order.aggregate([
@@ -526,9 +533,9 @@ const getOrderStatistics = async (req, res) => {
       },
       {
         $group: {
-          _id: { $dayOfMonth: '$paidAt' },
+          _id: { $dayOfMonth: "$paidAt" },
           orders: { $sum: 1 },
-          revenue: { $sum: '$totalOrderPrice' },
+          revenue: { $sum: "$totalOrderPrice" },
         },
       },
       {
@@ -540,10 +547,10 @@ const getOrderStatistics = async (req, res) => {
     const recentOrders = await Order.find(matchStage)
       .sort({ createdAt: -1 })
       .limit(5)
-      .populate('user', 'name email')
-      .populate('course', 'title')
-      .populate('package', 'title')
-      .populate('coursePackage', 'title');
+      .populate("user", "name email")
+      .populate("course", "title")
+      .populate("package", "title")
+      .populate("coursePackage", "title");
 
     // 6. Calculate Growth Rates
     // Using the already declared currentDate from above
@@ -552,8 +559,7 @@ const getOrderStatistics = async (req, res) => {
 
     // Find current month's data
     const currentMonthData = monthlyStats.find(
-      (stat) =>
-        stat._id.month === currentMonth && stat._id.year === currentYear,
+      (stat) => stat._id.month === currentMonth && stat._id.year === currentYear
     ) || { orders: 0, revenue: 0 };
 
     // Calculate previous month considering year transition
@@ -567,7 +573,7 @@ const getOrderStatistics = async (req, res) => {
     // Find previous month's data
     const previousMonthData = monthlyStats.find(
       (stat) =>
-        stat._id.month === previousMonth && stat._id.year === previousYear,
+        stat._id.month === previousMonth && stat._id.year === previousYear
     ) || { orders: 0, revenue: 0 };
 
     const growthRate = {
@@ -601,20 +607,20 @@ const getOrderStatistics = async (req, res) => {
     let productDetails = null;
     if (req.query.courseId) {
       productDetails = await Course.findById(req.query.courseId).select(
-        'title',
+        "title"
       );
     } else if (req.query.packageId) {
       productDetails = await Package.findById(req.query.packageId).select(
-        'title',
+        "title"
       );
     } else if (req.query.coursePackageId) {
       productDetails = await CoursePackage.findById(
-        req.query.coursePackageId,
-      ).select('title');
+        req.query.coursePackageId
+      ).select("title");
     }
 
     res.status(200).json({
-      status: 'success',
+      status: "success",
       data: {
         productDetails,
         overview: overallStats[0],
@@ -627,7 +633,7 @@ const getOrderStatistics = async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({
-      status: 'fail',
+      status: "fail",
       message: error.message,
     });
   }
@@ -639,7 +645,7 @@ const getOrdersByMonth = async (req, res) => {
     const { month, year } = req.query;
 
     if (!month || !year) {
-      throw new Error('Please provide both month and year');
+      throw new Error("Please provide both month and year");
     }
 
     // Build match object based on product type filter
@@ -650,7 +656,7 @@ const getOrdersByMonth = async (req, res) => {
       matchStage.package = mongoose.Types.ObjectId(req.query.packageId);
     } else if (req.query.coursePackageId) {
       matchStage.coursePackage = mongoose.Types.ObjectId(
-        req.query.coursePackageId,
+        req.query.coursePackageId
       );
     }
 
@@ -679,13 +685,13 @@ const getOrdersByMonth = async (req, res) => {
         $group: {
           _id: null,
           totalOrders: { $sum: 1 },
-          totalRevenue: { $sum: '$totalOrderPrice' },
-          avgOrderValue: { $avg: '$totalOrderPrice' },
+          totalRevenue: { $sum: "$totalOrderPrice" },
+          avgOrderValue: { $avg: "$totalOrderPrice" },
           paidOrders: {
-            $sum: { $cond: ['$isPaid', 1, 0] },
+            $sum: { $cond: ["$isPaid", 1, 0] },
           },
           resaleOrders: {
-            $sum: { $cond: ['$isResale', 1, 0] },
+            $sum: { $cond: ["$isResale", 1, 0] },
           },
         },
       },
@@ -695,20 +701,20 @@ const getOrdersByMonth = async (req, res) => {
     let productDetails = null;
     if (req.query.courseId) {
       productDetails = await Course.findById(req.query.courseId).select(
-        'title',
+        "title"
       );
     } else if (req.query.packageId) {
       productDetails = await Package.findById(req.query.packageId).select(
-        'title',
+        "title"
       );
     } else if (req.query.coursePackageId) {
       productDetails = await CoursePackage.findById(
-        req.query.coursePackageId,
-      ).select('title');
+        req.query.coursePackageId
+      ).select("title");
     }
 
     res.status(200).json({
-      status: 'success',
+      status: "success",
       data: {
         productDetails,
         monthStats: stats[0] || null,
@@ -717,7 +723,7 @@ const getOrdersByMonth = async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({
-      status: 'fail',
+      status: "fail",
       message: error.message,
     });
   }
@@ -744,6 +750,44 @@ const getOrdersByMonth = async (req, res) => {
 //   );
 // };
 
+// i used this function to simulate coursePackage subscription for specific user
+// const fixSubscription = async (req, res) => {
+//   const userId = "6892832c7c615843d2b50b04";
+//   const user = await User.findOne({ email: "abood.aqrab@hotmail.com" });
+//   if (!user) {
+//     return res.status(404).json({
+//       status: "fail",
+//       message: "User not found",
+//     });
+//   }
+//   const coursePackage = await CoursePackage.findById(
+//     "66c2775b8a994900dd3304d8"
+//   );
+//   if (!coursePackage) {
+//     return res.status(404).json({
+//       status: "fail",
+//       message: "Course package not found",
+//     });
+//   }
+
+//   // Populate the necessary fields
+
+//   await Promise.all(
+//     coursePackage.courses.map(async (courseId) => {
+//       await createCourseProgress(user._id, courseId);
+//       await addUserToGroupChatAndNotify(user._id, courseId);
+
+//       const package = await Package.findOne({ course: courseId });
+//       if (package) {
+//         await createOrUpdateSubscription(user._id, package._id, 5 * 30); // 5 months
+//       }
+//     })
+//   );
+//   res.status(200).json({
+//     status: "success",
+//     message: "Subscription fixed successfully",
+//   });
+// };
 module.exports = {
   createCourseOrderHandler,
   createPackageOrderHandler,
@@ -755,5 +799,5 @@ module.exports = {
   getOrderStatistics,
   getOrdersByMonth,
   // makeSureUserInChat,
-  addUserToGroupChatAndNotify
+  addUserToGroupChatAndNotify,
 };

@@ -2,7 +2,7 @@ const MarketingLog = require("../../models/MarketingModel");
 const {
   getInstructorProfitsInvoices,
   updateInstructorProfitsInvoiceStatus,
-} = require("../instructorProfitsService");
+} = require("./instructorProfitsService");
 const { getMonthMoney, getMonthBoundaries } = require("./marketingService");
 
 //1
@@ -294,3 +294,5 @@ exports.createCommissionInvoice = async (marketLog) => {
 
   return marketLog;
 };
+//-----------------------------------------------------
+
