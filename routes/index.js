@@ -20,6 +20,7 @@ const ChatRoute = require("./ChatRoute");
 const MessageRoute = require("./MessageRoute");
 const notificationRoute = require("./notificationRoute");
 const marketingRoute = require("./marketingRoute");
+const instructorProfitsRoute = require("./instructorProfitsRoute");
 const contactRoute = require("./contactRoute");
 const systemReviewRoute = require("./systemReviewRoute");
 const analyticsRoute = require("./analyticRoute");
@@ -76,5 +77,7 @@ const mountRoutes = (app) => {
 
   app.use("/api/v1/marketingAnalytics", marketingAnalytics);
   app.use("/api/v1/contactUs", contactUsRoute);
+
+  app.use("/api/v1/instructorProfits", instructorProfitsRoute);
 };
 module.exports = mountRoutes;

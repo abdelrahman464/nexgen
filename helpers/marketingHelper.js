@@ -1,7 +1,7 @@
 const { calculateProfits } = require("../services/marketing/marketingService");
 const {
   giveInstructorHisCommission,
-} = require("../services/instructorProfitsService");
+} = require("../services/marketing/instructorProfitsService");
 
 exports.handleOrderCommissions = async (item, data) => {
   //if item.instructorPercentage

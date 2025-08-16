@@ -9,6 +9,14 @@ const InstructorProfitsSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    totalSalesMoney: {
+      type: Number,
+      default: 0,
+    },
+    profits: {
+      type: Number,
+      default: 0,
+    },
     commissions: [
       {
         order: {

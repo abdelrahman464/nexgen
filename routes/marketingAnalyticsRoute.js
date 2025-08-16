@@ -20,6 +20,7 @@ router.get(
   getItemAnalyticsValidator,
   marketingAnalyticsService.getItemAnalytics
 );
+
 router.get(
   "/getInvitationsAnalytics/:marketerId", //marketer id
   authServices.protect,

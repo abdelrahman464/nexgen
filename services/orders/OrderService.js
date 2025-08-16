@@ -9,8 +9,7 @@ const User = require("../../models/userModel");
 const Chat = require("../../models/ChatModel");
 const Notification = require("../../models/notificationModel");
 const CourseProgress = require("../../models/courseProgressModel");
-
-const { calculateProfits } = require("../marketing/marketingService");
+// const { calculateProfits } = require("../marketing/marketingService");
 const { availUserToReview } = require("../userService");
 const { sendEmail } = require("../../utils/sendEmail");
 const { PDFGenerator } = require("../../utils/generatePdf");
@@ -247,8 +246,8 @@ const createCourseOrderHandler = async (paymentDetails) => {
       order: order._id,
       instructorId: course.instructorPercentage > 0 ? course.instructor : null,
     };
-    await calculateProfits(saleDetails);
-    // await handleOrderCommissions(course, saleDetails);
+    // await calculateProfits(saleDetails);
+    await handleOrderCommissions(course, saleDetails);
     // Generate the PDF
     let pdfPath = await PDFGenerator.generateOrderPDF(order);
     pdfPath = pdfPath.replace("uploads/orders/", "");
@@ -334,8 +333,8 @@ const createPackageOrderHandler = async (paymentDetails) => {
       order: order._id,
       item: package.title,
     };
-    await calculateProfits(saleDetails);
-    // await handleOrderCommissions(package, saleDetails);
+    // await calculateProfits(saleDetails);
+    await handleOrderCommissions(package, saleDetails);
     // Generate the PDF
     let pdfPath = await PDFGenerator.generateOrderPDF(order);
     pdfPath = pdfPath.replace("uploads/orders/", "");
@@ -350,7 +349,6 @@ const createPackageOrderHandler = async (paymentDetails) => {
     });
   }
 };
-
 
 // Handler for creating a course package order
 const createCoursePackageOrderHandler = async (paymentDetails) => {
@@ -408,8 +406,8 @@ const createCoursePackageOrderHandler = async (paymentDetails) => {
       order: order._id,
       item: coursePackage.title,
     };
-    await calculateProfits(saleDetails);
-    // await handleOrderCommissions(coursePackage, saleDetails);
+    // await calculateProfits(saleDetails);
+    await handleOrderCommissions(coursePackage, saleDetails);
 
     // Generate the PDF
     let pdfPath = await PDFGenerator.generateOrderPDF(order);
@@ -801,5 +799,5 @@ module.exports = {
   getOrderStatistics,
   getOrdersByMonth,
   // makeSureUserInChat,
-  addUserToGroupChatAndNotify
+  addUserToGroupChatAndNotify,
 };

@@ -86,3 +86,11 @@ exports.validateProfitCalculation = [
     .withMessage("commissionsProfitsPercentage must be greater than 0"),
   validatorMiddleware,
 ];
+
+exports.checkTypeQueryParam = [
+  check("type")
+    .optional()
+    .isIn(["instructor", "marketer"])
+    .withMessage('type must be either "instructor" or "marketer"'),
+  validatorMiddleware,
+];

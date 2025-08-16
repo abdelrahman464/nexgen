@@ -10,12 +10,16 @@ const {
   modifyInvitationKeys,
   updateMarketLogProfitsCalculationMethod,
 } = require("../services/marketing/marketingService");
+const {
+  getInstructorAnalytics,
+} = require("../services/marketing/instructorProfitsService");
 
 const {
   checkAuthority,
   createInvoiceValidator,
   modifyInvitationKeysValidator,
   validateProfitCalculation,
+  checkTypeQueryParam,
 } = require("../utils/validators/marketingValidator");
 
 const router = express.Router();
@@ -23,10 +27,16 @@ const router = express.Router();
 router.use(authServices.protect);
 
 router.get(
+  "/getInstructorAnalytics/:id?",
+  authServices.protect,
+  authServices.allowedTo("user", "admin"),
+  getInstructorAnalytics
+);
+router.get(
   "/getMarketLog/:id",
-  // authServices.protect,
-  // authServices.allowedTo("user", "admin"),
-  // checkAuthority,
+  authServices.protect,
+  authServices.allowedTo("user", "admin"),
+  checkAuthority,
   getMarketLog
 );
 router.get(
@@ -62,6 +72,7 @@ router.put(
   "/setPaymentDetails/:id", //id is the marketer id
   authServices.protect,
   authServices.allowedTo("user", "admin"),
+  checkTypeQueryParam,
   setPaymentDetails
 );
 //for testing purposes not for production
@@ -77,13 +88,15 @@ router.put(
   authServices.allowedTo("user", "admin"),
   checkAuthority,
   createInvoiceValidator,
+  checkTypeQueryParam,
   createInvoice
 );
 
 router.put(
-  "/startMarketing/:userId",
+  "/startMarketing/:userId",   
   authServices.protect,
   authServices.allowedTo("user", "admin"),
+  checkTypeQueryParam,
   startMarketing
 );
 

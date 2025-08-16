@@ -2,12 +2,8 @@ const MarketingLog = require("../../models/MarketingModel");
 const {
   getInstructorProfitsInvoices,
   updateInstructorProfitsInvoiceStatus,
-} = require("../instructorProfitsService");
-const {
-  getMonthMoney,
-  getMonthBoundaries,
-  detectPercentage,
-} = require("./marketingService");
+} = require("./instructorProfitsService");
+const { getMonthMoney, getMonthBoundaries } = require("./marketingService");
 
 //1
 const getProfitsInvoices = async (status, lang = "ar") => {
@@ -298,4 +294,5 @@ exports.createCommissionInvoice = async (marketLog) => {
 
   return marketLog;
 };
+//-----------------------------------------------------
 
