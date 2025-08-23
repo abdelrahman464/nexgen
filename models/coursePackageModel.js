@@ -8,6 +8,10 @@ const coursePackageSchema = new mongoose.Schema(
         ref: 'Course',
       },
     ],
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Category',
+    },
     title: {
       type: String,
       required: [true, 'Package title is required'],

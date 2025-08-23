@@ -1038,6 +1038,9 @@ exports.getCertificate = asyncHandler(async (req, res, next) => {
   }
   return res.status(200).json({
     status: "success",
-    data: courseProgress.certificate.file,
+    data: {
+      file: courseProgress.certificate.file,
+      course: courseProgress.course,
+    },
   });
 });

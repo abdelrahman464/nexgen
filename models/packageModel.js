@@ -12,6 +12,10 @@ const packageSchema = new mongoose.Schema(
       ref: 'Course',
       unique: true, //  package must belong to one course only
     },
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Category',
+    },
     title: { type: String, required: true, i18n: true },
     slug: {
       type: String,
