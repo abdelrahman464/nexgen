@@ -727,14 +727,14 @@ exports.submitCourseAnswers = async (req, res, next) => {
       0,
     );
 
-    // Calculate totalCourseExamsPercentage
-    const totalCourseExamsPercentage = (
+    // Calculate avgCourseExamsPercentage
+    const avgCourseExamsPercentage = (
       ((totalExamScore + examResult.score) /
         (totalPossibleLessonExamsGrade + totalPossibleGrade)) *
       100
     ).toFixed(2);
     // Check if the user deserves a certificate
-    if (totalCourseExamsPercentage >= 90 && passed) {
+    if (avgCourseExamsPercentage >= 90 && passed) {
       console.log('course.rating', course.rating);
       const certificateId = mongoose.Types.ObjectId();
       const certificateDetails = {
@@ -752,9 +752,7 @@ exports.submitCourseAnswers = async (req, res, next) => {
         {
           $set: {
             'certificate._id': certificateId,
-            'certificate.isDeserve': true,
             'certificate.file': certificate,
-            'certificate.isTake': true,
           },
         },
       );
@@ -930,7 +928,7 @@ exports.userScores = async (req, res, next) => {
     );
 
     //calculate the percentage of completed lessons exams
-    const totalLessonsExamsPercentage =
+    const avgLessonsExamsPercentage =
       ((totalExamScore / totalPossibleLessonExamsGrade) * 100).toFixed(2) || 0;
 
     // Calculate the percentage for each lesson
@@ -1025,7 +1023,7 @@ exports.userScores = async (req, res, next) => {
 
     //calculate the total percentage of the total course exams
 
-    const totalCourseExamsPercentage = (
+    const avgCourseExamsPercentage = (
       ((totalExamScore + finalExamScore) /
         (totalPossibleLessonExamsGrade + (finalExamGrade || 0))) *
       100
@@ -1060,11 +1058,14 @@ exports.userScores = async (req, res, next) => {
         totalLessons,
         completedLessonsCount,
         notAttemptedLessonsCount,
-        totalLessonsExamsPercentage,
+        avgLessonsExamsPercentage,
         courseScore,
         lessonExamsAttemptedCount,
         lessonsScores,
-        totalCourseExamsPercentage,
+        avgCourseExamsPercentage:
+          completionStatus === 'Course completed'
+            ? avgCourseExamsPercentage
+            : undefined,
         completionStatus,
       },
     });

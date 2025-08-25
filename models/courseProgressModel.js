@@ -44,8 +44,6 @@ const courseProgressSchema = new mongoose.Schema(
     ],
     certificate: {
       _id: mongoose.Schema.Types.ObjectId,
-      isDeserve: { type: Boolean, default: false },
-      isTake: { type: Boolean, default: false },
       file: { type: String },
     },
     attemptDate: { type: Date },

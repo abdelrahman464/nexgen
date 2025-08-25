@@ -1,15 +1,15 @@
-const UserSubscription = require("../models/userSubscriptionModel");
-const Chat = require("../models/ChatModel");
-const Notification = require("../models/notificationModel");
-const MarketLog = require("../models/MarketingModel");
-const Order = require("../models/orderModel");
+const UserSubscription = require('../models/userSubscriptionModel');
+const Chat = require('../models/ChatModel');
+const Notification = require('../models/notificationModel');
+const MarketLog = require('../models/MarketingModel');
+const Order = require('../models/orderModel');
 
 // exports.addCertificatesToUsers = async (req, res) => {
 //   try {
 //     const progresses = await CourseProgress.find({
 //       score: { $gte: 90 },
 
-//       "certificate.isDeserve": true,
+//    
 //       "certificate.ID": { $exists: true },
 //     })
 //       .populate({ path: "course", select: "title" })
@@ -122,14 +122,19 @@ exports.kickUnsubscribedUsersJob = async () => {
     })
       .sort({ endDate: -1 })
       .populate({
-        path: "user",
-        select: "invitor email",
+        path: 'user',
+        select: 'invitor email',
       });
 
     let processedCount = 0;
 
     for (const doc of expiredSubscriptions) {
       try {
+        // Check if user exists
+        if (!doc.user || !doc.user._id) {
+          console.log(`No user found for subscription ${doc._id}`);
+          continue;
+        }
         if (!doc.package?.course?._id) {
           console.log(`No course found for subscription ${doc._id}`);
           continue;
@@ -143,21 +148,22 @@ exports.kickUnsubscribedUsersJob = async () => {
 
         const chats = await Chat.find({
           $or: queryConditions,
-          "participants.user": doc.user._id,
+          'participants.user': doc.user._id,
         });
 
         for (const chat of chats) {
           // Check if the user is an admin in this chat
           const userParticipant = chat.participants.find(
             (participant) =>
-              participant.user.toString() === doc.user._id.toString()
+              participant.user &&
+              participant.user.toString() === doc.user._id.toString(),
           );
 
           // Only kick the user if they are not an admin
           if (userParticipant && !userParticipant.isAdmin) {
             const result = await Chat.updateOne(
               { _id: chat._id },
-              { $pull: { participants: { user: doc.user._id } } }
+              { $pull: { participants: { user: doc.user._id } } },
             );
 
             if (result.modifiedCount > 0) {
@@ -167,7 +173,7 @@ exports.kickUnsubscribedUsersJob = async () => {
                   en: `You have been removed from the group ${chat.groupName}`,
                   ar: `تمت ازالتك من المجموعة ${chat.groupName}`,
                 },
-                type: "system",
+                type: 'system',
               });
 
               processedCount++;
@@ -175,7 +181,7 @@ exports.kickUnsubscribedUsersJob = async () => {
             }
           } else {
             console.log(
-              `Skipped admin user ${doc.user._id} from chat ${chat._id}`
+              `Skipped admin user ${doc.user._id} from chat ${chat._id}`,
             );
           }
         }
@@ -184,10 +190,10 @@ exports.kickUnsubscribedUsersJob = async () => {
       }
     }
 
-    console.log("Cron job completed. Processed:", processedCount);
+    console.log('Cron job completed. Processed:', processedCount);
     return { success: true, processedCount };
   } catch (err) {
-    console.error("Error in kickUnsubscribedUsersJob:", err);
+    console.error('Error in kickUnsubscribedUsersJob:', err);
     throw err;
   }
 };
@@ -197,12 +203,12 @@ exports.kickUnSubscribedUsers = async (req, res) => {
   try {
     const result = await this.kickUnsubscribedUsersJob();
     return res.json({
-      status: "success",
+      status: 'success',
       message: `Processed ${result.processedCount} removals from chats`,
     });
   } catch (err) {
     return res.status(500).json({
-      status: "fail",
+      status: 'fail',
       message: err.message,
     });
   }
@@ -213,11 +219,11 @@ exports.updateOrdersWithMarketerId = async (req, res) => {
   try {
     // 1. Find MarketLogs where sales array is not empty
     const marketLogs = await MarketLog.find({
-      "sales.0": { $exists: true }, // Sales array has at least one element
+      'sales.0': { $exists: true }, // Sales array has at least one element
     });
 
     if (marketLogs.length === 0) {
-      console.log("No MarketLogs with sales found.");
+      console.log('No MarketLogs with sales found.');
       return;
     }
 
@@ -238,17 +244,17 @@ exports.updateOrdersWithMarketerId = async (req, res) => {
       // 4. Update orders with marketerId
       const result = await Order.updateMany(
         { _id: { $in: orderIds } },
-        { $set: { marketer } }
+        { $set: { marketer } },
       );
 
       console.log(
-        `Updated ${result.modifiedCount} orders for MarketLog ${log._id} with marketerId ${marketer}`
+        `Updated ${result.modifiedCount} orders for MarketLog ${log._id} with marketerId ${marketer}`,
       );
     }
 
-    console.log("Script completed successfully.");
-    return res.json({ msg: "Orders updated successfully." });
+    console.log('Script completed successfully.');
+    return res.json({ msg: 'Orders updated successfully.' });
   } catch (error) {
-    console.error("Error:", error);
+    console.error('Error:', error);
   }
 };
