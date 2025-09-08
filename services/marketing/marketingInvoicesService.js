@@ -239,20 +239,21 @@ exports.updateInvoiceStatus = async (req, res) => {
  * @returns {Object} marketLog
  */
 exports.createProfitsInvoice = async (marketLog) => {
-  const { profitPercentage, totalSalesMoney, profits, sales } = marketLog;
+  const { profitPercentage, totalSalesMoney, profits, sales, withdrawals } =
+    marketLog;
   //validation -----
   //1- check if he has sales
   if (!profits || profits === 0) return marketLog;
   //2- check if he has profits to be calculated
-  const monthBoundaries = getMonthBoundaries();
+  // const monthBoundaries = getMonthBoundaries();
 
-  let lastMonthAnalytics = getMonthMoney(
-    marketLog.invoices,
-    monthBoundaries.lastMonth.firstDay,
-    monthBoundaries.lastMonth.lastDay
-  );
+  // let lastMonthAnalytics = getMonthMoney(
+  //   marketLog.invoices,
+  //   monthBoundaries.lastMonth.firstDay,
+  //   monthBoundaries.lastMonth.lastDay
+  // );
 
-  const takenProfits = lastMonthAnalytics.monthProfits;
+  const takenProfits = withdrawals;
   //3- check if he has profits to be calculated
   if (profits === takenProfits) return marketLog;
 
@@ -295,4 +296,3 @@ exports.createCommissionInvoice = async (marketLog) => {
   return marketLog;
 };
 //-----------------------------------------------------
-

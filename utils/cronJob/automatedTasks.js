@@ -8,9 +8,10 @@ const Order = require("../../models/orderModel");
 const { kickUnsubscribedUsersJob } = require("../migrationScripts");
 
 exports.cronJobs = () => {
- 
   cron.schedule("0 0 0 1 * *", () => {
-    console.log("calculating monthly invoices for marketers at the first second of each month");
+    console.log(
+      "calculating monthly invoices for marketers at the first second of each month"
+    );
     this.resetMarketLogs();
   });
   cron.schedule("0 * * * *", async () => {
@@ -54,7 +55,14 @@ exports.resetMarketLogs = async () => {
       log.profits = 0;
       log.sales = [];
       log.commissions = [];
-      log.profitPercentage = log.role === "head" ? 20 : 10;
+      log.withdrawals = 0;
+      const defaultProfitPercentage = log.role === "head" ? 20 : 10;
+      if (
+        !log.profitsCalculationMethod ||
+        log.profitsCalculationMethod !== "manual"
+      ) {
+        log.profitPercentage = defaultProfitPercentage;
+      }
       await log.save();
     });
 
@@ -72,11 +80,12 @@ exports.resetMarketLogs = async () => {
       log.profits = 0;
       log.sales = [];
       log.commissions = [];
+      log.withdrawals = 0;
       if (
-        log.profitsCalculationMethod &&
+        !log.profitsCalculationMethod ||
         log.profitsCalculationMethod !== "manual"
       ) {
-        log.profitPercentage = log.role === "head" ? 20 : 10;
+        log.profitPercentage = defaultProfitPercentage;
       }
       await log.save();
     });

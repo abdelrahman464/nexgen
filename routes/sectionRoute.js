@@ -1,4 +1,4 @@
-const express = require('express');
+const express = require("express");
 
 const {
   getSectionValidator,
@@ -6,7 +6,7 @@ const {
   updateSectionValidator,
   deleteSectionValidator,
   getSectionCourseIdValidator,
-} = require('../utils/validators/sectionValidator');
+} = require("../utils/validators/sectionValidator");
 const {
   getSections,
   createSection,
@@ -15,39 +15,45 @@ const {
   deleteSection,
   filterSectionsByCourse,
   isTheSectionInstructor,
-} = require('../services/sectionService');
+  updateSectionsAndLessons,
+} = require("../services/sectionService");
 
-
-const authServices = require('../services/authServices');
+const authServices = require("../services/authServices");
 
 const router = express.Router();
 
+router.put(
+  "/update-sections-and-lessons",
+  authServices.protect,
+  authServices.allowedTo("admin"),
+  updateSectionsAndLessons
+);
 router
-  .route('/:courseId/course')
+  .route("/:courseId/course")
   .get(getSectionCourseIdValidator, filterSectionsByCourse, getSections);
 router
-  .route('/')
+  .route("/")
   .get(getSections)
   .post(
     authServices.protect,
     createSectionValidator,
     isTheSectionInstructor,
-    createSection,
+    createSection
   );
 router
-  .route('/:id')
+  .route("/:id")
   .get(getSectionValidator, getSection)
   .put(
     authServices.protect,
     updateSectionValidator,
     isTheSectionInstructor,
-    updateSection,
+    updateSection
   )
   .delete(
     authServices.protect,
     deleteSectionValidator,
     isTheSectionInstructor,
-    deleteSection,
+    deleteSection
   );
 
 module.exports = router;

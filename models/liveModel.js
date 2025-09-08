@@ -2,6 +2,14 @@ const mongoose = require("mongoose");
 
 const LiveSchema = new mongoose.Schema(
   {
+    instructor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    creator: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
     title: {
       type: String,
       required: true,
@@ -20,9 +28,10 @@ const LiveSchema = new mongoose.Schema(
     link: {
       type: String,
     },
-    instructor: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+    status: {
+      type: String,
+      enum: ["pending", "active", "completed"],
+      default: "pending",
     },
   },
   { timestamps: true }

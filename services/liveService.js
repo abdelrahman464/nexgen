@@ -5,6 +5,11 @@ const ApiError = require("../utils/apiError");
 const UserSubscription = require("../models/userSubscriptionModel");
 const factory = require("./handllerFactory");
 const sendEmail = require("../utils/sendEmail");
+
+exports.filterLivesByInstructor = async (req, res, next) => {
+  req.filterObj = { instructor: req.user._id };
+  next();
+};
 //@desc get list of Lives
 //@route GET /api/v1/categories
 //@access public
@@ -16,7 +21,14 @@ exports.getLive = factory.getOne(Live);
 //@desc create Live
 //@route POST /api/v1/lives
 //@access private
-exports.createLive = factory.createOne(Live);
+exports.createLive = async (req, res, next) => {
+  if (req.user.role !== "admin") {
+    req.body.status = "pending";
+  }
+  req.body.instructor = req.body.instructor || req.user._id;
+  req.body.creator = req.user._id;
+  return factory.createOne(Live)(req, res, next);
+};
 //@desc update specific category
 //@route PUT /api/v1/lives/:id
 //@access private
@@ -29,7 +41,7 @@ exports.deleteLive = factory.deleteOne(Live);
 //@route Get /api/v1/lives/MyLives
 //@access private
 exports.createFilterObj = asyncHandler(async (req, res, next) => {
-  const filterObject = {};
+  const filterObject = { status: "active" };
   const newQuery = { ...req.query };
   // Date filtering logic (applied for both users and admins)
   if (req.query.startDate && req.query.endDate) {
@@ -46,7 +58,6 @@ exports.createFilterObj = asyncHandler(async (req, res, next) => {
     const dayStart = new Date(req.query.day);
     const dayEnd = new Date(req.query.day);
     dayEnd.setUTCHours(23, 59, 59, 999); // Set to the end of the day
-    console.log(dayStart, dayEnd);
     filterObject.date = {
       $gte: dayStart,
       $lte: dayEnd,

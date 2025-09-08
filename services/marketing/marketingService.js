@@ -281,23 +281,21 @@ exports.getMarketLog = async (req, res, next) => {
       marketLog.commissionsBalance = marketLog.walletBalance;
     }
     //5- calculate profits -------------------------------------------
-    marketLog.profits =
-      marketLog.totalSalesMoney * (marketLog.profitPercentage / 100);
+    // marketLog.profits =
+    //   marketLog.totalSalesMoney * (marketLog.profitPercentage / 100);
     //6- get withdrawals money in current money -----------------------
     const monthBoundaries = this.getMonthBoundaries();
 
-    let currentMonthAnalytics =  this.getMonthMoney(
-      marketLog.invoices,
-      monthBoundaries.currentMonth.firstDay,
-      monthBoundaries.currentMonth.lastDay
-    );
-    console.log(currentMonthAnalytics);
-    marketLog.withdrawals = currentMonthAnalytics.monthProfits;
-    //7- calc what is available to withdraw
+    // let currentMonthAnalytics = this.getMonthMoney(
+    //   marketLog.invoices,
+    //   monthBoundaries.currentMonth.firstDay,
+    //   monthBoundaries.currentMonth.lastDay
+    // );
+
     marketLog.availableToWithdraw = marketLog.profits - marketLog.withdrawals;
     //8- get last month salesMoney and profits to calculate difference and performance----------------------
     if (marketLog.invoices.length !== 0) {
-      const lastMonthAnalytics =  this.getMonthMoney(
+      const lastMonthAnalytics = this.getMonthMoney(
         marketLog.invoices,
         monthBoundaries.lastMonth.firstDay,
         monthBoundaries.lastMonth.lastDay
@@ -343,15 +341,15 @@ const createProfitsInvoice = async (marketLog, amount) => {
   const { profitPercentage, sales } = marketLog;
   //validation -----
   //1- check if he has profits to be calculated
-  const monthBoundaries = this.getMonthBoundaries();
+  // const monthBoundaries = this.getMonthBoundaries();
 
-  let lastMonthAnalytics = this.getMonthMoney(
-    marketLog.invoices,
-    monthBoundaries.lastMonth.firstDay,
-    monthBoundaries.lastMonth.lastDay
-  );
+  // let lastMonthAnalytics = this.getMonthMoney(
+  //   marketLog.invoices,
+  //   monthBoundaries.lastMonth.firstDay,
+  //   monthBoundaries.lastMonth.lastDay
+  // );
 
-  const takenProfits = lastMonthAnalytics.monthProfits;
+  const takenProfits = marketLog.withdrawals;
 
   if (!profits || profits === 0 || profits === takenProfits) {
     return "marketing-errors.No-Profits-Found";
@@ -505,7 +503,6 @@ exports.detectPercentage = (role, totalSalesMoney) => {
 exports.getMonthMoney = (invoices, startDate, endDate) => {
   let monthProfits = 0;
   let monthSalesMoney = 0;
-
   invoices.map((invoice) => {
     // Convert ISO strings to Date objects for comparison
     const startDateObj = new Date(startDate);

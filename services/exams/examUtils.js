@@ -8,7 +8,7 @@ const CourseProgress = require('../../models/courseProgressModel');
 exports.calculateScore = (questions, answers) => {
   let score = 0;
   const wrongAnswers = [];
-  questions.forEach((question) => {
+  questions?.forEach((question) => {
     const answerObj = answers.find(
       (ans) => ans.questionId.toString() === question._id.toString(),
     );
