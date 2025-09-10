@@ -301,6 +301,7 @@ exports.getSectionLessons = async (req, res, next) => {
     // Define a variable to hold the modified lessons with restricted access as needed
     let accessibleLessons = [...localizedLessons];
     let canTakeFinalExam = false;
+
     if (req.user.role !== "admin") {
       const userCourseProgress = await CourseProgress.findOne({
         user: req.user._id,
@@ -355,6 +356,7 @@ exports.getSectionLessons = async (req, res, next) => {
             lesson.passedExam = false;
             if (lesson.isRequireAnalytic) lesson.passedAnalyticsTask = false; // check if lesson require analytics (hashMap lessons by order)
           }
+
           return lesson;
         });
         if (lessons.length < currentLessonOrder) {
@@ -388,7 +390,6 @@ exports.getSectionLessons = async (req, res, next) => {
         lessons: sectionLessons,
       });
     });
-
     return res.status(200).json({
       canTakeFinalExam,
       data: orderedLessons,

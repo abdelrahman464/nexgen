@@ -805,3 +805,39 @@ exports.getCertificate = asyncHandler(async (req, res, next) => {
     },
   });
 });
+
+// Middleware to get certificate link by courseId
+exports.getCertificateLink = asyncHandler(async (req, res, next) => {
+  const { courseId } = req.params;
+  // const userId = req.user._id; // Assuming user is authenticated
+  const userId = "66447ad7a7957a07c0ae9e69"; // Assuming user is authenticated
+
+  // Validate courseId
+  if (!mongoose.Types.ObjectId.isValid(courseId)) {
+    return next(new ApiError(`Invalid course ID: ${courseId}`, 400));
+  }
+
+  // Find course progress for the user and course
+  const courseProgress = await CourseProgress.findOne({
+    user: userId,
+    course: courseId,
+    "certificate.file": { $exists: true, $ne: null },
+  });
+
+  if (!courseProgress || !courseProgress.certificate.file) {
+    return res.status(404).json({
+      status: "error",
+      message: "No certificate found for this user and course",
+    });
+  }
+
+  return res.status(200).json({
+    status: "success",
+    message: "Certificate found",
+    data: {
+      hasCertificate: true,
+      certificateLink: courseProgress.certificate.file,
+      certificateId: courseProgress.certificate._id,
+    },
+  });
+});

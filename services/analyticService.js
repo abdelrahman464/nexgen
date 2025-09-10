@@ -132,7 +132,7 @@ exports.filterOnUserRole = (req, res, next) => {
   return next();
 };
 //1
-exports.filterStatus = (req, res, next) => {
+exports.filterStatus = async (req, res, next) => {
   //initialize the filter object if not initialized in the previous middleware
   if (_.isObject(req.filterObj) === false) {
     req.filterObj = {};
@@ -148,10 +148,16 @@ exports.filterStatus = (req, res, next) => {
     //remove the key from the query
     delete req.newQuery.isPassed;
   }
-  if (req.query.lesson) {
+  if (req.query.course) {
+    const lessons = await Lesson.find({ course: req.query.course });
+    const lessonsIds = lessons.map((lesson) => lesson._id);
+    req.filterObj.lesson = { $in: lessonsIds };
+    delete req.newQuery.course;
+  } else if (req.query.lesson) {
     req.filterObj.lesson = req.query.lesson;
     delete req.newQuery.lesson;
   }
+  
   if (req.query.user) {
     req.filterObj.user = req.query.user;
     delete req.newQuery.user;
@@ -275,7 +281,7 @@ exports.getAnalyticsPerformance = async (req, res, next) => {
     user: userId,
     isPassed: true,
   });
-  
+
   const analyticsDocs = await Analytic.find({
     user: userId,
     createdAt: { $gte: startDate, $lte: endDate },
