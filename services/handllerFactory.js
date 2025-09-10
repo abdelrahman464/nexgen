@@ -70,6 +70,13 @@ exports.getOne = (Model, populationOpt) => async (req, res, next) => {
     if (document.content) {
       localizedResult.translationContent = document.content;
     }
+    if (document.assignmentTitle) {
+      localizedResult.translationAssignmentTitle = document.assignmentTitle;
+    }
+    if (document.assignmentDescription) {
+      localizedResult.translationAssignmentDescription =
+        document.assignmentDescription;
+    }
 
     return res.status(200).json({ data: localizedResult });
   } catch (error) {

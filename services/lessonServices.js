@@ -25,6 +25,10 @@ exports.uploadFiles = uploadMixOfFiles([
     name: "attachments",
     maxCount: 10,
   },
+  {
+    name: "assignmentFile",
+    maxCount: 1,
+  },
 ]);
 
 const ensureDirectoryExistence = (filePath) => {
@@ -99,6 +103,18 @@ exports.resizeFiles = asyncHandler(async (req, res, next) => {
       .toFile(`uploads/lessons/images/${imageFileName}`);
 
     req.body.image = imageFileName;
+  }
+  if (req.files && req.files.assignmentFile) {
+    if (!req.files.assignmentFile[0].mimetype.startsWith("image/")) {
+      return next(
+        new ApiError("lesson assignment file is not a image file", 400)
+      );
+    }
+    const assignmentFileName = `lesson-${uuidv4()}-${Date.now()}-assignment.webp`;
+    await sharp(req.files.assignmentFile[0].buffer)
+      .webp({ quality: 95 })
+      .toFile(`uploads/lessons/assignments/${assignmentFileName}`);
+    req.body.assignmentFile = assignmentFileName;
   }
 
   next();

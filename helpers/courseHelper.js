@@ -9,12 +9,11 @@ const requiredFields = [
   "price",
   "image",
   "courseDuration",
-  "instructorPercentage",
 ];
 
 exports.checkIfCourseHasAllFields = async (courseDoc, fields) => {
   const missedFields = [];
-  const course = [...fields, ...courseDoc];
+  const course = { ...courseDoc, ...fields };
   // eslint-disable-next-line no-restricted-syntax
   for (const field of requiredFields) {
     if (!course[field]) {

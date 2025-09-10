@@ -8,7 +8,6 @@ const { uploadMixOfFiles } = require("../middlewares/uploadImageMiddleware");
 
 const Artical = require("../models/articalModel");
 
-
 exports.uploadImages = uploadMixOfFiles([
   {
     name: "imageCover",
@@ -67,10 +66,19 @@ exports.resizeImages = asyncHandler(async (req, res, next) => {
   next();
 });
 
+exports.filterActiveArticles = (req, res, next) => {
+  req.filterObj = { status: "active" };
+  next();
+};
 // @desc    Create new artical
 // @router  POST /api/v1/articals
 // @access  public/protected
-exports.createArtical = factory.createOne(Artical);
+exports.createArtical = async (req, res, next) => {
+  if (req.user.role === "admin") {
+    req.body.status = "active";
+  }
+  return factory.createOne(Artical)(req, res, next);
+};
 
 // @desc    Get All articals
 // @router  Get /api/v1/articals

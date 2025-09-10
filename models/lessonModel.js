@@ -38,6 +38,18 @@ const lessonSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+
+    assignmentTitle: {
+      type: String,
+      i18n: true,
+    },
+    assignmentDescription: {
+      type: String,
+      i18n: true,
+    },
+    hasQuiz: { type: Boolean },
+    assignmentFile: String,
+
     isRequireAnalytic: { type: Boolean, default: false },
   },
   { timestamps: true }
@@ -53,6 +65,10 @@ const setImageURL = (doc) => {
   if (doc.image) {
     const imageUrl = `${process.env.BASE_URL}/lessons/images/${doc.image}`;
     doc.image = imageUrl;
+  }
+  if (doc.assignmentFile) {
+    const assignmentFileUrl = `${process.env.BASE_URL}/lessons/assignments/${doc.assignmentFile}`;
+    doc.assignmentFile = assignmentFileUrl;
   }
   //return attachment base url + attachment name
   if (doc.attachments && Array.isArray(doc.attachments)) {

@@ -303,28 +303,29 @@ exports.isTheCourseInstructor = async (req, res, next) => {
 };
 exports.updateCourse = async (req, res, next) => {
   try {
-    // if (req.body.status && req.body.status === "active") {
-    //   //check if this course has all fields
-    //   const missedFields = await checkIfCourseHasAllFields(
-    //     req.params.id,
-    //     req.body
-    //   );
-    //   if (missedFields.length > 0) {
-    //     return next(
-    //       new ApiError(
-    //         `you cannot activate this Course ,Course has missing fields: ${missedFields.join(", ")}`,
-    //         400
-    //       )
-    //     );
-    //   }
-    // }
-    const course = await Course.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    });
+    const course = await Course.findById(req.params.id).lean();
     if (!course) {
       return next(
         new ApiError(res.__("errors.Not-Found", { document: "document" }), 404)
       );
+    }
+    if (req.body.status && req.body.status === "active") {
+      //check if this course has all fields
+      const missedFields = await checkIfCourseHasAllFields(course, req.body);
+      if (missedFields.length > 0) {
+        return next(
+          new ApiError(
+            `you cannot activate this Course ,Course has missing required fields: ${missedFields.join(", ")}`,
+            400
+          )
+        );
+      }
+    }
+    const result = await Course.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    if (!result) {
+      return next(new ApiError("Failed to update course", 400));
     }
     if (req.body.status && req.body.status === "active") {
       const groupCreatorId = req.user._id.toString();
@@ -344,14 +345,14 @@ exports.updateCourse = async (req, res, next) => {
       });
     }
     const localizedCourse = Course.schema.methods.toJSONLocalizedOnly(
-      course,
+      result,
       req.locale
     );
     res
       .status(200)
       .json({ status: `updated successfully`, data: localizedCourse });
   } catch (error) {
-    console.error("Error updating document:", error);
+    console.error("Error updating document:", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };

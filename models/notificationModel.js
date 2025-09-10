@@ -92,7 +92,6 @@ NotificationSchema.post('save', async (doc) => {
       user.lang === 'ar'
         ? doc.toObject().message.ar
         : doc.toObject().message.en;
-    console.log('notificationTitle:', notificationTitle);
     // Send localized notification
     sendNotification(doc.user.toString(), {
       ...doc.toObject(),

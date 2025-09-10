@@ -9,7 +9,9 @@ const {
   getOneArtical,
   updateArtical,
   deleteArtical,
+  filterActiveArticles,
 } = require("../services/articalServices");
+
 const {
   createArticalValidator,
   getOneArticalValidator,
@@ -27,7 +29,11 @@ router.post(
   createArtical
 );
 
-router.get("/", getAllArticals);
+router.get(
+  "/",
+  filterActiveArticles,
+  getAllArticals
+);
 
 router.get("/:id", getOneArticalValidator, getOneArtical);
 

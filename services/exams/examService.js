@@ -404,7 +404,6 @@ exports.checkCourseQuestionsStatus = async (courseExamResult) => {
     course: courseExamResult.course,
     model: courseExamResult.modelExam,
   }).select("questions");
-  console.log("courseExam", courseExam);
   // Convert each question to a plain JavaScript object
   //This allows you to freely add new properties
   const courseExamQuestions = courseExam.questions.map((question) =>
@@ -735,7 +734,6 @@ exports.submitCourseAnswers = async (req, res, next) => {
     ).toFixed(2);
     // Check if the user deserves a certificate
     if (avgCourseExamsPercentage >= 90 && passed) {
-      console.log("course.rating", course.rating);
       const certificateId = new mongoose.Types.ObjectId();
       const certificateDetails = {
         studentName: req.user.name,

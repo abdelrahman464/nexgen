@@ -21,7 +21,6 @@ exports.calculateScore = (questions, answers) => {
       });
     }
   });
-  console.log('wrongAnswers', wrongAnswers);
   return { score, wrongAnswers };
 };
 

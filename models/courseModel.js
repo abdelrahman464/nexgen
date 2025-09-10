@@ -13,19 +13,16 @@ const courseSchema = new mongoose.Schema(
     //i18n
     title: {
       type: String,
-      required: true,
       i18n: true,
     },
     slug: {
       type: String,
-      required: true,
       lowercase: true,
     },
     //use this field to know how many starts in certificate image
     rating: {
       type: Number,
       default: 0,
-      required: true,
     },
     certificateDescription: {
       type: String,
@@ -33,7 +30,6 @@ const courseSchema = new mongoose.Schema(
     },
     description: {
       type: String,
-      required: true,
       i18n: true,
     },
     type: String,
@@ -46,7 +42,6 @@ const courseSchema = new mongoose.Schema(
     //
     image: {
       type: String,
-      required: true,
     },
     colors: {
       bgColor: String,
@@ -57,7 +52,6 @@ const courseSchema = new mongoose.Schema(
 
     price: {
       type: Number,
-      required: [true, "Course price is required"],
       trim: true,
       max: [200000, "Too long Course price"],
     },

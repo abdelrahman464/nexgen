@@ -9,9 +9,10 @@ const CourseProgress = require("../../models/courseProgressModel");
 const User = require("../../models/userModel");
 
 exports.createCourseValidator = [
-  body("title").isObject().withMessage("Title must be an object."),
+  body("title").optional().isObject().withMessage("Title must be an object."),
 
   body("title.en")
+    .optional()
     .isString()
     .withMessage(`en title must be a string.`)
     .isLength({ min: 3 })
@@ -22,47 +23,61 @@ exports.createCourseValidator = [
     }),
 
   body("title.ar")
+    .optional()
     .isString()
     .withMessage(`ar title must be a string.`)
     .isLength({ min: 3 })
     .withMessage(`ar title must be at least 3 chars`),
 
-  body("description").isObject().withMessage("description must be an object."),
+  body("description")
+    .optional()
+    .isObject()
+    .withMessage("description must be an object."),
 
   body("description.en")
+    .optional()
     .isString()
     .withMessage(`en description must be a string.`)
     .isLength({ min: 10 })
     .withMessage(`en description must at least 10 chars`),
 
   body("description.ar")
+    .optional()
     .isString()
     .withMessage(`ar description must be a string.`)
     .isLength({ min: 10 })
     .withMessage(`ar description must at least 10 chars`),
 
-  body("highlights").isArray().withMessage("highlights must be an array"),
-  body("highlights.*").isObject().withMessage("highlight must be an object"),
+  body("highlights")
+    .optional()
+    .isArray()
+    .withMessage("highlights must be an array"),
+  body("highlights.*")
+    .optional()
+    .isObject()
+    .withMessage("highlight must be an object"),
   body("highlights.*.en")
+    .optional()
     .isString()
     .withMessage(`en highlight must be a string.`)
     .isLength({ min: 3 })
     .withMessage(`en highlight must be at least 3 chars`),
   body("highlights.*.ar")
+    .optional()
     .isString()
     .withMessage(`ar highlight must be a string.`)
     .isLength({ min: 3 })
     .withMessage(`ar highlight must be at least 3 chars`),
 
   check("price")
-    .notEmpty()
-    .withMessage("Course price is required")
+    .optional()
     .isNumeric()
     .withMessage("Course price must be a number")
     .isLength({ max: 32 })
     .withMessage("To long price"),
 
   check("needAccessibleCourse")
+    .optional()
     .isBoolean()
     .withMessage("needAccessibleCourse must be a boolean"),
   check("accessibleCourses")
@@ -101,11 +116,8 @@ exports.createCourseValidator = [
       return true;
     }),
 
-  check("image").notEmpty().withMessage("Course Image Required"),
-
   check("category")
-    .notEmpty()
-    .withMessage("Course must be belong to a category")
+    .optional()
     .isMongoId()
     .withMessage("Invalid ID format")
     // before i add product to category i must check if category is in database
@@ -118,8 +130,7 @@ exports.createCourseValidator = [
     ),
 
   check("instructor")
-    .notEmpty()
-    .withMessage("Course instructor is required")
+    .optional()
     .isMongoId()
     .withMessage("Invalid instructor ID format")
     // check if instructor exists and is actually an instructor

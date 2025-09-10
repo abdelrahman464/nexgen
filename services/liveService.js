@@ -99,7 +99,6 @@ exports.createFilterObj = asyncHandler(async (req, res, next) => {
 //<----------------------------------->//
 exports.SendEmailsToLiveFollowers = asyncHandler(async (req, res, next) => {
   const { id } = req.params; //live id
-  console.log(id);
   const live = await Live.findById(id);
   if (!live) {
     return next(ApiError("Live not found", 404));
