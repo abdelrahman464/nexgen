@@ -238,7 +238,16 @@ exports.getMyCourses = asyncHandler(async (req, res, next) => {
 
 exports.filterActiveCourses = (req, res, next) => {
   req.filterObj = { status: "active" };
-  next();
+  if (req.query.keyword) {
+    const textPattern = new RegExp(req.query.keyword, "i");
+    req.filterObj.$or = [
+      { "title.ar": { $regex: textPattern } },
+      { "title.en": { $regex: textPattern } },
+      { "description.ar": { $regex: textPattern } },
+      { "description.en": { $regex: textPattern } },
+    ];
+  }
+  return next();
 };
 // Get all courses
 exports.getAllCourses = factory.getALl(Course, "Course", [

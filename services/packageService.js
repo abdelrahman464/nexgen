@@ -1,31 +1,32 @@
-const mongoose = require('mongoose');
-const sharp = require('sharp');
-const { v4: uuidv4 } = require('uuid');
-const ApiError = require('../utils/apiError');
-const factory = require('./handllerFactory');
-const Package = require('../models/packageModel');
-const Post = require('../models/postModel');
-const UserSubscription = require('../models/userSubscriptionModel');
-const { uploadSingleFile } = require('../middlewares/uploadImageMiddleware');
+const mongoose = require("mongoose");
+const sharp = require("sharp");
+const { v4: uuidv4 } = require("uuid");
+const ApiError = require("../utils/apiError");
+const factory = require("./handllerFactory");
+const Package = require("../models/packageModel");
+const Post = require("../models/postModel");
+const UserSubscription = require("../models/userSubscriptionModel");
+const { uploadSingleFile } = require("../middlewares/uploadImageMiddleware");
+const Course = require("../models/courseModel");
 
 //upload course image
-exports.uploadPackageImage = uploadSingleFile('image');
+exports.uploadPackageImage = uploadSingleFile("image");
 //image processing
 exports.resizeImage = async (req, res, next) => {
   const { file } = req; // Access the uploaded file
   if (file) {
     const fileExtension = file.originalname.substring(
-      file.originalname.lastIndexOf('.'),
+      file.originalname.lastIndexOf(".")
     ); // Extract file extension
     const newFileName = `package-${uuidv4()}-${Date.now()}${fileExtension}`; // Generate new file name
 
     // Check if the file is an image for the profile picture
-    if (file.mimetype.startsWith('image/')) {
+    if (file.mimetype.startsWith("image/")) {
       // Process and save the image file using sharp for resizing, conversion, etc.
       const filePath = `uploads/packages/${newFileName}`;
 
       await sharp(file.buffer)
-        .toFormat('webp') // Convert to WebP
+        .toFormat("webp") // Convert to WebP
         .webp({ quality: 95 })
         .toFile(filePath);
 
@@ -34,9 +35,9 @@ exports.resizeImage = async (req, res, next) => {
     } else {
       return next(
         new ApiError(
-          'Unsupported file type. Only images are allowed for package.',
-          400,
-        ),
+          "Unsupported file type. Only images are allowed for package.",
+          400
+        )
       );
     }
   }
@@ -51,18 +52,34 @@ exports.convertToArray = (req, res, next) => {
   }
   next();
 };
+
+exports.filterInstructorPackages = async (req, res, next) => {
+  if (req.user.role !== "admin") {
+    req.filterObj = { instructor: req.user._id };
+  }
+  next();
+};
 //@desc get list of collections
 //@route GET /api/v1/collections
 //@access public
 exports.filterPackages = async (req, res, next) => {
-  const isAdmin = req.user && req.user.role === 'admin';
-  req.filterObj = { status: 'active' };
+  const isAdmin = req.user && req.user.role === "admin";
+  req.filterObj = { status: "active" };
   if (req.query.all || isAdmin) {
     req.filterObj = {};
   }
-  next();
+  if (req.query.keyword) {
+    const textPattern = new RegExp(req.query.keyword, "i");
+    req.filterObj.$or = [
+      { "title.ar": { $regex: textPattern } },
+      { "title.en": { $regex: textPattern } },
+      { "description.ar": { $regex: textPattern } },
+      { "description.en": { $regex: textPattern } },
+    ];
+  }
+  return next();
 };
-exports.getAll = factory.getALl(Package, 'Package');
+exports.getAll = factory.getALl(Package, "Package");
 //@desc get specific collection by id
 //@route GET /api/v1/collections/:id
 //@access public
@@ -71,7 +88,23 @@ exports.getOne = factory.getOne(Package);
 //@desc create collection
 //@route POST /api/v1/collections
 //@access private
-exports.createOne = factory.createOne(Package);
+exports.createOne = async (req, res, next) => {
+  const { course } = req.body;
+  const courseDoc = await Course.findById(course);
+  const isAllowed =
+    req.user.role === "admin" ||
+    courseDoc.instructor.toString() === req.user._id.toString();
+  if (!isAllowed) {
+    return next(
+      new ApiError(
+        "You are not allowed to create a package for this course",
+        403
+      )
+    );
+  }
+  req.body.instructor = courseDoc.instructor;
+  return factory.createOne(Package)(req, res, next);
+};
 
 //@desc update specific collection
 //@route PUT /api/v1/collections/:id
@@ -86,13 +119,13 @@ exports.deleteOne = async (req, res, next) => {
     await mongoose.connection.transaction(async (session) => {
       // Find and delete the course
       const package = await Package.findByIdAndDelete(req.params.id).session(
-        session,
+        session
       );
 
       // Check if course exists
       if (!package) {
         return next(
-          new ApiError(`package not found for this id ${req.params.id}`, 404),
+          new ApiError(`package not found for this id ${req.params.id}`, 404)
         );
       }
 
@@ -115,6 +148,6 @@ exports.deleteOne = async (req, res, next) => {
       return next(error);
     }
     // Handle other errors with a generic message
-    return next(new ApiError('Error during course deletion', 500));
+    return next(new ApiError("Error during course deletion", 500));
   }
 };

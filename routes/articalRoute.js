@@ -9,6 +9,7 @@ const {
   getOneArtical,
   updateArtical,
   deleteArtical,
+  filterInstructorArticals,
   filterActiveArticles,
 } = require("../services/articalServices");
 
@@ -31,12 +32,8 @@ router.post(
 router.get(
   "/getAll",
   authService.protect,
-  (req, res, next) => {
-    if (req.user.isInstructor) {
-      req.filterObj = { instructor: req.user._id };
-    }
-    next();
-  },
+  authService.checkIfUserIsAdminOrInstructor,
+  filterInstructorArticals,
   getAllArticals
 );
 

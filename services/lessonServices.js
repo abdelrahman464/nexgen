@@ -302,6 +302,7 @@ exports.getSectionLessons = async (req, res, next) => {
     let accessibleLessons = [...localizedLessons];
     let canTakeFinalExam = false;
     let currentLessonOrder;
+    let passedFinalExam = false;
     if (req.user.role !== "admin") {
       const userCourseProgress = await CourseProgress.findOne({
         user: req.user._id,
@@ -316,7 +317,7 @@ exports.getSectionLessons = async (req, res, next) => {
         });
       } else {
         // Find the last lesson in progress
-
+        passedFinalExam = userCourseProgress.status === "Completed";
         let lastLessonProgress = this.getLastLessonExamOrder(
           userCourseProgress.progress
         );
@@ -390,17 +391,22 @@ exports.getSectionLessons = async (req, res, next) => {
         lessons: sectionLessons,
       });
     });
-
     let lastSectionUserStoppedAt;
     if (currentLessonOrder) {
-      lastSectionUserStoppedAt = lessons.find(
-        (lesson) => lesson.order === currentLessonOrder
-      )?.section;
+      // that's mean user completed the course
+      if (currentLessonOrder === lessons[lessons.length - 1].order + 1) {
+        lastSectionUserStoppedAt = lessons[lessons.length - 1].section;
+      } else {
+        lastSectionUserStoppedAt = lessons.find(
+          (lesson) => lesson.order === currentLessonOrder
+        )?.section;
+      }
     }
     return res.status(200).json({
+      lastSectionUserStoppedAt,
+      passedFinalExam,
       canTakeFinalExam,
       data: orderedLessons,
-      lastSectionUserStoppedAt,
     });
   } catch (error) {
     return next(new ApiError(error.message, 500));

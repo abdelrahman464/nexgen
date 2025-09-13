@@ -7,7 +7,9 @@ const factory = require("./handllerFactory");
 const sendEmail = require("../utils/sendEmail");
 
 exports.filterLivesByInstructor = async (req, res, next) => {
-  req.filterObj = { instructor: req.user._id };
+  if (req.user.role !== "admin") {
+    req.filterObj = { instructor: req.user._id };
+  }
   next();
 };
 //@desc get list of Lives

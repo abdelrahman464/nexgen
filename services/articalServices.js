@@ -66,6 +66,13 @@ exports.resizeImages = asyncHandler(async (req, res, next) => {
   next();
 });
 
+exports.filterInstructorArticals = (req, res, next) => {
+  if (req.user.role !== "admin") {
+    req.filterObj = { instructor: req.user._id };
+  }
+  next();
+};
+
 exports.filterActiveArticles = (req, res, next) => {
   req.filterObj = { status: "active" };
   next();

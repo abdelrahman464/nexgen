@@ -16,7 +16,7 @@ router.put(
   liveService.SendEmailsToLiveFollowers
 );
 router.get(
-  "/instructorLives",
+  "/getAll",
   authServices.protect,
   authServices.checkIfUserIsAdminOrInstructor,
   liveService.filterLivesByInstructor,
