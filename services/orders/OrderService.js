@@ -178,7 +178,6 @@ async function createOrUpdateSubscription(userId, packageId, durationDays) {
   if (subscription) {
     subscription.endDate = endDate;
     // await makeSureUserInChat(packageId, userId);
-    await addUserToGroupChatAndNotify(userId, package.course._id);
     await subscription.save();
   } else {
     await UserSubscription.create({
@@ -188,6 +187,7 @@ async function createOrUpdateSubscription(userId, packageId, durationDays) {
       endDate,
     });
   }
+  await addUserToGroupChatAndNotify(userId, package.course._id);
 }
 
 // Handler for creating a course order
@@ -228,12 +228,16 @@ const createCourseOrderHandler = async (paymentDetails) => {
     await createCourseProgress(user._id, course._id);
     await addUserToGroupChatAndNotify(user._id, course._id);
 
-    if (package.course) {
+    if (
+      package &&
+      course.freePackageSubscriptionInDays &&
+      course.freePackageSubscriptionInDays > 0
+    ) {
       await createOrUpdateSubscription(
         user._id,
         package._id, // package id
-        4 * 30
-      ); // 4 months
+        course.freePackageSubscriptionInDays
+      );
     }
 
     await availUserToReview(user._id);
@@ -800,4 +804,5 @@ module.exports = {
   getOrdersByMonth,
   // makeSureUserInChat,
   addUserToGroupChatAndNotify,
+  createOrUpdateSubscription,
 };

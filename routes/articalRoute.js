@@ -28,12 +28,19 @@ router.post(
   createArticalValidator,
   createArtical
 );
-
 router.get(
-  "/",
-  filterActiveArticles,
+  "/getAll",
+  authService.protect,
+  (req, res, next) => {
+    if (req.user.isInstructor) {
+      req.filterObj = { instructor: req.user._id };
+    }
+    next();
+  },
   getAllArticals
 );
+
+router.get("/", filterActiveArticles, getAllArticals);
 
 router.get("/:id", getOneArticalValidator, getOneArtical);
 

@@ -10,7 +10,10 @@ const Notification = require("../../models/notificationModel");
 const CourseProgress = require("../../models/courseProgressModel");
 const { calculateProfits } = require("../marketing/marketingService");
 const { availUserToReview } = require("../userService");
-const { checkExistingPaidOrder } = require("./OrderService");
+const {
+  checkExistingPaidOrder,
+  createOrUpdateSubscription,
+} = require("./OrderService");
 const { subscribeToFreePackage } = require("../userSubscriptionService");
 const { handleOrderCommissions } = require("../../helpers/marketingHelper");
 
@@ -245,36 +248,11 @@ const createPackageOrder = asyncHandler(async (id, userId, isPaid) => {
   if (!order) throw new Error("Couldn't create order");
 
   // 3) Create user subscription if not exist, and if it exists renew his subscription
-  const startDate = new Date();
-  const endDate = new Date(startDate);
-  endDate.setDate(startDate.getDate() + package.subscriptionDurationDays);
-
-  const subscription = await UserSubscription.findOne({
-    user: user._id,
-    package: package._id,
-  }).sort({ endDate: -1 });
-
-  if (subscription) {
-    // If a subscription exists, renew it by updating the endDate
-    subscription.endDate = endDate;
-    await subscription.save();
-  } else {
-    // Only create a new subscription if no existing subscription was found or renewed
-    await UserSubscription.create({
-      user: user._id,
-      package: package._id,
-      startDate,
-      endDate,
-    });
-    //if package type is course => let  gave course to user
-    if (package.type === "course") {
-      await createCourseProgress(user._id, package.course._id);
-    }
-
-    //avail user to review
-    await availUserToReview(user._id);
-  }
-  await addUserToGroupChat(user._id, package.course._id);
+  await createOrUpdateSubscription(
+    user._id,
+    package._id,
+    package.subscriptionDurationDays
+  );
   //check if user paid for this package
   if (isPaid) {
     //4) calculate profits
@@ -298,9 +276,10 @@ const createCourseOrder = async (id, userId, isPaid) => {
       course: id,
     });
     if (result) throw new Error("Order already exists");
-    const [course, user] = await Promise.all([
+    const [course, user, package] = await Promise.all([
       Course.findById(id),
       User.findById(userId),
+      Package.findOne({ course: id }),
     ]);
     const coursePrice = course.priceAfterDiscount
       ? course.priceAfterDiscount
@@ -315,7 +294,19 @@ const createCourseOrder = async (id, userId, isPaid) => {
     );
     await createCourseProgress(user._id, course._id);
     await addUserToGroupChat(user._id, course._id);
-    await subscribeUserToPackage(user._id, course._id);
+    // await subscribeUserToPackage(user._id, course._id);
+    //check if course has free package subscription
+    if (
+      package &&
+      course.freePackageSubscriptionInDays &&
+      course.freePackageSubscriptionInDays > 0
+    ) {
+      await createOrUpdateSubscription(
+        user._id,
+        package._id,
+        course.freePackageSubscriptionInDays
+      );
+    }
     //avail user to review
     await availUserToReview(user._id);
     //check if user paid for this course

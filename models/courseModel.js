@@ -88,7 +88,7 @@ const courseSchema = new mongoose.Schema(
     courseWelcomeMessage: String,
     goodByeMessage: String,
     hasQuiz: Boolean,
-
+    freePackageSubscriptionInDays: Number,
     status: {
       type: String,
       enum: ["active", "inActive"],
