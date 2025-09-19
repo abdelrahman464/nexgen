@@ -1,20 +1,20 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const coursePackageSchema = new mongoose.Schema(
   {
     courses: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Course',
+        ref: "Course",
       },
     ],
     category: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Category',
+      ref: "Category",
     },
     title: {
       type: String,
-      required: [true, 'Package title is required'],
+      required: [true, "Package title is required"],
       i18n: true,
     },
     slug: {
@@ -24,17 +24,17 @@ const coursePackageSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['active', 'pending'],
-      default: 'pending',
+      enum: ["active", "pending"],
+      default: "pending",
     },
     description: { type: String, required: true, i18n: true },
     highlights: [{ type: Object, i18n: true }],
     image: String,
     price: {
       type: Number,
-      required: [true, 'Package price is required'],
+      required: [true, "Package price is required"],
       trim: true,
-      max: [200000, 'Too long Package price'],
+      max: [200000, "Too long Package price"],
     },
     type: String,
     priceAfterDiscount: {
@@ -43,10 +43,10 @@ const coursePackageSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  },
+  }
 );
 coursePackageSchema.pre(/^find/, function (next) {
-  this.populate({ path: 'courses', select: 'title' });
+  this.populate({ path: "courses", select: "title courseDuration" });
   next();
 });
 
@@ -60,11 +60,11 @@ const setCourseImageURL = (doc) => {
 //after intialize the doc in db
 // check if the document contains image
 // it work with findOne,findAll,update
-coursePackageSchema.post('init', (doc) => {
+coursePackageSchema.post("init", (doc) => {
   setCourseImageURL(doc);
 });
 // it work with create
-coursePackageSchema.post('save', (doc) => {
+coursePackageSchema.post("save", (doc) => {
   setCourseImageURL(doc);
 });
-module.exports = mongoose.model('CoursePackage', coursePackageSchema);
+module.exports = mongoose.model("CoursePackage", coursePackageSchema);

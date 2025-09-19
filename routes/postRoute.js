@@ -29,7 +29,7 @@ router
   .get(authServices.protect, createFilterObjHomePosts, getPosts)
   .post(
     authServices.protect,
-    authServices.allowedTo("user", "admin"),
+    authServices.allowedTo("user", "admin", "moderator"),
     uploadFiles,
     processFiles,
     convertToArray,
@@ -40,14 +40,14 @@ router
 router.get(
   "/courses/:course",
   authServices.protect,
-  authServices.allowedTo("user", "admin"),
+  authServices.allowedTo("user", "admin", "moderator"),
   createFilterObjAllowedCoursePosts,
   getPosts
 );
 router.get(
   "/packages/:package",
   authServices.protect,
-  authServices.allowedTo("user", "admin"),
+  authServices.allowedTo("user", "admin", "moderator"),
   createFilterObjPackagesPosts,
   getPosts
 );
@@ -55,13 +55,13 @@ router
   .route("/:id")
   .get(
     authServices.protect,
-    authServices.allowedTo("user", "admin"),
+    authServices.allowedTo("user", "admin", "moderator"),
     getPostValidator,
     getPost
   )
   .put(
     authServices.protect,
-    authServices.allowedTo("admin"),
+    authServices.allowedTo("admin", "moderator"),
     uploadFiles,
     processFiles,
     processPostValidator,
@@ -69,7 +69,7 @@ router
   )
   .delete(
     authServices.protect,
-    authServices.allowedTo("admin"),
+    authServices.allowedTo("admin", "moderator"),
     processPostValidator,
     deletePost
   );

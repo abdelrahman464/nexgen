@@ -330,9 +330,9 @@ exports.updateCourse = async (req, res, next) => {
         );
       }
     }
-    const result = await Course.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    });
+      const result = await Course.findByIdAndUpdate(req.params.id, req.body, {
+        new: true,
+      });
     if (!result) {
       return next(new ApiError("Failed to update course", 400));
     }

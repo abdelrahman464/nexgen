@@ -23,7 +23,7 @@ const {
 router.post(
   "/",
   authService.protect,
-  authService.allowedTo("admin"),
+  authService.allowedTo("admin", "moderator"),
   uploadImages,
   resizeImages,
   createArticalValidator,
@@ -44,7 +44,7 @@ router.get("/:id", getOneArticalValidator, getOneArtical);
 router.put(
   "/:id",
   authService.protect,
-  authService.allowedTo("admin"),
+  authService.allowedTo("admin", "moderator"),
   uploadImages,
   resizeImages,
   updateArticalValidator,
@@ -54,7 +54,7 @@ router.put(
 router.delete(
   "/:id",
   authService.protect,
-  authService.allowedTo("admin"),
+  authService.allowedTo("admin", "moderator"),
   deleteArticalValidator,
   deleteArtical
 );

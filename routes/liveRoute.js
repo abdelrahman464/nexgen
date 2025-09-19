@@ -12,7 +12,7 @@ router.use("/:categoryId/courses", courseRoute);
 router.put(
   "/sendEmails/:id",
   authServices.protect,
-  authServices.allowedTo("admin"),
+  authServices.allowedTo("admin", "moderator"),
   liveService.SendEmailsToLiveFollowers
 );
 router.get(
@@ -27,7 +27,7 @@ router
   .route("/")
   .get(
     authServices.protect,
-    authServices.allowedTo("admin", "user"),
+    authServices.allowedTo("admin", "user", "moderator"),
     liveService.createFilterObj,
     liveService.getLives
   )
@@ -41,17 +41,17 @@ router
   .route("/:id")
   .get(
     authServices.protect,
-    authServices.allowedTo("admin"),
+    authServices.allowedTo("admin", "moderator"),
     liveService.getLive
   )
   .put(
     authServices.protect,
-    authServices.allowedTo("admin"),
+    authServices.allowedTo("admin", "moderator"),
     liveService.updateLive
   )
   .delete(
     authServices.protect,
-    authServices.allowedTo("admin"),
+    authServices.allowedTo("admin", "moderator"),
     liveService.deleteLive
   );
 // router
