@@ -9,6 +9,7 @@ const {
   setPaymentDetails,
   modifyInvitationKeys,
   updateMarketLogProfitsCalculationMethod,
+  modifyProfitableItems,
 } = require("../services/marketing/marketingService");
 const {
   getInstructorAnalytics,
@@ -91,9 +92,16 @@ router.put(
   checkTypeQueryParam,
   createInvoice
 );
+router.put(
+  "/modifyProfitableItems/:id", //marketer id
+  authServices.protect,
+  authServices.allowedTo("user", "admin"),
+  checkAuthority,
+  modifyProfitableItems
+);
 
 router.put(
-  "/startMarketing/:userId",   
+  "/startMarketing/:userId",
   authServices.protect,
   authServices.allowedTo("user", "admin"),
   checkTypeQueryParam,

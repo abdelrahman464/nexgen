@@ -62,6 +62,8 @@ const MarketingLogsSchema = new mongoose.Schema(
           type: mongoose.Schema.Types.ObjectId,
           ref: "Order",
         },
+        instructorProfits: Number,
+        percentage: Number, //marketer percentage
         amount: Number,
         itemType: String, //course or package
         item: { type: String, i18n: true }, //course or package
@@ -145,6 +147,13 @@ const MarketingLogsSchema = new mongoose.Schema(
         paidAt: {
           type: Date,
         },
+      },
+    ],
+    profitableItems: [
+      {
+        itemId: { type: mongoose.Schema.Types.ObjectId, required: true },
+        itemType: { type: String, required: true }, //course or package
+        percentage: { type: Number, required: true },
       },
     ],
   },

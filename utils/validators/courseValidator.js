@@ -438,11 +438,12 @@ exports.checkCourseAccess = async (user, courseId) => {
 exports.checkCourseInstructorOrAdmin = async (req, res, next) => {
   try {
     const { id: courseId } = req.params;
-
+    console.log("courseId", req.user.role);
     // If user is admin, allow access
     if (req.user.role === "admin") {
       return next();
     }
+    console.log("not admin");
 
     // Find the course and check if user is the instructor
     const course = await Course.findById(courseId);

@@ -85,8 +85,8 @@ const courseSchema = new mongoose.Schema(
     instructorPercentage: {
       type: Number,
     },
-    courseWelcomeMessage: String,
-    goodByeMessage: String,
+    courseWelcomeMessage: { type: String, i18n: true },
+    goodByeMessage: { type: String, i18n: true },
     hasQuiz: Boolean,
     freePackageSubscriptionInDays: Number,
     status: {

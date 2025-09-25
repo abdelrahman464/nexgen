@@ -67,7 +67,7 @@ exports.startMarketing = async (req, res) => {
 };
 //--------------------------------------New One
 
-const updateSellerSales = async (data, profitPercentage) => {
+const updateSellerSales = async (data, profitPercentage = null) => {
   console.log("updating seller sales");
   //**update the sales */
   await MarketingLog.findOneAndUpdate(
@@ -77,6 +77,8 @@ const updateSellerSales = async (data, profitPercentage) => {
         sales: {
           purchaser: data.purchaser,
           order: data.order,
+          instructorProfits: data.instructorProfits,
+          percentage: data.marketerPercentage,
           amount: (data.amount || 0).toFixed(2),
           itemType: data.itemType,
           item: data.item || null,
@@ -84,8 +86,8 @@ const updateSellerSales = async (data, profitPercentage) => {
       },
       $set: {
         totalSalesMoney: (data.totalSalesMoney || 0).toFixed(2),
-        profitPercentage,
-        profits: ((data.totalSalesMoney * profitPercentage) / 100).toFixed(2),
+        profitPercentage: data.marketerPercentage,
+        profits: data.marketerProfits,
       },
     }
   );
@@ -149,35 +151,38 @@ exports.calculateProfits = async (
       amount: details.amount,
       itemType: details.itemType,
       item: details.item,
+      instructorProfits: details.instructorProfits || 0,
+      marketerPercentage: details.marketerPercentage || 0,
+      marketerProfits: details.marketerProfits || 0,
       totalSalesMoney:
         marketerMarketLog.totalSalesMoney + parseFloat(details.amount),
     };
 
     //7- calculate the percentage
     let profitPercentage;
-    if (
-      marketerMarketLog.profitsCalculationMethod &&
-      marketerMarketLog.profitsCalculationMethod == "manual"
-    ) {
-      profitPercentage = marketerMarketLog.profitPercentage;
-    } else {
-      profitPercentage = this.detectPercentage(
-        marketerMarketLog.role,
-        data.totalSalesMoney
-      );
-    }
+    // if (
+    //   marketerMarketLog.profitsCalculationMethod &&
+    //   marketerMarketLog.profitsCalculationMethod == "manual"
+    // ) {
+    //   profitPercentage = marketerMarketLog.profitPercentage;
+    // } else {
+    //   profitPercentage = this.detectPercentage(
+    //     marketerMarketLog.role,
+    //     data.totalSalesMoney
+    //   );
+    // }
     //8- update marketLog with this sale
-    await updateSellerSales(data, profitPercentage);
+    await updateSellerSales(data, data.marketerPercentage);
     //9- update current user object in his head.transaction (not sure about this approach till now)
-    if (marketerMarketLog.role !== "head" && marketerMarketLog.invitor) {
-      //create or update current marketer object in his father.treeProfits
-      await updateHeadCommission({
-        marketerId: marketerMarketLog.marketer,
-        invitorId: marketerMarketLog.invitor,
-        marketerTotalSalesMoney: data.totalSalesMoney,
-        marketerProfitsPercentage: profitPercentage,
-      });
-    }
+    // if (marketerMarketLog.role !== "head" && marketerMarketLog.invitor) {
+    //   //create or update current marketer object in his father.treeProfits
+    //   await updateHeadCommission({
+    //     marketerId: marketerMarketLog.marketer,
+    //     invitorId: marketerMarketLog.invitor,
+    //     marketerTotalSalesMoney: data.totalSalesMoney,
+    //     marketerProfitsPercentage: data.marketerPercentage,
+    //   });
+    // }
     //10- end of function , thank you :)
     console.log("(calculateProfits) completed");
     return true;
@@ -742,4 +747,26 @@ exports.getMonthBoundaries = () => {
     currentMonth,
     lastMonth,
   };
+};
+
+//------------------
+exports.modifyProfitableItems = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const marketLog = await MarketingLog.findOne({ marketer: id });
+    if (!marketLog) {
+      return res
+        .status(404)
+        .json({ status: "failed", msg: "MarketLog not found" });
+    }
+    const { profitableItems } = req.body;
+    marketLog.profitableItems = profitableItems;
+    await marketLog.save();
+    return res.status(200).json({
+      status: "success",
+      msg: "MarketLog profitable items updated successfully",
+    });
+  } catch (err) {
+    return res.status(500).json({ status: "failed", msg: err.message });
+  }
 };

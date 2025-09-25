@@ -56,7 +56,7 @@ router.get("/courseDetails/:id", authServices.protect, getCourseDetails);
 router.post(
   "/",
   authServices.protect,
-  authServices.allowedTo("admin"),
+  authServices.checkIfUserIsAdminOrInstructor,
   uploadCourseImage,
   resizeImage,
   convertToArray,
@@ -67,9 +67,15 @@ router.post(
 
 // Get all courses
 router.get(
-  "/allCourses",
+  "/getAll",
   authServices.protect,
-  authServices.allowedTo("admin"),
+  authServices.checkIfUserIsAdminOrInstructor,
+  (req, res, next) => {
+    if (req.user.isInstructor) {
+      req.filterObj = { instructor: req.user._id };
+    }
+    next();
+  },
   getAllCourses
 );
 // Get all active courses

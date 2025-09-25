@@ -47,7 +47,7 @@ const lessonSchema = new mongoose.Schema(
       type: String,
       i18n: true,
     },
-    hasQuiz: { type: Boolean },
+    hasQuiz: { type: Boolean, default: false },
     assignmentFile: String,
 
     isRequireAnalytic: { type: Boolean, default: false },

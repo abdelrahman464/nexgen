@@ -197,6 +197,15 @@ exports.getCourseLessons = async (req, res, next) => {
   if (lessons.length === 0)
     return next(new ApiError("No lessons found for this course", 404));
 
+  let firstLockedLesson = 0;
+  for (const lesson of lessons) {
+    if (lesson.hasQuiz && lesson.hasQuiz === false) {
+      firstLockedLesson += 1;
+    } else {
+      break;
+    }
+  }
+
   // Define a variable to hold the modified lessons with restricted access as needed
   let accessibleLessons = [...lessons];
   let canTakeFinalExam = false;
@@ -209,7 +218,7 @@ exports.getCourseLessons = async (req, res, next) => {
     if (!userCourseProgress || userCourseProgress.progress.length === 0) {
       // If no progress, user should only access the first lesson
       accessibleLessons = lessons.map((lesson, index) => {
-        if (index > 0) lesson.videoUrl = undefined;
+        if (index > firstLockedLesson) lesson.videoUrl = undefined;
         return lesson;
       });
     } else {
@@ -241,7 +250,13 @@ exports.getCourseLessons = async (req, res, next) => {
       // Update accessibleLessons based on currentLessonOrder
 
       accessibleLessons = lessons.map((lesson) => {
-        if (lesson.order > currentLessonOrder) lesson.videoUrl = undefined;
+        if (
+          lesson.order > firstLockedLesson &&
+          lesson.order > currentLessonOrder
+        ) {
+          lesson.videoUrl = undefined;
+        }
+
         if (lesson.order < currentLessonOrder) {
           lesson.passedExam = true;
           if (lesson.isRequireAnalytic) lesson.passedAnalyticsTask = true; // check if lesson require analytics (hashMap lessons by order)
@@ -288,9 +303,27 @@ exports.getSectionLessons = async (req, res, next) => {
     const lessons = await Lesson.find({ course: req.params.id }).sort({
       order: 1,
     });
+    //get all sections in that course
+    const sections = await Section.find({ course: req.params.id }).sort({
+      order: 1,
+    });
 
     if (lessons.length === 0) {
-      return next(new ApiError("No lessons found for this course", 404));
+      sections?.forEach((section) => {
+        section.lessons = [];
+      });
+      return res.status(200).json({
+        data: sections,
+      });
+    }
+
+    let firstLockedLesson = 0;
+    for (const lesson of lessons) {
+      if (lesson.hasQuiz && lesson.hasQuiz === false) {
+        firstLockedLesson += 1;
+      } else {
+        break;
+      }
     }
 
     const localizedLessons = Lesson.schema.methods.toJSONLocalizedOnly(
@@ -312,7 +345,7 @@ exports.getSectionLessons = async (req, res, next) => {
       if (!userCourseProgress || userCourseProgress.progress.length === 0) {
         // If no progress, user should only access the first lesson
         accessibleLessons = localizedLessons.map((lesson, index) => {
-          if (index > 0) lesson.videoUrl = undefined;
+          if (index > firstLockedLesson) lesson.videoUrl = undefined;
           return lesson;
         });
       } else {
@@ -342,7 +375,13 @@ exports.getSectionLessons = async (req, res, next) => {
         }
         // Update accessibleLessons based on currentLessonOrder
         accessibleLessons = localizedLessons.map((lesson) => {
-          if (lesson.order > currentLessonOrder) lesson.videoUrl = undefined;
+          if (
+            lesson.order > firstLockedLesson &&
+            lesson.order > currentLessonOrder
+          ) {
+            lesson.videoUrl = undefined;
+          }
+
           if (lesson.order < currentLessonOrder) {
             lesson.passedExam = true;
             if (lesson.isRequireAnalytic) lesson.passedAnalyticsTask = true; // check if lesson require analytics (hashMap lessons by order)
@@ -365,11 +404,6 @@ exports.getSectionLessons = async (req, res, next) => {
         }
       }
     }
-
-    //get all sections in that course
-    const sections = await Section.find({ course: req.params.id }).sort({
-      order: 1,
-    });
 
     const localizedSections = Section.schema.methods.toJSONLocalizedOnly(
       sections,

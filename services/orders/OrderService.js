@@ -243,6 +243,7 @@ const createCourseOrderHandler = async (paymentDetails) => {
     await availUserToReview(user._id);
     const saleDetails = {
       email: user.email,
+      invitor: user.invitor,
       amount: price,
       date: order.createdAt,
       itemType: "course",
@@ -332,6 +333,7 @@ const createPackageOrderHandler = async (paymentDetails) => {
     // await availUserToReview(user._id);
     const saleDetails = {
       email: user.email,
+      invitor: user.invitor,
       amount: price,
       itemType: "package",
       order: order._id,
@@ -405,6 +407,7 @@ const createCoursePackageOrderHandler = async (paymentDetails) => {
     await availUserToReview(user._id);
     const saleDetails = {
       email: user.email,
+      invitor: user.invitor,
       amount: price,
       itemType: "coursePackage",
       order: order._id,

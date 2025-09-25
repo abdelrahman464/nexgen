@@ -225,12 +225,11 @@ exports.login = asyncHandler(async (req, res, next) => {
   //  check if password and email in the body
   //  check if user exist & check if password is correct
   const user = await User.findOne({ email: req.body.email });
-  // if (!user || !(await bcrypt.compare(req.body.password, user.password))) {
-  //   return next(new ApiError("incorrect password or email", 401));
-  // }
+  if (!user || !(await bcrypt.compare(req.body.password, user.password))) {
+    return next(new ApiError("incorrect password or email", 401));
+  }
   // generate token
-  // const token = generateToken(user._id);
-  const token = generateToken("67b08485f9f7ee0e27185edc");
+  const token = generateToken(user._id);
 
   //exclude sensitive data
   user.idDocuments = undefined;
@@ -351,6 +350,7 @@ exports.protect = asyncHandler(async (req, res, next) => {
   //to use this in authorization
   // check if user is already registered
   req.user = currentUser;
+  console.log("req.user", req.user);
 
   next();
 });

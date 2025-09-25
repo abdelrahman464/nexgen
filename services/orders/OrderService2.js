@@ -202,6 +202,7 @@ const createCoursePackageOrder = async (id, userId, isPaid) => {
   if (isPaid) {
     const data = {
       email: user.email,
+      invitor: user.invitor,
       amount: coursePackagePrice,
       itemType: "package",
       order: order._id,
@@ -258,6 +259,7 @@ const createPackageOrder = asyncHandler(async (id, userId, isPaid) => {
     //4) calculate profits
     const data = {
       email: user.email,
+      invitor: user.invitor,
       amount: packagePrice,
       itemType: "package",
       order: order._id,
@@ -326,6 +328,7 @@ const createCourseOrder = async (id, userId, isPaid) => {
       // });
       await handleOrderCommissions(course, {
         email: user.email,
+        invitor: user.invitor,
         amount: coursePrice,
         itemType: "course",
         item: course.title,
