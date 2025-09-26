@@ -157,7 +157,6 @@ exports.filterStatus = async (req, res, next) => {
     req.filterObj.lesson = req.query.lesson;
     delete req.newQuery.lesson;
   }
-  
   if (req.query.user) {
     req.filterObj.user = req.query.user;
     delete req.newQuery.user;
@@ -172,7 +171,7 @@ exports.filterStatus = async (req, res, next) => {
 //2
 exports.assignIds = (req, res, next) => {
   req.body.user = req.user._id;
-  req.body.marketer = req.user.invitor || null;
+  req.body.marketer = req.user.coach || null;
   next();
 };
 

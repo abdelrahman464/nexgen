@@ -78,6 +78,7 @@ passport.use(
 exports.signup = asyncHandler(async (req, res, next) => {
   //**2-Handle invitor and treeHead */
   let invitorId = null;
+  let coachId = null;
   if (req.body.invitationKey) {
     console.log("invitationKey", req.body.invitationKey);
 
@@ -86,13 +87,23 @@ exports.signup = asyncHandler(async (req, res, next) => {
     if (!invitorId) {
       return next(new ApiError("this link is invalid", 400));
     }
+    const invitor = await User.findById(invitorId).select(
+      "isMarketer isAffiliateMarketer  _id"
+    );
+    if (invitor && invitor.isMarketer) {
+      coachId = invitor._id;
+    } else {
+      coachId = process.env.ADMIN_ID;
+    }
   } else {
     invitorId = process.env.ADMIN_ID;
+    coachId = process.env.ADMIN_ID;
   }
 
   //create user
   const user = await User.create({
     invitor: invitorId,
+    coach: coachId,
     invitationKey: req.body.invitationKey,
     name: req.body.name,
     email: req.body.email,
@@ -350,7 +361,6 @@ exports.protect = asyncHandler(async (req, res, next) => {
   //to use this in authorization
   // check if user is already registered
   req.user = currentUser;
-  console.log("req.user", req.user);
 
   next();
 });

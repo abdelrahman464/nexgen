@@ -8,6 +8,10 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    coach: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
     invitationKey: {
       type: String,
       default: "defaultKey",
@@ -144,6 +148,9 @@ const userSchema = new mongoose.Schema(
       },
     },
     isMarketer: {
+      type: Boolean,
+    },
+    isAffiliateMarketer: {
       type: Boolean,
     },
   },

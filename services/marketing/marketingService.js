@@ -53,7 +53,13 @@ exports.startMarketing = async (req, res) => {
       role,
     });
     //4-update user startMarketing field
-    await User.findOneAndUpdate({ _id: userId }, { isMarketer: true });
+    let updateBody;
+    if (req.query.type && req.query.type === "affiliate") {
+      updateBody = { isAffiliateMarketer: true };
+    } else {
+      updateBody = { isMarketer: true };
+    }
+    await User.findOneAndUpdate({ _id: userId }, updateBody);
     //5-create group chat
     await createMarketerGroupChat(user);
     //6-return response

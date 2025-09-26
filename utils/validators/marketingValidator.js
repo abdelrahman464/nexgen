@@ -89,8 +89,9 @@ exports.validateProfitCalculation = [
 
 exports.checkTypeQueryParam = [
   check("type")
-    .optional()
-    .isIn(["instructor", "marketer"])
-    .withMessage('type must be either "instructor" or "marketer"'),
+    .notEmpty()
+    .withMessage("type is required")
+    .isIn(["instructor", "marketer", "affiliate"]) // Allowed values
+    .withMessage('type must be either "instructor" or "marketer or affiliate"'),
   validatorMiddleware,
 ];
