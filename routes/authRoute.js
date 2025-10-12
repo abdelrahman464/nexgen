@@ -18,6 +18,7 @@ const {
   googleMobileAuth,
 } = require("../services/authServices");
 const { uploadImages, resizeImage } = require("../services/userService");
+const { cleanUpSubscriptions } = require("../services/marketing/fixBugs");
 
 const router = express.Router();
 
@@ -48,6 +49,7 @@ router
   .route("/signup")
   .post(uploadImages, resizeImage, signupValidator, signup);
 router.route("/login").post(loginValidator, login);
+// router.route("/login").post(cleanUpSubscriptions);
 //password reset
 router.route("/forgotPassword").post(forgotPassword);
 router.route("/verifyResetCode").post(verifyPassResetCode);

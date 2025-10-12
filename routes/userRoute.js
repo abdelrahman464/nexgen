@@ -50,6 +50,8 @@ router.get(
   },
   getUsers
 );
+
+
 router.get(
   "/adminAndInstructor",
   authServices.protect,

@@ -4,6 +4,7 @@ const {
 } = require("../services/marketing/instructorProfitsService");
 
 const MarketingLog = require("../models/MarketingModel");
+const Course = require("../models/courseModel");
 
 //---------------------------------------------------
 //Buisness Logic
@@ -37,6 +38,7 @@ exports.handleOrderCommissions = async (item, data) => {
       );
       if (profitableItem) {
         marketerPercentage = profitableItem.percentage;
+        data.marketerPercentage = marketerPercentage;
       }
     }
   }
@@ -48,13 +50,13 @@ exports.handleOrderCommissions = async (item, data) => {
     if (marketerPercentage > 0) {
       marketerProfits = (instructorProfit * marketerPercentage) / 100;
       instructorProfit -= marketerProfits;
+      data.marketerProfits = marketerProfits;
     }
     data.instructorProfits = instructorProfit;
     await giveInstructorHisCommission(data, instructorProfit);
   }
   //call `calculateProfits` and send data to it
   if (marketerPercentage > 0) {
-    data.marketerPercentage = marketerPercentage;
     data.marketerProfits =
       marketerProfits !== 0
         ? marketerProfits // that's mean his profit already calculated from instructor profit
@@ -63,3 +65,49 @@ exports.handleOrderCommissions = async (item, data) => {
     await calculateProfits(data);
   }
 };
+
+// exports.handleCoursePackageOrderCommissions = async (item, data) => {
+//   //if item.instructorPercentage
+//   //call `appendNewSale` from instructorProfitsService that push new commission and update totalSales
+//   item.profitableCourses.map(async (item) => {
+//     const course = await Course.findOne({ _id: item.course });
+//     if(!course){
+//       break:
+//     }
+//     let marketerPercentage = 0;
+//     let marketerProfits = 0;
+//     if (data.invitor) {
+//       const marketer = await MarketingLog.findOne({ marketer: data.invitor });
+//       if (marketer) {
+//         const profitableItem = marketer.profitableItems.find(
+//           (i) =>
+//             i.itemId.toString() === course._id.toString()
+//         );
+//         if (profitableItem) {
+//           marketerPercentage = profitableItem.percentage;
+//         }
+//       }
+//     }
+
+//     data.instructorPercentage = item.instructorPercentage;
+//     data.instructorId = course.instructor._id;
+//     let instructorProfit = item.instructorProfits
+//     if (marketerPercentage > 0) {
+//       marketerProfits = (instructorProfit * marketerPercentage) / 100;
+//       instructorProfit -= marketerProfits;
+//     }
+//     data.instructorProfits = instructorProfit;
+//     await giveInstructorHisCommission(data, instructorProfit);
+
+//     //call `calculateProfits` and send data to it
+//     if (marketerPercentage > 0) {
+//       data.marketerPercentage = marketerPercentage;
+//       data.marketerProfits =
+//         marketerProfits !== 0
+//           ? marketerProfits // that's mean his profit already calculated from instructor profit
+//           : (course.price * marketerPercentage) / 100;
+
+//       await calculateProfits(data);
+//     }
+//   });
+// };

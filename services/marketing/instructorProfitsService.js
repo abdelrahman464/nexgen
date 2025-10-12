@@ -157,11 +157,22 @@ exports.giveInstructorHisCommission = async (data, profit) => {
         $push: {
           commissions: {
             order: data.order,
+            type: data.itemType,
+            amount: data.amount,
+            marketerPercentage: data.marketerPercentage,
+            marketerProfits: data.marketerProfits,
             percentage: data.instructorPercentage,
             profit,
             createdAt: new Date(),
           },
         },
+      }
+    );
+    await Order.findOneAndUpdate(
+      { _id: data.order },
+      {
+        instructorPercentage: data.instructorPercentage,
+        instructorProfits: profit,
       }
     );
     return;

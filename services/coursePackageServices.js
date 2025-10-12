@@ -45,19 +45,23 @@ exports.resizeImage = asyncHandler(async (req, res, next) => {
 //@route GET /api/v1/categories
 //@access public
 exports.filterCoursePackages = async (req, res, next) => {
-  const isAdmin = req.user && req.user.role === "admin";
-  req.filterObj = { status: "active" };
-  if (req.query.all || isAdmin) {
-    req.filterObj = {};
-  }
-  if (req.query.instructor) {
-    const courses = await Course.find({ instructor: req.query.instructor });
+
+  req.filterObj = {};
+  if (req.user.isInstructor) {
+    const courses = await Course.find({ instructor: req.user._id });
+
     if (courses.length === 0) {
       return res.status(200).json({ results: 0, data: [] });
     }
     req.filterObj.courses = { $in: courses.map((course) => course._id) };
   }
-  next();
+  return next();
+};
+
+exports.filterActiveCoursePackages = async (req, res, next) => {
+  req.filterObj = { status: "active" };
+
+  return next();
 };
 exports.getCoursePackages = factory.getALl(CoursePackage, "CoursePackage");
 

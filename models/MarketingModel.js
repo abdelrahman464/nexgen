@@ -64,6 +64,7 @@ const MarketingLogsSchema = new mongoose.Schema(
         },
         instructorProfits: Number,
         percentage: Number, //marketer percentage
+        profits: Number, //marketer profits
         amount: Number,
         itemType: String, //course or package
         item: { type: String, i18n: true }, //course or package

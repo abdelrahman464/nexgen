@@ -86,14 +86,14 @@ const updateSellerSales = async (data, profitPercentage = null) => {
           instructorProfits: data.instructorProfits,
           percentage: data.marketerPercentage,
           amount: (data.amount || 0).toFixed(2),
+          profits: data.marketerProfits,
           itemType: data.itemType,
           item: data.item || null,
         },
       },
       $set: {
         totalSalesMoney: (data.totalSalesMoney || 0).toFixed(2),
-        profitPercentage: data.marketerPercentage,
-        profits: data.marketerProfits,
+        profits: data.totalProfits,
       },
     }
   );
@@ -157,11 +157,14 @@ exports.calculateProfits = async (
       amount: details.amount,
       itemType: details.itemType,
       item: details.item,
-      instructorProfits: details.instructorProfits || 0,
+      instructorProfits:
+        details.instructorProfits + details.marketerProfits || 0,
       marketerPercentage: details.marketerPercentage || 0,
       marketerProfits: details.marketerProfits || 0,
       totalSalesMoney:
         marketerMarketLog.totalSalesMoney + parseFloat(details.amount),
+      totalProfits:
+        marketerMarketLog.profits + parseFloat(details.marketerProfits),
     };
 
     //7- calculate the percentage

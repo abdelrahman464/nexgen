@@ -8,6 +8,16 @@ const coursePackageSchema = new mongoose.Schema(
         ref: "Course",
       },
     ],
+    profitableCourses: [
+      {
+        course: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Course",
+        },
+        instructorPercentage: Number,
+        instructorProfits: Number,
+      },
+    ],
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
@@ -39,6 +49,19 @@ const coursePackageSchema = new mongoose.Schema(
     type: String,
     priceAfterDiscount: {
       type: Number,
+    },
+    // SEO fields
+    metaTitle: {
+      type: String,
+      i18n: true,
+    },
+    metaDescription: {
+      type: String,
+      i18n: true,
+    },
+    keywords: {
+      type: String,
+      i18n: true,
     },
   },
   {

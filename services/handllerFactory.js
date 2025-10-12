@@ -77,6 +77,16 @@ exports.getOne = (Model, populationOpt) => async (req, res, next) => {
       localizedResult.translationAssignmentDescription =
         document.assignmentDescription;
     }
+    if (document.metaTitle) {
+      localizedResult.translationMetaTitle = document.metaTitle;
+    }
+    if (document.metaDescription) {
+      localizedResult.translationMetaDescription = document.metaDescription;
+    }
+    if (document.keywords) {
+      localizedResult.translationKeywords =
+        document.keywords;
+    }
 
     return res.status(200).json({ data: localizedResult });
   } catch (error) {

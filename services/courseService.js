@@ -285,6 +285,15 @@ exports.getCourseById = asyncHandler(async (req, res, next) => {
     localizedResult.translationCertificateDescription =
       course.certificateDescription;
   }
+  if (course.metaTitle) {
+    localizedResult.translationMetaTitle = course.metaTitle;
+  }
+  if (course.metaDescription) {
+    localizedResult.translationMetaDescription = course.metaDescription;
+  }
+  if (course.keywords) {
+    localizedResult.translationKeywords = course.keywords;
+  }
 
   return res.status(200).json({
     status: "success",
@@ -292,7 +301,7 @@ exports.getCourseById = asyncHandler(async (req, res, next) => {
   });
 });
 
-// Update a course by ID
+// this middlware to check if the user is the instructor of the course or admin
 exports.isTheCourseInstructor = async (req, res, next) => {
   if (req.user.role === "admin") {
     return next();
@@ -308,8 +317,9 @@ exports.isTheCourseInstructor = async (req, res, next) => {
   if (course.instructor.toString() !== req.user._id.toString()) {
     return next(new ApiError(`You are not the instructor of this course`, 404));
   }
-  next();
+  return next();
 };
+
 exports.updateCourse = async (req, res, next) => {
   try {
     const course = await Course.findById(req.params.id).lean();
@@ -318,6 +328,7 @@ exports.updateCourse = async (req, res, next) => {
         new ApiError(res.__("errors.Not-Found", { document: "document" }), 404)
       );
     }
+    //if the status is active check if the course has all required fields
     if (req.body.status && req.body.status === "active") {
       //check if this course has all fields
       const missedFields = await checkIfCourseHasAllFields(course, req.body);
@@ -330,9 +341,9 @@ exports.updateCourse = async (req, res, next) => {
         );
       }
     }
-      const result = await Course.findByIdAndUpdate(req.params.id, req.body, {
-        new: true,
-      });
+    const result = await Course.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
     if (!result) {
       return next(new ApiError("Failed to update course", 400));
     }

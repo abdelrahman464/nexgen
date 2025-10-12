@@ -47,6 +47,19 @@ const packageSchema = new mongoose.Schema(
     priceAfterDiscount: {
       type: Number,
     },
+    // SEO fields
+    metaTitle: {
+      type: String,
+      i18n: true,
+    },
+    metaDescription: {
+      type: String,
+      i18n: true,
+    },
+    keywords: {
+      type: String,
+      i18n: true,
+    },
     type: {
       type: String,
       enum: ["service", "course"],

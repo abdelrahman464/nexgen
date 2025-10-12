@@ -377,6 +377,7 @@ exports.getPurchasersUsersAndNon = async (req, res, next) => {
 //@desc get list of user
 //@route GET /api/v1/users
 //@access private
+
 exports.getUsers = factory.getALl(User, 'User');
 //@desc get specific User by id
 //@route GET /api/v1/User/:id

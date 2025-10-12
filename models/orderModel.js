@@ -42,6 +42,14 @@ const OrderSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    instructorPercentage: {
+      type: Number,
+      default: 0,
+    },
+    instructorProfits: {
+      type: Number,
+      default: 0,
+    },
     coupon: String,
     paidAt: Date,
     paypalOrderId: String,

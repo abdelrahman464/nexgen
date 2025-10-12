@@ -15,6 +15,10 @@ const courseSchema = new mongoose.Schema(
       type: String,
       i18n: true,
     },
+    description: {
+      type: String,
+      i18n: true,
+    },
     slug: {
       type: String,
       lowercase: true,
@@ -28,10 +32,7 @@ const courseSchema = new mongoose.Schema(
       type: String,
       i18n: true,
     },
-    description: {
-      type: String,
-      i18n: true,
-    },
+
     type: String,
     highlights: [
       {
@@ -89,6 +90,19 @@ const courseSchema = new mongoose.Schema(
     goodByeMessage: { type: String, i18n: true },
     hasQuiz: Boolean,
     freePackageSubscriptionInDays: Number,
+    // SEO fields
+    metaTitle: {
+      type: String,
+      i18n: true,
+    },
+    metaDescription: {
+      type: String,
+      i18n: true,
+    },
+    keywords: {
+      type: String,
+      i18n: true,
+    },
     status: {
       type: String,
       enum: ["active", "inActive"],

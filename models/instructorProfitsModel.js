@@ -3,6 +3,25 @@ const mongoose = require("mongoose");
 //when return his unDirect transaction
 //loop on this array and return his total profits
 //calculate his total
+const commissionSchema = new mongoose.Schema(
+  {
+    order: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Order",
+    },
+    type: String,
+    amount: Number,
+    percentage: Number,
+    profit: Number,
+    marketerPercentage: Number,
+    marketerProfits: Number,
+    createdAt: {
+      type: Date,
+      default: Date.now, // Don't call `new Date()` here
+    },
+  },
+  { _id: false } // Optional: if you don't want _id for subdocs
+);
 const InstructorProfitsSchema = new mongoose.Schema(
   {
     instructor: {
@@ -17,20 +36,7 @@ const InstructorProfitsSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    commissions: [
-      {
-        order: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Order",
-        },
-        percentage: Number,
-        profit: Number,
-        createdAt: {
-          type: Date,
-          default: new Date(),
-        },
-      },
-    ],
+    commissions: [commissionSchema],
     //payment details for withdrawing profits
     paymentMethod: {
       type: String,

@@ -1,47 +1,54 @@
-const express = require('express');
+const express = require("express");
 
-const coursePackageValidator = require('../utils/validators/coursePackageValidator');
-const coursePackage = require('../services/coursePackageServices');
+const coursePackageValidator = require("../utils/validators/coursePackageValidator");
+const coursePackage = require("../services/coursePackageServices");
 
-const authServices = require('../services/authServices');
+const authServices = require("../services/authServices");
 
 const router = express.Router();
 
+router.get(
+  "/getAll",
+  authServices.protect,
+  authServices.checkIfUserIsAdminOrInstructor,
+  coursePackage.filterCoursePackages,
+  coursePackage.getCoursePackages
+);
+
 router
-  .route('/')
+  .route("/")
   .get(
-    authServices.optionalAuth,
-    coursePackage.filterCoursePackages,
-    coursePackage.getCoursePackages,
+    coursePackage.filterActiveCoursePackages,
+    coursePackage.getCoursePackages
   )
   .post(
     authServices.protect,
-    authServices.allowedTo('admin'),
+    authServices.allowedTo("admin"),
     coursePackage.uploadCoursePackageImage,
     coursePackage.resizeImage,
     coursePackageValidator.createCoursePackageValidator,
-    coursePackage.createCoursePackage,
+    coursePackage.createCoursePackage
   );
 router
-  .route('/:id')
+  .route("/:id")
   .get(coursePackage.getCoursePackage)
   .put(
     authServices.protect,
-    authServices.allowedTo('admin'),
+    authServices.allowedTo("admin"),
     coursePackage.uploadCoursePackageImage,
     coursePackage.resizeImage,
     coursePackageValidator.updateCoursePackageValidator,
-    coursePackage.updateCoursePackage,
+    coursePackage.updateCoursePackage
   )
   .delete(
     authServices.protect,
-    authServices.allowedTo('admin'),
-    coursePackage.deleteCoursePackage,
+    authServices.allowedTo("admin"),
+    coursePackage.deleteCoursePackage
   );
 router
-  .route('/:packageId')
+  .route("/:packageId")
   .get(
-    authServices.allowedTo('admin'),
-    coursePackage.findUniqueUsersByPackageId,
+    authServices.allowedTo("admin"),
+    coursePackage.findUniqueUsersByPackageId
   );
 module.exports = router;
