@@ -1,14 +1,16 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const couponSchema = mongoose.Schema(
   {
     marketer: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
     },
     couponName: {
       type: String,
       required: true,
+      unique: true,
+      trim: true,
     },
     discount: Number,
     maxUsageTimes: {
@@ -22,18 +24,42 @@ const couponSchema = mongoose.Schema(
     reason: String, // why this coupon was given
     status: {
       type: String,
-      default: "pending",
-      enum: ["pending", "active", "rejected"],
+      default: 'pending',
+      enum: ['pending', 'active', 'rejected'],
+    },
+    // apply for specific courses or courses package
+    appliesTo: {
+      scope: {
+        type: String,
+        enum: ['all', 'courses', 'coursePackages'],
+        default: 'all',
+      },
+      courses: {
+        type: [
+          {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Course',
+          },
+        ],
+      },
+      coursePackages: {
+        type: [
+          {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'CoursePackage',
+          },
+        ],
+      },
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 // ^find => it mean if part of of teh word contains find
 couponSchema.pre(/^find/, function (next) {
   // this => query
-  this.populate({ path: "marketer", select: "name email profileImg" });
+  this.populate({ path: 'marketer', select: 'name email profileImg' });
   next();
 });
 
 //2- create model
-module.exports = mongoose.model("Coupon", couponSchema);
+module.exports = mongoose.model('Coupon', couponSchema);

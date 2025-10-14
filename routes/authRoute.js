@@ -18,7 +18,7 @@ const {
   googleMobileAuth,
 } = require("../services/authServices");
 const { uploadImages, resizeImage } = require("../services/userService");
-const { cleanUpSubscriptions } = require("../services/marketing/fixBugs");
+//const { cleanUpSubscriptions } = require("../services/marketing/fixBugs");
 
 const router = express.Router();
 

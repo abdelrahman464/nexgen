@@ -1,8 +1,45 @@
+const sharp = require("sharp");
+const { v4: uuidv4 } = require("uuid");
 const Category = require("../models/categoryModel");
 const Course = require("../models/courseModel");
 const factory = require("./handllerFactory");
 const ApiFeatures = require("../utils/apiFeatures");
+const { uploadSingleFile } = require("../middlewares/uploadImageMiddleware");
+const ApiError = require("../utils/apiError");
+//upload Singel image
+exports.uploadImage = uploadSingleFile("image");
+//image processing
+exports.resizeImage = async (req, res, next) => {
+  const { file } = req; // Access the uploaded file
+  if (file) {
+    const fileExtension = file.originalname.substring(
+      file.originalname.lastIndexOf(".")
+    ); // Extract file extension
+    const newFileName = `categoryImage-${uuidv4()}-${Date.now()}${fileExtension}`; // Generate new file name
 
+    // Check if the file is an image for the profile picture
+    if (file.mimetype.startsWith("image/")) {
+      // Process and save the image file using sharp for resizing, conversion, etc.
+      const filePath = `uploads/categories/${newFileName}`;
+
+      await sharp(file.buffer)
+        .toFormat("webp") // Convert to WebP
+        .webp({ quality: 97 })
+        .toFile(filePath);
+
+      // Update the req.body to include the path for the new profile image
+      req.body.image = newFileName;
+    } else {
+      return next(
+        new ApiError(
+          "Unsupported file type. Only images are allowed for Category Image.",
+          400
+        )
+      );
+    }
+  }
+  next();
+};
 //@desc get list of categories
 //@route GET /api/v1/categories
 //@access public

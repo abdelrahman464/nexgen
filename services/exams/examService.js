@@ -776,6 +776,16 @@ exports.submitCourseAnswers = async (req, res, next) => {
       });
     }
 
+    //FIXME: send email to user to congragulate him in (html) template
+      await sendEmail({
+        to: req.user.email,
+        subject: "Congratulations on completing the course",
+        html: htmlEmail({
+          courseName: course.title.en,
+          userName: req.user.name,
+        }),
+      });
+
     // Respond with success or failure message
     return handleExamResponse(
       res,

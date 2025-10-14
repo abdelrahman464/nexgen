@@ -19,9 +19,9 @@ const {
   createCoursePackageOrderHandler,
 } = require('./OrderService');
 
-const { validateCoupon } = require('../couponService');
+const { validateCoupon, canCouponApplyToScope } = require('../couponService');
 
-const createLahzaTransaction = async (email, first_name, amount, metadata) => {
+const createLahzaTransaction = async (email, firstName, amount, metadata) => {
   const data = {
     email,
     first_name,
@@ -121,8 +121,14 @@ exports.courseCheckoutSessionLahza = asyncHandler(async (req, res, next) => {
     if (typeof coupon === 'string') {
       return next(new ApiError(res.__(coupon), 400));
     }
-    totalOrderPrice =
-      totalOrderPrice - (totalOrderPrice * coupon.discount) / 100;
+
+    // Check if coupon can be applied to this course
+    const scopeValidation = canCouponApplyToScope(coupon, 'course', courseId);
+    if (!scopeValidation.canApply) {
+      return next(new ApiError(scopeValidation.errorMessage, 400));
+    }
+
+    totalOrderPrice -= (totalOrderPrice * coupon.discount) / 100;
   }
 
   totalOrderPrice = Math.ceil(totalOrderPrice * 100);
@@ -172,8 +178,18 @@ exports.coursePackageCheckoutSessionLahza = asyncHandler(
       if (typeof coupon === 'string') {
         return next(new ApiError(res.__(coupon), 400));
       }
-      totalOrderPrice =
-        totalOrderPrice - (totalOrderPrice * coupon.discount) / 100;
+
+      // Check if coupon can be applied to this course package
+      const scopeValidation = canCouponApplyToScope(
+        coupon,
+        'coursePackage',
+        coursePackageId,
+      );
+      if (!scopeValidation.canApply) {
+        return next(new ApiError(scopeValidation.errorMessage, 400));
+      }
+
+      totalOrderPrice -= (totalOrderPrice * coupon.discount) / 100;
     }
 
     totalOrderPrice = Math.ceil(totalOrderPrice * 100);
@@ -224,8 +240,14 @@ exports.packageCheckoutSessionLahza = asyncHandler(async (req, res, next) => {
     if (typeof coupon === 'string') {
       return next(new ApiError(res.__(coupon), 400));
     }
-    totalOrderPrice =
-      totalOrderPrice - (totalOrderPrice * coupon.discount) / 100;
+
+    // Check if coupon can be applied to this package
+    const scopeValidation = canCouponApplyToScope(coupon, 'package', packageId);
+    if (!scopeValidation.canApply) {
+      return next(new ApiError(scopeValidation.errorMessage, 400));
+    }
+
+    totalOrderPrice -= (totalOrderPrice * coupon.discount) / 100;
   }
 
   totalOrderPrice = Math.ceil(totalOrderPrice * 100);

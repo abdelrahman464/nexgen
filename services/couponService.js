@@ -1,25 +1,88 @@
-const Coupon = require("../models/couponModel");
-const factory = require("./handllerFactory");
-const ApiError = require("../utils/apiError");
+const Coupon = require('../models/couponModel');
+const factory = require('./handllerFactory');
+const ApiError = require('../utils/apiError');
 
 exports.validateCoupon = async (couponName, marketerId) => {
   const coupon = await Coupon.findOne({ couponName });
   if (!coupon) {
-    return "coupon-errors.Not-Found";
+    return 'coupon-errors.Not-Found';
   }
-  if (coupon.status === "rejected") {
-    return "coupon-errors.unActive";
+  if (coupon.status === 'rejected') {
+    return 'coupon-errors.unActive';
   }
   if (coupon.maxUsageTimes <= coupon.usedTimes) {
-    return "coupon-errors.Expired";
+    return 'coupon-errors.Expired';
   }
   if (coupon.marketer?._id.toString() !== marketerId?.toString())
-    return "coupon-errors.Un-Authorized";
+    return 'coupon-errors.Un-Authorized';
   return coupon;
+};
+
+/**
+ * Check if a coupon can be applied to a specific scope and item
+ * @param {Object} coupon - The coupon object
+ * @param {string} scope - The scope type ('course', 'coursePackage', 'package')
+ * @param {string} itemId - The ID of the item to check against
+ * @returns {Object} - { canApply: boolean, errorMessage?: string }
+ */
+exports.canCouponApplyToScope = (coupon, scope, itemId) => {
+  // If coupon applies to all, it can be used for any scope
+  if (coupon.appliesTo && coupon.appliesTo.scope === 'all') {
+    return { canApply: true };
+  }
+
+  // Check specific scope restrictions
+  switch (scope) {
+    case 'course':
+      if (coupon.appliesTo && coupon.appliesTo.scope === 'courses') {
+        const canApply = coupon.appliesTo.courses.includes(itemId);
+        return {
+          canApply,
+          errorMessage: canApply
+            ? null
+            : 'This coupon cannot be used for this course',
+        };
+      }
+      break;
+
+    case 'coursePackage':
+      if (coupon.appliesTo && coupon.appliesTo.scope === 'coursePackages') {
+        const canApply = coupon.appliesTo.coursePackages.includes(itemId);
+        return {
+          canApply,
+          errorMessage: canApply
+            ? null
+            : 'This coupon cannot be used for this course package',
+        };
+      }
+      break;
+
+    case 'package':
+      // Packages can only use coupons with 'all' scope
+      if (coupon.appliesTo && coupon.appliesTo.scope !== 'all') {
+        return {
+          canApply: false,
+          errorMessage: 'This coupon cannot be used for this package',
+        };
+      }
+      break;
+
+    default:
+      return {
+        canApply: false,
+        errorMessage: 'Invalid scope type',
+      };
+  }
+
+  // If we reach here, the coupon scope doesn't match the requested scope
+  return {
+    canApply: false,
+    errorMessage: `This coupon cannot be used for ${scope}s`,
+  };
 };
 //----------------------------------------------
 exports.filterCoupons = (req, res, next) => {
-  if (req.user.role === "user") {
+  if (req.user.role === 'user') {
     req.filterObj = { marketer: req.user.id };
   }
   return next();
@@ -57,7 +120,7 @@ exports.incrementCouponUsedTimes = async (couponName) => {
   await Coupon.findOneAndUpdate(
     { couponName },
     { $inc: { usedTimes: 1 } },
-    { new: true }
+    { new: true },
   );
   return true;
 };
@@ -66,26 +129,26 @@ exports.getCouponDetails = async (req, res, next) => {
   try {
     const { couponName } = req.params;
     const coupon = await Coupon.findOne({ couponName }).select(
-      "-__v -updatedAt"
+      '-__v -updatedAt',
     );
     if (!coupon) {
-      return next(new ApiError(res.__("coupon-errors.Not-Found"), 404));
+      return next(new ApiError(res.__('coupon-errors.Not-Found'), 404));
     }
-    if (coupon.status !== "active") {
-      return next(new ApiError(res.__("coupon-errors.unActive"), 404));
+    if (coupon.status !== 'active') {
+      return next(new ApiError(res.__('coupon-errors.unActive'), 404));
     }
     if (coupon.maxUsageTimes <= coupon.usedTimes) {
-      return next(new ApiError(res.__("coupon-errors.Expired"), 404));
+      return next(new ApiError(res.__('coupon-errors.Expired'), 404));
     }
 
     if (
       coupon.marketer._id.toString() !== req.user._id.toString() &&
       coupon.marketer._id.toString() !== req.user.invitor?.toString()
     )
-      return next(new ApiError(res.__("coupon-errors.Un-Authorized"), 404));
+      return next(new ApiError(res.__('coupon-errors.Un-Authorized'), 404));
 
-    return res.status(200).json({ status: "success", coupon });
+    return res.status(200).json({ status: 'success', coupon });
   } catch (error) {
-    return res.status(500).json({ status: "error", error: error.message });
+    return res.status(500).json({ status: 'error', error: error.message });
   }
 };

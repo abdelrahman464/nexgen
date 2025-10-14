@@ -1,43 +1,48 @@
-const express = require("express");
+const express = require('express');
 
 const {
   getCategoryValidator,
   createCategoryValidator,
   updateCategoryValidator,
-} = require("../utils/validators/categoryValidator");
+} = require('../utils/validators/categoryValidator');
 const {
   getCategories,
   createCategory,
   getCategory,
   updateCategory,
-} = require("../services/categoryService");
+  uploadImage,
+  resizeImage,
+} = require('../services/categoryService');
 
-const authServices = require("../services/authServices");
+const authServices = require('../services/authServices');
 
-const courseRoute = require("./courseRoute");
+const courseRoute = require('./courseRoute');
 
 const router = express.Router();
 
-router.use("/:categoryId/courses", courseRoute);
+router.use('/:categoryId/courses', courseRoute);
 
 router
-  .route("/")
+  .route('/')
   .get(getCategories)
   .post(
     authServices.protect,
-    authServices.allowedTo("admin"),
+    authServices.allowedTo('admin'),
+    uploadImage,
+    resizeImage,
     createCategoryValidator,
-    createCategory
+    createCategory,
   );
 router
-  .route("/:id")
+  .route('/:id')
   .get(getCategoryValidator, getCategory)
   .put(
     authServices.protect,
-    authServices.allowedTo("admin"),
+    authServices.allowedTo('admin'),
+    uploadImage,
+    resizeImage,
     updateCategoryValidator,
-    updateCategory
-  )
-
+    updateCategory,
+  );
 
 module.exports = router;

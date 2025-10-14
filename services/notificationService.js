@@ -44,7 +44,10 @@ exports.sendSystemNotificationToUsers = asyncHandler(async (req, res, next) => {
 //@desc get list of notifications
 //@route GET /api/v1/notifications
 //@access private
-exports.getMyNotifications = factory.getALl(Notification, 'Notification');
+exports.getMyNotifications = factory.getALl(Notification, 'Notification', {
+  path: 'user',
+  select: 'name email profileImg',
+});
 //@desc delete notification
 //@route DELETE /api/v1/notifications/:id
 //@access private
