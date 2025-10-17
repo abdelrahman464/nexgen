@@ -56,6 +56,11 @@ NotificationSchema.pre(/^find/, function (next) {
       select: 'name email profileImg',
     })
     .populate({
+      path: 'user',
+      select: 'name email profileImg',
+    })
+
+    .populate({
       path: 'chat',
       select: '-participants -course',
     });
