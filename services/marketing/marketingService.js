@@ -21,7 +21,9 @@ const {
 exports.startMarketing = async (req, res) => {
   try {
     const userId = req.params.userId;
-    if (req.query.type && req.query.type === "instructor") {
+    const { type } = req.query;
+    const { fallBackCoach } = req.body;
+    if (type && type === "instructor") {
       const result = await createInstructorProfitsDocument(userId);
       if (typeof result === "string") {
         return res.status(400).json({ status: "failed", msg: result });
@@ -31,9 +33,6 @@ exports.startMarketing = async (req, res) => {
         message: `this instructor can take profits now`,
       });
     }
-
-    let role;
-    if (!role || role === "customer") role = "marketer";
 
     const isMarketer = await MarketingLog.exists({ marketer: userId });
     //check existance
@@ -50,11 +49,12 @@ exports.startMarketing = async (req, res) => {
     await MarketingLog.create({
       marketer: userId,
       invitor: user.invitor,
-      role,
+      role: type,
+      fallBackCoach,
     });
     //4-update user startMarketing field
     let updateBody;
-    if (req.query.type && req.query.type === "affiliate") {
+    if (type && type === "affiliate") {
       updateBody = { isAffiliateMarketer: true };
     } else {
       updateBody = { isMarketer: true };

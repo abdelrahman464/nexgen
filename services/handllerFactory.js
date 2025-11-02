@@ -84,10 +84,18 @@ exports.getOne = (Model, populationOpt) => async (req, res, next) => {
       localizedResult.translationMetaDescription = document.metaDescription;
     }
     if (document.keywords) {
-      localizedResult.translationKeywords =
-        document.keywords;
+      localizedResult.translationKeywords = document.keywords;
     }
-
+    if (document.whatWillLearn) {
+      localizedResult.translationWhatWillLearn = document.whatWillLearn;
+    }
+    if (document.coursePrerequisites) {
+      localizedResult.translationCoursePrerequisites =
+        document.coursePrerequisites;
+    }
+    if (document.whoThisCourseFor) {
+      localizedResult.translationWhoThisCourseFor = document.whoThisCourseFor;
+    }
     return res.status(200).json({ data: localizedResult });
   } catch (error) {
     console.error("Error fetching document:", error);

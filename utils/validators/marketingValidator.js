@@ -1,7 +1,9 @@
 const { check, body } = require("express-validator");
+const mongoose = require("mongoose");
 const validatorMiddleware = require("../../middlewares/validatorMiddleware");
 const ApiError = require("../apiError");
 const MarketLog = require("../../models/MarketingModel");
+
 // exports.getCategoryValidator = [
 //   //rules
 //   check("id").isMongoId().withMessage("Invalid category id format"),
@@ -91,7 +93,24 @@ exports.checkTypeQueryParam = [
   check("type")
     .notEmpty()
     .withMessage("type is required")
-    .isIn(["instructor", "marketer", "affiliate"]) // Allowed values
-    .withMessage('type must be either "instructor" or "marketer or affiliate"'),
+    .isIn(["instructor", "marketer", "affiliate"])
+    .withMessage(
+      'type must be either "instructor", "marketer", or "affiliate"'
+    ),
+
+  // Custom validator for fallBackCoach
+  check("fallBackCoach").custom((value, { req }) => {
+    if (req.query.type === "affiliate") {
+      if (!value) {
+        throw new Error("fallBackCoach is required for affiliate type");
+      }
+      // Optionally validate it’s a MongoId
+      if (!mongoose.Types.ObjectId.isValid(value)) {
+        throw new Error("Invalid fallBackCoach id format");
+      }
+    }
+    return true;
+  }),
+
   validatorMiddleware,
 ];

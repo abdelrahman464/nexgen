@@ -21,9 +21,11 @@ const {
   // updateUserProgress,
   handleExamResponse,
   getTotalGrades,
+  getCorrectAndWrongAnswers,
 } = require("./examUtils");
 const _ = require("lodash");
 const { generateCertificate } = require("../../utils/generateCertificate");
+const { modifyExamQuestionsNumber } = require("../../helpers/examHelper");
 
 // Middleware to upload question image and options images-------------
 exports.uploadQuestionAndOptions = uploadMixOfFiles([
@@ -190,6 +192,8 @@ exports.addQuestionToExam = asyncHandler(async (req, res, next) => {
     if (!updatedExam) {
       return next(new ApiError("Exam not found", 404));
     }
+    //increment numOfquestions
+    await modifyExamQuestionsNumber(updatedExam);
 
     res.status(200).json({
       status: "success",
@@ -255,6 +259,8 @@ exports.removeQuestionsFromExam = asyncHandler(async (req, res, next) => {
     if (!exam) {
       return next(new ApiError("Exam not found", 404));
     }
+    //decrement numOfquestions
+    await modifyExamQuestionsNumber(exam);
 
     res.status(200).json({
       status: "success",
@@ -598,7 +604,11 @@ exports.submitLessonAnswers = async (req, res, next) => {
       totalPossibleGrade,
       exam.passingScore
     );
-
+    let examAnalytics = null;
+    if (passed) {
+      examAnalytics = getCorrectAndWrongAnswers(exam.questions, answers);
+    }
+    // );
     // Create new progress entry
     const newProgress = {
       lesson: lesson._id,
@@ -624,13 +634,14 @@ exports.submitLessonAnswers = async (req, res, next) => {
       },
       { new: true }
     );
-
+    console.log("newProgress", newProgress);
     // Respond with exam results
     return handleExamResponse(
       res,
       passed,
       examResult.score,
-      totalPossibleGrade
+      totalPossibleGrade,
+      examAnalytics
     );
   } catch (error) {
     return next(new ApiError(error.message, 500));
@@ -777,14 +788,14 @@ exports.submitCourseAnswers = async (req, res, next) => {
     }
 
     //FIXME: send email to user to congragulate him in (html) template
-      await sendEmail({
-        to: req.user.email,
-        subject: "Congratulations on completing the course",
-        html: htmlEmail({
-          courseName: course.title.en,
-          userName: req.user.name,
-        }),
-      });
+    await sendEmail({
+      to: req.user.email,
+      subject: "Congratulations on completing the course",
+      html: htmlEmail({
+        courseName: course.title.en,
+        userName: req.user.name,
+      }),
+    });
 
     // Respond with success or failure message
     return handleExamResponse(

@@ -68,6 +68,70 @@ exports.createCourseValidator = [
     .withMessage(`ar highlight must be a string.`)
     .isLength({ min: 3 })
     .withMessage(`ar highlight must be at least 3 chars`),
+  //-----------------------------------
+  body("whatWillLearn")
+    .optional()
+    .isArray()
+    .withMessage("whatWillLearn must be an array"),
+  body("whatWillLearn.*")
+    .optional()
+    .isObject()
+    .withMessage("whatWillLearn must be an object"),
+  body("whatWillLearn.*.en")
+    .optional()
+    .isString()
+    .withMessage(`en whatWillLearn must be a string.`)
+    .isLength({ min: 3 })
+    .withMessage(`en whatWillLearn must be at least 3 chars`),
+  body("whatWillLearn.*.ar")
+    .optional()
+    .isString()
+    .withMessage(`ar whatWillLearn must be a string.`)
+    .isLength({ min: 3 })
+    .withMessage(`ar whatWillLearn must be at least 3 chars`),
+  //--------------
+  body("coursePrerequisites")
+    .optional()
+    .isArray()
+    .withMessage("coursePrerequisites must be an array"),
+  body("coursePrerequisites.*")
+    .optional()
+    .isObject()
+    .withMessage("coursePrerequisites must be an object"),
+  body("coursePrerequisites.*.en")
+    .optional()
+    .isString()
+    .withMessage(`en coursePrerequisites must be a string.`)
+    .isLength({ min: 3 })
+    .withMessage(`en coursePrerequisites must be at least 3 chars`),
+  body("coursePrerequisites.*.ar")
+    .optional()
+    .isString()
+    .withMessage(`ar coursePrerequisites must be a string.`)
+    .isLength({ min: 3 })
+    .withMessage(`ar coursePrerequisites must be at least 3 chars`),
+  //--------------
+  body("whoThisCourseFor")
+    .optional()
+    .isArray()
+    .withMessage("whoThisCourseFor must be an array"),
+  body("whoThisCourseFor.*")
+    .optional()
+    .isObject()
+    .withMessage("whoThisCourseFor must be an object"),
+  body("whoThisCourseFor.*.en")
+    .optional()
+    .isString()
+    .withMessage(`en whoThisCourseFor must be a string.`)
+    .isLength({ min: 3 })
+    .withMessage(`en whoThisCourseFor must be at least 3 chars`),
+  body("whoThisCourseFor.*.ar")
+    .optional()
+    .isString()
+    .withMessage(`ar whoThisCourseFor must be a string.`)
+    .isLength({ min: 3 })
+    .withMessage(`ar whoThisCourseFor must be at least 3 chars`),
+  //-----------------------------------
 
   check("price")
     .optional()
@@ -171,6 +235,11 @@ exports.createCourseValidator = [
   validatorMiddleware,
 ];
 
+//----------------------------------------------------------
+//----------------------------------------------------------
+//----------------------------------------------------------
+//----------------------------------------------------------
+//----------------------------------------------------------
 exports.updateCourseValidator = [
   check("id")
     .isMongoId()
@@ -453,7 +522,7 @@ exports.checkCourseInstructorOrAdmin = async (req, res, next) => {
     }
 
     // Check if current user is the instructor of this course
-    if (course.instructor.toString() === req.user._id.toString()) {
+    if (course.instructor?.toString() === req.user._id.toString()) {
       return next();
     }
 

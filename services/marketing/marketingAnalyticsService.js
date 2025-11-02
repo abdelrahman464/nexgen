@@ -299,7 +299,8 @@ function toISOFormat(dateString) {
 exports.incrementSignUpClicks = async (req, res) => {
   try {
     const invitationKey = req.params.invitationKey;
-    const marketerId = await this.getMarketerFromInvitationKey(invitationKey);
+    const { marketerId } =
+      await this.getMarketerFromInvitationKey(invitationKey);
     if (!marketerId)
       return res.status(404).json({
         status: "failed",
@@ -408,8 +409,8 @@ exports.getMarketerFromInvitationKey = async (invitationKey) => {
 
   const marketer = await MarketingLog.findOne({
     invitationKeys: { $in: [invitationKey] }, // Checks if invitationKey exists in the array
-  }).select("_id marketer");
+  }).select("_id marketer role fallBackCoach");
 
-  if (!marketer) return false;
-  return marketer.marketer;
+  if (!marketer) return {};
+  return { marketerId: marketer.marketer, marketLog: marketer };
 };

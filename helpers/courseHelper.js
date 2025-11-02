@@ -1,5 +1,3 @@
-const Course = require("../models/courseModel");
-
 const requiredFields = [
   "title",
   "description",
@@ -21,4 +19,17 @@ exports.checkIfCourseHasAllFields = async (courseDoc, fields) => {
     }
   }
   return missedFields;
+};
+
+//-----------------
+exports.getLastLessonOrderNumber = async (lessons) => {
+  let lastOrderNumber = 0;
+  lessons.forEach((lesson) => {
+    console.log("lesson.order", lesson.order);
+    if (lesson.order > lastOrderNumber) {
+      lastOrderNumber = lesson.order;
+    }
+  });
+  lastOrderNumber += 1;
+  return lastOrderNumber;
 };
