@@ -125,6 +125,9 @@ const courseSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    examTitle: {
+      type: String,
+    },
     status: {
       type: String,
       enum: ["active", "inActive"],

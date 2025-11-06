@@ -218,14 +218,29 @@ exports.getInstructorAnalytics = async (req, res) => {
     const courses = await Course.find({ instructor: instructorId }).select(
       "_id"
     );
-    const itemIds = courses.map((course) => course._id);
-    const orders = await Order.count({ course: { $in: itemIds } });
-
+    const coursesIds = courses.map((course) => course._id);
+    const packages = await Package.find({ instructor: instructorId }).select(
+      "_id"
+    );
+    const packagesIds = packages.map((pack) => pack._id);
+    const totalEnrollments = await Order.count({
+      $or: [{ course: { $in: coursesIds } }, { package: { $in: packagesIds } }],
+    });
+    //calculate avg rate
+    const avgRate = 4;
+    const totalEnrollmentsDiff = 32; //need to calculate
+    const avgRateDiff = 1.3;
+    const instructorProfitsDiff = 300; //need to calculate
     //need to add avg rate
     return res.status(200).json({
       status: "success",
+      totalEnrollments,
+      totalEnrollmentsDiff,
+      avgRate,
+      avgRateDiff,
       instructorProfits,
-      totalStudents: orders,
+      instructorProfitsDiff,
+      withdrawals: 400,
     });
   } catch (error) {
     console.log(error.message);

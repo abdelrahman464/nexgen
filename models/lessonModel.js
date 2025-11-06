@@ -50,7 +50,7 @@ const lessonSchema = new mongoose.Schema(
     quizTitle: {
       type: String,
     },
-    
+
     hasQuiz: { type: Boolean, default: false },
     assignmentFile: String,
     isRequireAnalytic: { type: Boolean, default: false },
@@ -58,6 +58,9 @@ const lessonSchema = new mongoose.Schema(
     examQuestionsNumber: {
       type: Number,
       default: 0,
+    },
+    examTitle: {
+      type: String,
     },
   },
   { timestamps: true }

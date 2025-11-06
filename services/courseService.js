@@ -24,6 +24,7 @@ const {
 const {
   checkIfCourseHasAllFields,
   getLastLessonOrderNumber,
+  addTranslationFields
 } = require("../helpers/courseHelper");
 
 exports.getInstructorCourses = asyncHandler(async (req, res, next) => {
@@ -139,7 +140,7 @@ exports.createCourse = asyncHandler(async (req, res, next) => {
       return next(new ApiError("Instructor has no instructorProfits", 404));
     }
   }
-  req.body.instructor = req.body
+  req.body.instructor = req.body.instructor || req.user._id;
   const course = await Course.create(req.body);
   const { description, title } = req.body;
   //i commented this part here and execute it in updateCourse if status is active
@@ -274,25 +275,11 @@ exports.getCourseById = asyncHandler(async (req, res, next) => {
       new ApiError(`No course found for this id ${req.params.id}`, 404)
     );
   }
-  const localizedResult = Course.schema.methods.toJSONLocalizedOnly(
+  let localizedResult = Course.schema.methods.toJSONLocalizedOnly(
     course,
     req.locale
   );
-  const { title } = course;
-  localizedResult.translationTitle = title;
-  if (course.description) {
-    localizedResult.translationDescription = course.description;
-  }
-  if (course.highlights) {
-    localizedResult.translationHighlights = course.highlights;
-  }
-  if (course.content) {
-    localizedResult.translationContent = course.content;
-  }
-  if (course.certificateDescription) {
-    localizedResult.translationCertificateDescription =
-      course.certificateDescription;
-  }
+  localizedResult = addTranslationFields(course, localizedResult);
 
   return res.status(200).json({
     status: "success",
@@ -313,7 +300,7 @@ exports.isTheCourseInstructor = async (req, res, next) => {
   if (!course) {
     return next(new ApiError("Course not found", 404));
   }
-  if (course.instructor.toString() !== req.user._id.toString()) {
+  if (course.instructor._id.toString() !== req.user._id.toString()) {
     return next(new ApiError(`You are not the instructor of this course`, 404));
   }
   next();

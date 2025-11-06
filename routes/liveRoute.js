@@ -5,6 +5,9 @@ const liveService = require("../services/liveService");
 const authServices = require("../services/authServices");
 
 const courseRoute = require("./courseRoute");
+const {
+  checkIfInstructorHasOneActiveCourse,
+} = require("../utils/validators/courseValidator");
 
 const router = express.Router();
 
@@ -34,6 +37,7 @@ router
   .post(
     authServices.protect,
     authServices.checkIfUserIsAdminOrInstructor,
+    checkIfInstructorHasOneActiveCourse,
     createLiveValidator,
     liveService.createLive
   );

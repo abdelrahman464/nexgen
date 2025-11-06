@@ -699,7 +699,10 @@ exports.submitCourseAnswers = async (req, res, next) => {
       totalPossibleGrade,
       exam.passingScore
     );
-
+    let examAnalytics = null;
+    if (passed) {
+      examAnalytics = getCorrectAndWrongAnswers(exam.questions, answers);
+    }
     // Update course progress
     const updateData = {
       modelExam: exam.model,
@@ -802,7 +805,8 @@ exports.submitCourseAnswers = async (req, res, next) => {
       res,
       passed,
       examResult.score,
-      totalPossibleGrade
+      totalPossibleGrade,
+      examAnalytics
     );
   } catch (err) {
     return res.status(400).json({ status: "error", message: err.message });
@@ -850,6 +854,11 @@ exports.submitCoursePlacementAnswers = async (req, res, next) => {
         ? false
         : hasPassed(examResult.score, totalPossibleScore, exam.passingScore);
 
+    let examAnalytics = null;
+    if (passed) {
+      examAnalytics = getCorrectAndWrongAnswers(exam.questions, answers);
+    }
+
     // Update user's placement exam progress
     await User.findOneAndUpdate(
       { _id: user._id },
@@ -873,7 +882,8 @@ exports.submitCoursePlacementAnswers = async (req, res, next) => {
       res,
       passed,
       examResult.score,
-      totalPossibleScore
+      totalPossibleScore,
+      examAnalytics
     );
   } catch (err) {
     return next(new ApiError(err.message, 500));

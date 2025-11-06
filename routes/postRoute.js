@@ -29,7 +29,6 @@ router
   .get(authServices.protect, createFilterObjHomePosts, getPosts)
   .post(
     authServices.protect,
-    authServices.allowedTo("user", "admin", "moderator"),
     uploadFiles,
     processFiles,
     convertToArray,

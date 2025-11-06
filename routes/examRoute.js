@@ -1,7 +1,7 @@
 const router = require("express").Router();
 const { checkCourseAccess } = require("../utils/validators/lessonsValidator");
 const { isTheExamInstructor } = require("../utils/validators/examValidator");
-const { isTheCourseInstructor } = require("../services/courseService");
+const { checkCourseInstructorOrAdmin } = require("../utils/validators/courseValidator");
 const { isTheLessonInstructor } = require("../services/lessonServices");
 const authService = require("../services/authServices");
 const {
@@ -69,7 +69,7 @@ router
   .route("/courses/:courseId")
   .get(
     authService.protect,
-    isTheCourseInstructor,
+    checkCourseInstructorOrAdmin,
     createFilterObj("course"),
     getExams
   );
@@ -77,7 +77,7 @@ router
   .route("/placements/:courseId")
   .get(
     authService.protect,
-    isTheCourseInstructor,
+    checkCourseInstructorOrAdmin,
     createFilterObj("placement"),
     getExams
   );

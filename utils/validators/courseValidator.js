@@ -506,7 +506,7 @@ exports.checkCourseAccess = async (user, courseId) => {
 // * Check if current user is admin or course instructor
 exports.checkCourseInstructorOrAdmin = async (req, res, next) => {
   try {
-    const { id: courseId } = req.params;
+    const courseId = req.params.id || req.params.courseId;
     // If user is admin, allow access
     if (req.user.role === "admin") {
       return next();
@@ -534,4 +534,22 @@ exports.checkCourseInstructorOrAdmin = async (req, res, next) => {
   } catch (err) {
     return res.status(500).json({ status: "failed", error: err.message });
   }
+};
+
+exports.checkIfInstructorHasOneActiveCourse = async (req, res, next) => {
+  if (req.user.role === "admin" || req.user.role === "moderator") {
+    return next();
+  }
+  const activeCourses = await Course.findOne({
+    instructor: req.user._id,
+    status: "active",
+  });
+  if (!activeCourses) {
+    return res.status(403).json({
+      status: "failed",
+      error:
+        "You are not allowed to perform this action , you must have at least one active course",
+    });
+  }
+  return next();
 };
