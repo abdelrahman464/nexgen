@@ -1,12 +1,12 @@
-const express = require("express");
+const express = require('express');
 
 const {
   processPostValidator,
   createPostValidator,
   getPostValidator,
   checkCourseAuthority,
-} = require("../utils/validators/postValidator");
-const authServices = require("../services/authServices");
+} = require('../utils/validators/postValidator');
+const authServices = require('../services/authServices');
 const {
   convertToArray,
   createPost,
@@ -18,14 +18,16 @@ const {
   deletePost,
   uploadFiles,
   processFiles,
-
   getPosts,
-} = require("../services/postServices");
+  getTopProfilePosters,
+} = require('../services/postServices');
 
 const router = express.Router();
 
+router.get('/topPosters', authServices.protect, getTopProfilePosters);
+
 router
-  .route("/")
+  .route('/')
   .get(authServices.protect, createFilterObjHomePosts, getPosts)
   .post(
     authServices.protect,
@@ -34,43 +36,43 @@ router
     convertToArray,
     createPostValidator,
     checkCourseAuthority,
-    createPost
+    createPost,
   );
 router.get(
-  "/courses/:course",
+  '/courses/:course',
   authServices.protect,
-  authServices.allowedTo("user", "admin", "moderator"),
+  authServices.allowedTo('user', 'admin', 'moderator'),
   createFilterObjAllowedCoursePosts,
-  getPosts
+  getPosts,
 );
 router.get(
-  "/packages/:package",
+  '/packages/:package',
   authServices.protect,
-  authServices.allowedTo("user", "admin", "moderator"),
+  authServices.allowedTo('user', 'admin', 'moderator'),
   createFilterObjPackagesPosts,
-  getPosts
+  getPosts,
 );
 router
-  .route("/:id")
+  .route('/:id')
   .get(
     authServices.protect,
-    authServices.allowedTo("user", "admin", "moderator"),
+    authServices.allowedTo('user', 'admin', 'moderator'),
     getPostValidator,
-    getPost
+    getPost,
   )
   .put(
     authServices.protect,
-    authServices.allowedTo("admin", "moderator"),
+    authServices.allowedTo('admin', 'moderator'),
     uploadFiles,
     processFiles,
     processPostValidator,
-    updatePost
+    updatePost,
   )
   .delete(
     authServices.protect,
-    authServices.allowedTo("admin", "moderator"),
+    authServices.allowedTo('admin', 'moderator'),
     processPostValidator,
-    deletePost
+    deletePost,
   );
-
+router.get('/topPosters', authServices.protect, getTopProfilePosters);
 module.exports = router;

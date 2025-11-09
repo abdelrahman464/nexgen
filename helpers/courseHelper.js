@@ -25,7 +25,6 @@ exports.checkIfCourseHasAllFields = async (courseDoc, fields) => {
 exports.getLastLessonOrderNumber = async (lessons) => {
   let lastOrderNumber = 0;
   lessons.forEach((lesson) => {
-    console.log("lesson.order", lesson.order);
     if (lesson.order > lastOrderNumber) {
       lastOrderNumber = lesson.order;
     }
