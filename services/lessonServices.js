@@ -133,11 +133,11 @@ exports.isTheLessonInstructor = async (req, res, next) => {
     if (!lesson) {
       return next(new ApiError("Lesson not found", 404));
     }
-    const course = await Course.findById(lesson.course);
+    const course = await Course.findById(lesson.course._id);
     if (!course) {
       return next(new ApiError("Course not found", 404));
     }
-    if (course.instructor.toString() !== req.user._id.toString()) {
+    if (course.instructor?._id.toString() !== req.user._id.toString()) {
       return next(
         new ApiError(`You are not the instructor of this course`, 404)
       );
@@ -147,7 +147,7 @@ exports.isTheLessonInstructor = async (req, res, next) => {
     if (!course) {
       return next(new ApiError("Course not found", 404));
     }
-    if (course.instructor.toString() !== req.user._id.toString()) {
+    if (course.instructor?._id.toString() !== req.user._id.toString()) {
       return next(
         new ApiError(`You are not the instructor of this course`, 404)
       );
@@ -308,12 +308,18 @@ exports.getSectionLessons = async (req, res, next) => {
       order: 1,
     });
 
+    const localizedSections = Section.schema.methods.toJSONLocalizedOnly(
+      sections,
+      req.locale
+    );
     if (lessons.length === 0) {
-      sections?.forEach((section) => {
-        section.lessons = [];
-      });
+      const result = localizedSections.map((sectionDoc) => ({
+        sectionId: sectionDoc._id,
+        section: sectionDoc.title,
+        lessons: [],
+      }));
       return res.status(200).json({
-        data: sections,
+        data: result,
       });
     }
 
@@ -405,11 +411,6 @@ exports.getSectionLessons = async (req, res, next) => {
       }
     }
 
-    const localizedSections = Section.schema.methods.toJSONLocalizedOnly(
-      sections,
-      req.locale
-    );
-
     //order lessons by section
     const orderedLessons = [];
     localizedSections.forEach((section) => {
@@ -425,6 +426,7 @@ exports.getSectionLessons = async (req, res, next) => {
         lessons: sectionLessons,
       });
     });
+    console.log("dsadas" + orderedLessons);
     let lastSectionUserStoppedAt;
     if (currentLessonOrder) {
       // that's mean user completed the course

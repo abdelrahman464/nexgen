@@ -19,11 +19,15 @@ const {
   updateArticalValidator,
   deleteArticalValidator,
 } = require("../utils/validators/articalValidator");
+const {
+  checkIfInstructorHasOneActiveCourse,
+} = require("../utils/validators/courseValidator");
 
 router.post(
   "/",
   authService.protect,
   authService.allowedTo("admin", "moderator"),
+  checkIfInstructorHasOneActiveCourse,
   uploadImages,
   resizeImages,
   createArticalValidator,

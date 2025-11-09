@@ -1,6 +1,6 @@
-const ApiError = require('../../utils/apiError');
-const Exam = require('../../models/examModel');
-const CourseProgress = require('../../models/courseProgressModel');
+const ApiError = require("../../utils/apiError");
+const Exam = require("../../models/examModel");
+const CourseProgress = require("../../models/courseProgressModel");
 
 // Utility functions
 /******************************************************************** */
@@ -10,7 +10,7 @@ exports.calculateScore = (questions, answers) => {
   const wrongAnswers = [];
   questions?.forEach((question) => {
     const answerObj = answers.find(
-      (ans) => ans.questionId.toString() === question._id.toString(),
+      (ans) => ans.questionId.toString() === question._id.toString()
     );
     if (answerObj && answerObj.answer === question.correctOption) {
       score += question.grade;
@@ -37,7 +37,7 @@ exports.getTotalGrades = async (progress) => {
         // Reduce over the 'questions' array to get the total score
         const totalGrade = exam.questions.reduce(
           (total, q) => total + (q.grade || 0),
-          0,
+          0
         );
         return {
           lessonId: lesson.lesson._id,
@@ -48,7 +48,7 @@ exports.getTotalGrades = async (progress) => {
         lessonId: lesson.lesson._id,
         grade: 0, // Return 0 if no exam or no questions are found
       };
-    }),
+    })
   );
 
   return grades; // Array of objects { lessonId, grade }
@@ -72,7 +72,7 @@ exports.hasPassed = (score, totalScore, passingScore) =>
 //   wrongAnswers,
 //   isRequireAnalytic = false,
 // }) => {
-  
+
 //   const passAnalytics = isRequireAnalytic ? false : null;
 //   await CourseProgress.findOneAndUpdate(
 //     { user: userId, course: courseId },
@@ -93,13 +93,20 @@ exports.hasPassed = (score, totalScore, passingScore) =>
 //   );
 // };
 // Handle success or failure response
-exports.handleExamResponse = (res, passed, score, totalScore) =>
+exports.handleExamResponse = (
+  res,
+  passed,
+  score,
+  totalScore,
+  examAnalytics = null
+) =>
   res.status(200).json({
-    status: 'success',
+    status: "success",
     data: {
       passed,
       score,
       totalScore,
+      examAnalytics,
     },
   });
 
@@ -107,7 +114,7 @@ exports.handleExamResponse = (res, passed, score, totalScore) =>
 // Utility function to fetch an exam based on lesson or course and model
 /******************************************************************** */
 exports.fetchExam = async ({ id, type, model }) => {
-  if (type === 'placement') {
+  if (type === "placement") {
     return await Exam.findOne({ course: id, type, model });
   }
   return await Exam.findOne({ [type]: id, model });
@@ -131,7 +138,7 @@ exports.checkUserProgress = async (user, courseId, lessonOrder) => {
 
   // If no course progress is found, return an error
   if (!courseProgress) {
-    throw new ApiError('You must start the course before taking the exam', 401);
+    throw new ApiError("You must start the course before taking the exam", 401);
   }
 
   const lastProgress = courseProgress.progress.length
@@ -140,7 +147,7 @@ exports.checkUserProgress = async (user, courseId, lessonOrder) => {
 
   // If there's no progress yet, allow the user to start the first lesson
   if (!lastProgress && lessonOrder !== 1) {
-    throw new ApiError('Cannot take this lesson out of order', 401);
+    throw new ApiError("Cannot take this lesson out of order", 401);
   }
 
   // If there's progress but the last lesson was completed, prevent the user from retaking the lesson
@@ -154,6 +161,36 @@ exports.checkUserProgress = async (user, courseId, lessonOrder) => {
 
   // If the lesson order is not correct, block the user from proceeding
   if (lastProgress && lessonOrder > lastProgress.lesson.order + 1) {
-    throw new ApiError('Cannot take this lesson out of order', 401);
+    throw new ApiError("Cannot take this lesson out of order", 401);
   }
+};
+
+//--------------
+// If you can: make the query lean so questions are plain objects already
+// const exam = await Exam.findById(id).lean();
+
+exports.getCorrectAndWrongAnswers = (questions, answers) => {
+  return questions.map((q) => {
+    // ensure plain object
+    const question =
+      typeof q.toObject === "function"
+        ? q.toObject({ depopulate: true, versionKey: false })
+        : q;
+
+    const answerObj = answers.find(
+      (ans) => String(ans.questionId) === String(question._id)
+    );
+
+    const given = answerObj?.answer ?? null;
+
+    // normalize types: correctOption might be a number, given might be a string
+    const isCorrect =
+      given !== null && Number(given) === Number(question.correctOption);
+
+    return {
+      ...question,
+      givenAnswer: given,
+      isAnswerCorrect: !!isCorrect,
+    };
+  });
 };

@@ -2,6 +2,8 @@ const InstructorProfit = require("../../models/instructorProfitsModel");
 const ApiError = require("../../utils/apiError");
 const Course = require("../../models/courseModel");
 const Order = require("../../models/orderModel");
+const Package = require("../../models/packageModel");
+const CoursePackage = require("../../models/coursePackageModel");
 const User = require("../../models/userModel");
 //-----------------------------------------------------
 exports.createInstructorProfitsDocument = async (instructor) => {
@@ -216,14 +218,29 @@ exports.getInstructorAnalytics = async (req, res) => {
     const courses = await Course.find({ instructor: instructorId }).select(
       "_id"
     );
-    const courseIds = courses.map((course) => course._id);
-    const orders = await Order.count({ course: { $in: courseIds } });
-
+    const coursesIds = courses.map((course) => course._id);
+    const packages = await Package.find({ instructor: instructorId }).select(
+      "_id"
+    );
+    const packagesIds = packages.map((pack) => pack._id);
+    const totalEnrollments = await Order.count({
+      $or: [{ course: { $in: coursesIds } }, { package: { $in: packagesIds } }],
+    });
+    //calculate avg rate
+    const avgRate = 4;
+    const totalEnrollmentsDiff = 32; //need to calculate
+    const avgRateDiff = 1.3;
+    const instructorProfitsDiff = 300; //need to calculate
     //need to add avg rate
     return res.status(200).json({
       status: "success",
+      totalEnrollments,
+      totalEnrollmentsDiff,
+      avgRate,
+      avgRateDiff,
       instructorProfits,
-      totalStudents: orders,
+      instructorProfitsDiff,
+      withdrawals: 400,
     });
   } catch (error) {
     console.log(error.message);
@@ -236,17 +253,26 @@ exports.getInstructorAnalytics = async (req, res) => {
 // Get course analytics: total sales and registered users with optional date filtering
 exports.getCourseAnalytics = async (req, res) => {
   try {
-    const { courseId } = req.params;
+    const { itemId } = req.params;
     const { startDate, endDate } = req.query;
-
-    // Validate course exists
-    const course = await Course.findById(courseId).select(
-      "title price instructor"
-    );
-    if (!course) {
+    const { type } = req.query;
+    if (!type) {
+      return res.status(400).json({
+        status: "error",
+        message: "type query parameter is required",
+      });
+    }
+    if (!["course", "package", "coursePackage"].includes(type)) {
+      return res.status(400).json({
+        status: "error",
+        message: "type query parameter is invalid",
+      });
+    }
+    const item = await getItemData(type, itemId);
+    if (!item) {
       return res.status(404).json({
         status: "error",
-        message: "Course not found",
+        message: "Item not found",
       });
     }
 
@@ -272,10 +298,20 @@ exports.getCourseAnalytics = async (req, res) => {
 
     // Build query filter
     const queryFilter = {
-      course: courseId,
       isPaid: true, // Only count paid orders
       ...dateFilter,
     };
+    switch (type) {
+      case "course":
+        queryFilter.course = itemId;
+        break;
+      case "package":
+        queryFilter.package = itemId;
+        break;
+      case "coursePackage":
+        queryFilter.coursePackage = itemId;
+        break;
+    }
 
     // Get orders for this course with user details
     const orders = await Order.find(queryFilter).select(
@@ -307,11 +343,11 @@ exports.getCourseAnalytics = async (req, res) => {
     return res.status(200).json({
       status: "success",
 
-      course: {
-        _id: course._id,
-        title: course.title,
-        price: course.price,
-        instructor: course.instructor,
+      item: {
+        _id: item._id,
+        title: item.title,
+        price: item.price,
+        instructor: item.instructor,
       },
       totalSales,
       totalRegisteredUsers: uniqueUsers.length,
@@ -323,11 +359,24 @@ exports.getCourseAnalytics = async (req, res) => {
       },
     });
   } catch (error) {
-    console.log(error.message);
     return res.status(500).json({
       status: "error",
       message: "Internal server error",
       error: error.message,
     });
+  }
+};
+
+//-----------
+const getItemData = async (type, itemId) => {
+  switch (type) {
+    case "course":
+      return await Course.findById(itemId).select("title price instructor");
+    case "package":
+      return await Package.findById(itemId).select("title price instructor");
+    case "coursePackage":
+      return await CoursePackage.findById(itemId);
+    default:
+      throw new Error("Invalid item type");
   }
 };

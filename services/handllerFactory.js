@@ -1,5 +1,6 @@
 const ApiError = require("../utils/apiError");
 const ApiFeatures = require("../utils/apiFeatures");
+const { addTranslationFields } = require("../helpers/courseHelper");
 
 exports.updateOne = (Model) => async (req, res, next) => {
   try {
@@ -55,39 +56,49 @@ exports.getOne = (Model, populationOpt) => async (req, res, next) => {
     if (!document) {
       return next(new ApiError(`No document For this id ${id}`, 404));
     }
-    const { title } = document;
-    const localizedResult = Model.schema.methods.toJSONLocalizedOnly(
+    
+    let localizedResult = Model.schema.methods.toJSONLocalizedOnly(
       document,
       req.locale
     );
-    localizedResult.translationTitle = title;
-    if (document.description) {
-      localizedResult.translationDescription = document.description;
-    }
-    if (document.highlights) {
-      localizedResult.translationHighlights = document.highlights;
-    }
-    if (document.content) {
-      localizedResult.translationContent = document.content;
-    }
-    if (document.assignmentTitle) {
-      localizedResult.translationAssignmentTitle = document.assignmentTitle;
-    }
-    if (document.assignmentDescription) {
-      localizedResult.translationAssignmentDescription =
-        document.assignmentDescription;
-    }
-    if (document.metaTitle) {
-      localizedResult.translationMetaTitle = document.metaTitle;
-    }
-    if (document.metaDescription) {
-      localizedResult.translationMetaDescription = document.metaDescription;
-    }
-    if (document.keywords) {
-      localizedResult.translationKeywords =
-        document.keywords;
-    }
-
+    localizedResult = addTranslationFields(document, localizedResult);
+    // const { title } = document;
+    // localizedResult.translationTitle = title;
+    // if (document.description) {
+    //   localizedResult.translationDescription = document.description;
+    // }
+    // if (document.highlights) {
+    //   localizedResult.translationHighlights = document.highlights;
+    // }
+    // if (document.content) {
+    //   localizedResult.translationContent = document.content;
+    // }
+    // if (document.assignmentTitle) {
+    //   localizedResult.translationAssignmentTitle = document.assignmentTitle;
+    // }
+    // if (document.assignmentDescription) {
+    //   localizedResult.translationAssignmentDescription =
+    //     document.assignmentDescription;
+    // }
+    // if (document.metaTitle) {
+    //   localizedResult.translationMetaTitle = document.metaTitle;
+    // }
+    // if (document.metaDescription) {
+    //   localizedResult.translationMetaDescription = document.metaDescription;
+    // }
+    // if (document.keywords) {
+    //   localizedResult.translationKeywords = document.keywords;
+    // }
+    // if (document.whatWillLearn) {
+    //   localizedResult.translationWhatWillLearn = document.whatWillLearn;
+    // }
+    // if (document.coursePrerequisites) {
+    //   localizedResult.translationCoursePrerequisites =
+    //     document.coursePrerequisites;
+    // }
+    // if (document.whoThisCourseFor) {
+    //   localizedResult.translationWhoThisCourseFor = document.whoThisCourseFor;
+    // }
     return res.status(200).json({ data: localizedResult });
   } catch (error) {
     console.error("Error fetching document:", error);

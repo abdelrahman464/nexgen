@@ -39,6 +39,24 @@ const coursePackageSchema = new mongoose.Schema(
     },
     description: { type: String, required: true, i18n: true },
     highlights: [{ type: Object, i18n: true }],
+    whatWillLearn: [
+      {
+        type: Object,
+        i18n: true,
+      },
+    ],
+    coursePrerequisites: [
+      {
+        type: Object,
+        i18n: true,
+      },
+    ],
+    whoThisCourseFor: [
+      {
+        type: Object,
+        i18n: true,
+      },
+    ],
     image: String,
     price: {
       type: Number,

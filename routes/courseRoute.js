@@ -93,11 +93,10 @@ router.put(
   "/:id",
   authServices.protect,
   uploadCourseImage,
+  isTheCourseInstructor,
   resizeImage,
-  checkCourseInstructorOrAdmin,
   convertToArray,
   updateCourseValidator,
-  isTheCourseInstructor,
   updateCourse
 );
 

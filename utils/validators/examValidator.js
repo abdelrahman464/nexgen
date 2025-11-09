@@ -1,22 +1,22 @@
-const ApiError = require('../apiError');
-const Course = require('../../models/courseModel');
-const Exam = require('../../models/examModel');
-const Lesson = require('../../models/lessonModel');
+const ApiError = require("../apiError");
+const Course = require("../../models/courseModel");
+const Exam = require("../../models/examModel");
+const Lesson = require("../../models/lessonModel");
 
 // Helper function to get course based on exam type
 async function getCourseForExam(examData) {
   const { type, course: courseId, lesson: lessonId } = examData;
 
   // For course and placement exams, get course directly
-  if (type === 'course' || type === 'placement') {
+  if (type === "course" || type === "placement") {
     return await Course.findById(courseId);
   }
 
   // For lesson exams, get course through lesson
-  if (type === 'lesson') {
+  if (type === "lesson") {
     const lesson = await Lesson.findById(lessonId);
     if (!lesson) return null;
-    return await Course.findById(lesson.course);
+    return await Course.findById(lesson.course._id);
   }
 
   return null;
@@ -25,7 +25,7 @@ async function getCourseForExam(examData) {
 exports.isTheExamInstructor = async (req, res, next) => {
   try {
     // Admin users have full access
-    if (req.user.role === 'admin') {
+    if (req.user.role === "admin") {
       return next();
     }
 
@@ -38,7 +38,7 @@ exports.isTheExamInstructor = async (req, res, next) => {
     if (examId) {
       const exam = await Exam.findById(examId);
       if (!exam) {
-        return next(new ApiError('Exam not found', 404));
+        return next(new ApiError("Exam not found", 404));
       }
       examData = exam;
     } else {
@@ -49,18 +49,18 @@ exports.isTheExamInstructor = async (req, res, next) => {
     const course = await getCourseForExam(examData);
 
     if (!course) {
-      return next(new ApiError('Associated course not found', 404));
+      return next(new ApiError("Associated course not found", 404));
     }
 
-    if (course.instructor.toString() !== userId) {
-      const resourceType = examData.type === 'lesson' ? 'lesson' : 'course';
+    if (course.instructor?._id.toString() !== userId) {
+      const resourceType = examData.type === "lesson" ? "lesson" : "course";
       return next(
-        new ApiError(`You are not the instructor of this ${resourceType}`, 403),
+        new ApiError(`You are not the instructor of this ${resourceType}`, 403)
       );
     }
 
     next();
   } catch (error) {
-    next(new ApiError('Failed to verify instructor permissions', 500));
+    next(new ApiError("Failed to verify instructor permissions", 500));
   }
 };

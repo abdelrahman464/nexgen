@@ -21,7 +21,11 @@ const {
   createOne,
   deleteOne,
 } = require("./marketing/instructorProfitsService");
-const { checkIfCourseHasAllFields } = require("../helpers/courseHelper");
+const {
+  checkIfCourseHasAllFields,
+  getLastLessonOrderNumber,
+  addTranslationFields
+} = require("../helpers/courseHelper");
 
 exports.getInstructorCourses = asyncHandler(async (req, res, next) => {
   req.filterObj = {
@@ -136,6 +140,7 @@ exports.createCourse = asyncHandler(async (req, res, next) => {
       return next(new ApiError("Instructor has no instructorProfits", 404));
     }
   }
+  req.body.instructor = req.body.instructor || req.user._id;
   const course = await Course.create(req.body);
   const { description, title } = req.body;
   //i commented this part here and execute it in updateCourse if status is active
@@ -225,8 +230,12 @@ exports.getMyCourses = asyncHandler(async (req, res, next) => {
           finalExamCompletionPercentage * finalExamWeight
         ).toFixed(2)
       );
-
-      return { ...localizedCourse, totalProgress };
+      const lastLessonOrder = await getLastLessonOrderNumber(
+        courseProgress.progress
+          .filter((item) => item.lesson)
+          .map((item) => item.lesson)
+      );
+      return { ...localizedCourse, totalProgress, lastLessonOrder };
     })
   );
 
@@ -266,34 +275,11 @@ exports.getCourseById = asyncHandler(async (req, res, next) => {
       new ApiError(`No course found for this id ${req.params.id}`, 404)
     );
   }
-  const localizedResult = Course.schema.methods.toJSONLocalizedOnly(
+  let localizedResult = Course.schema.methods.toJSONLocalizedOnly(
     course,
     req.locale
   );
-  const { title } = course;
-  localizedResult.translationTitle = title;
-  if (course.description) {
-    localizedResult.translationDescription = course.description;
-  }
-  if (course.highlights) {
-    localizedResult.translationHighlights = course.highlights;
-  }
-  if (course.content) {
-    localizedResult.translationContent = course.content;
-  }
-  if (course.certificateDescription) {
-    localizedResult.translationCertificateDescription =
-      course.certificateDescription;
-  }
-  if (course.metaTitle) {
-    localizedResult.translationMetaTitle = course.metaTitle;
-  }
-  if (course.metaDescription) {
-    localizedResult.translationMetaDescription = course.metaDescription;
-  }
-  if (course.keywords) {
-    localizedResult.translationKeywords = course.keywords;
-  }
+  localizedResult = addTranslationFields(course, localizedResult);
 
   return res.status(200).json({
     status: "success",
@@ -301,7 +287,7 @@ exports.getCourseById = asyncHandler(async (req, res, next) => {
   });
 });
 
-// this middlware to check if the user is the instructor of the course or admin
+// Update a course by ID
 exports.isTheCourseInstructor = async (req, res, next) => {
   if (req.user.role === "admin") {
     return next();
@@ -314,12 +300,11 @@ exports.isTheCourseInstructor = async (req, res, next) => {
   if (!course) {
     return next(new ApiError("Course not found", 404));
   }
-  if (course.instructor.toString() !== req.user._id.toString()) {
+  if (course.instructor._id.toString() !== req.user._id.toString()) {
     return next(new ApiError(`You are not the instructor of this course`, 404));
   }
-  return next();
+  next();
 };
-
 exports.updateCourse = async (req, res, next) => {
   try {
     const course = await Course.findById(req.params.id).lean();
@@ -328,7 +313,6 @@ exports.updateCourse = async (req, res, next) => {
         new ApiError(res.__("errors.Not-Found", { document: "document" }), 404)
       );
     }
-    //if the status is active check if the course has all required fields
     if (req.body.status && req.body.status === "active") {
       //check if this course has all fields
       const missedFields = await checkIfCourseHasAllFields(course, req.body);

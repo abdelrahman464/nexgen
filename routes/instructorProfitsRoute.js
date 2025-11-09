@@ -14,7 +14,7 @@ router.use(authServices.protect);
 
 // Get course analytics with optional date filtering
 router.get(
-  "/courseAnalytics/:courseId",
+  "/courseAnalytics/:itemId",
   authServices.allowedTo("user", "admin"),
   getCourseAnalytics
 );

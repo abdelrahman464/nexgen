@@ -79,25 +79,40 @@ exports.signup = asyncHandler(async (req, res, next) => {
   //**2-Handle invitor and treeHead */
   let invitorId = null;
   let coachId = null;
-  if (req.body.invitationKey) {
-    console.log("invitationKey", req.body.invitationKey);
+  // if (req.body.invitationKey) {
+  //   console.log("invitationKey", req.body.invitationKey);
 
+  //   //check if invitor is valid
+  //   invitorId = await getMarketerFromInvitationKey(req.body.invitationKey);
+  //   if (!invitorId) {
+  //     return next(new ApiError("this link is invalid", 400));
+  //   }
+  //   const invitor = await User.findById(invitorId).select(
+  //     "isMarketer isAffiliateMarketer  _id"
+  //   );
+  //   if (invitor && invitor.isMarketer) {
+  //     coachId = invitor._id;
+  //   } else {
+  //     coachId = process.env.ADMIN_ID;
+  //   }
+  // } else {
+  //   invitorId = process.env.ADMIN_ID;
+  //   coachId = process.env.ADMIN_ID;
+  // }
+  if (req.body.invitationKey) {
     //check if invitor is valid
-    invitorId = await getMarketerFromInvitationKey(req.body.invitationKey);
-    if (!invitorId) {
+    const { marketerId, marketLog } = await getMarketerFromInvitationKey(
+      req.body.invitationKey
+    );
+    if (!marketerId) {
       return next(new ApiError("this link is invalid", 400));
     }
-    const invitor = await User.findById(invitorId).select(
-      "isMarketer isAffiliateMarketer  _id"
-    );
-    if (invitor && invitor.isMarketer) {
-      coachId = invitor._id;
+    invitorId = marketLog.marketer;
+    if (marketLog.role === "affiliate") {
+      coachId = marketLog.marketer;
     } else {
-      coachId = process.env.ADMIN_ID;
+      coachId = marketLog.fallBackCoach;
     }
-  } else {
-    invitorId = process.env.ADMIN_ID;
-    coachId = process.env.ADMIN_ID;
   }
 
   //create user
@@ -301,6 +316,7 @@ const checkIfUserNeedToVerifyId = async (user) => {
 //@desc make sure user is logged in
 exports.protect = asyncHandler(async (req, res, next) => {
   //1- check if token exists, if exist get it
+ 
   let token;
   if (
     req.headers.authorization &&
@@ -918,10 +934,7 @@ exports.googleMobileAuth = asyncHandler(async (idToken) => {
 
 //------------------------------------
 exports.checkIfUserIsAdminOrInstructor = async (req, res, next) => {
-  if (req.user.role === "admin") {
-    return next();
-  }
-  if (!req.user.isInstructor) {
+  if (req.user.role !== "admin" && !req.user.isInstructor) {
     return next(
       new ApiError("You are not authorized to access this route", 404)
     );

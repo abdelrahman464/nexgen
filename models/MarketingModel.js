@@ -8,13 +8,17 @@ const MarketingLogsSchema = new mongoose.Schema(
   {
     role: {
       type: String,
-      enum: ["head", "marketer", "instructor"],
+      enum: ["head", "marketer", "instructor", "affiliate"],
     },
     marketer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
     invitor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    fallBackCoach: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },

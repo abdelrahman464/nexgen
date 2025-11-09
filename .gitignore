@@ -4,3 +4,4 @@ uploads/
 # config.env
 nexgen.marketinglogs.json
 services/marketing/fixBugs.js
+TODO.txt
