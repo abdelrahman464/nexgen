@@ -1,15 +1,15 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const lessonSchema = new mongoose.Schema(
   {
     section: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Section",
+      ref: 'Section',
       required: true,
     },
     course: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Course",
+      ref: 'Course',
     },
     title: {
       type: String,
@@ -22,8 +22,8 @@ const lessonSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["live", "recorded"],
-      default: "recorded",
+      enum: ['live', 'recorded'],
+      default: 'recorded',
     },
     image: {
       type: String,
@@ -52,11 +52,12 @@ const lessonSchema = new mongoose.Schema(
 
     isRequireAnalytic: { type: Boolean, default: false },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
+lessonSchema.index({ course: 1, order: 1 });
 
 lessonSchema.pre(/^find/, function (next) {
-  this.populate({ path: "course", select: "_id title -category" });
+  this.populate({ path: 'course', select: '_id title -category' });
   next();
 });
 
@@ -73,18 +74,18 @@ const setImageURL = (doc) => {
   //return attachment base url + attachment name
   if (doc.attachments && Array.isArray(doc.attachments)) {
     doc.attachments = doc.attachments.map(
-      (file) => `${process.env.BASE_URL}/lessons/attachments/${file}`
+      (file) => `${process.env.BASE_URL}/lessons/attachments/${file}`,
     );
   }
 };
 //after initialize the doc in db
 // check if the document contains image
 // it work with findOne,findAll,update
-lessonSchema.post("init", (doc) => {
+lessonSchema.post('init', (doc) => {
   setImageURL(doc);
 });
 // it work with create
-lessonSchema.post("save", (doc) => {
+lessonSchema.post('save', (doc) => {
   setImageURL(doc);
 });
 
@@ -101,5 +102,5 @@ lessonSchema.post("save", (doc) => {
 //   next();
 // });
 
-const Lesson = mongoose.model("Lesson", lessonSchema);
+const Lesson = mongoose.model('Lesson', lessonSchema);
 module.exports = Lesson;

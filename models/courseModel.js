@@ -9,7 +9,7 @@ const courseSchema = new mongoose.Schema(
     instructor: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-    },                                                  
+    },
     //i18n
     title: {
       type: String,
@@ -117,6 +117,9 @@ const courseSchema = new mongoose.Schema(
     toObject: { virtuals: true },
   },
 );
+
+courseSchema.index({ status: 1 });
+
 // virtual field =>reviews
 courseSchema.virtual('reviews', {
   ref: 'Review',
@@ -125,12 +128,16 @@ courseSchema.virtual('reviews', {
 });
 
 courseSchema.pre(/^find/, function (next) {
-  this.populate({ path: 'category', select: 'title' }).populate({
-    path: 'accessibleCourses',
-  });
-  this.populate({ path: 'instructor', select: 'name email profileImg' });
+  // allow callers to opt-out
+  if (this?.getOptions?.().skipPopulate) return next();
+
+  this.populate({ path: 'category', select: 'title' })
+    .populate({ path: 'accessibleCourses'})
+    .populate({ path: 'instructor', select: 'name email profileImg' });
+
   next();
 });
+
 const setCourseImageURL = (doc) => {
   //return image base url + image name
   if (doc.image) {

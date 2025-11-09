@@ -50,6 +50,10 @@ const courseProgressSchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
+courseProgressSchema.index({ user: 1, course: 1 }, { unique: true });
+courseProgressSchema.index({ user: 1 });
+courseProgressSchema.index({ course: 1 });
+courseProgressSchema.index({ 'progress.lesson': 1 });
 
 const setCertificateFileURL = (doc) => {
   //return image base url + image name
