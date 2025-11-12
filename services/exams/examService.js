@@ -749,13 +749,14 @@ exports.submitCourseAnswers = async (req, res, next) => {
     // Check if the user deserves a certificate
     if (avgCourseExamsPercentage >= 90 && passed) {
       const certificateId = new mongoose.Types.ObjectId();
+      console.log("course",course.instructor)
       const certificateDetails = {
         studentName: req.user.name,
         courseName: course.title[req.user.lang],
         courseDescription: course.certificateDescription[req.user.lang],
         rating: Number(course.rating) || 3,
         certificateId: certificateId.toString(),
-        signatureImageUrl: req.user.signatureImage,
+        signatureImageUrl: course.instructor.signatureImage,
         language: req.user.lang,
       };
       const certificate = await generateCertificate(certificateDetails);

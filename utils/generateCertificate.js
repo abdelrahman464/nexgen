@@ -223,7 +223,7 @@ async function generateCertificate(certificateDetails) {
     // Validate signature image URL
     if (!signatureImageUrl) {
       signatureImageUrl =
-        'https://api.nexgen-academy.com/users/signatureImage-42760dce-b1e1-4b14-b791-1b0e2bcd15aa-1746300472928.webp';
+        'https://development.nexgen-academy.com/users/signatureImage-42760dce-b1e1-4b14-b791-1b0e2bcd15aa-1746300472928.webp';
     }
 
     // Validate rating
@@ -410,7 +410,7 @@ async function generateCertificate(certificateDetails) {
       .toFile(outputPath);
 
     console.log(
-      `Certificate generated successfully for ${studentName} in ${language} language with course description and signature. QR code links to: https://api.nexgen-academy.com/api/v1/courses/getCertificate/${certificateId}`,
+      `Certificate generated successfully for ${studentName} in ${language} language with course description and signature. QR code links to: https://development.nexgen-academy.com/api/v1/courses/getCertificate/${certificateId}`,
     );
     return outputFilename;
   } catch (error) {
