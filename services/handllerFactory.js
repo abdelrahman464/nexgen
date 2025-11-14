@@ -57,11 +57,11 @@ exports.getOne = (Model, populationOpt) => async (req, res, next) => {
       return next(new ApiError(`No document For this id ${id}`, 404));
     }
     
-    let localizedResult = Model.schema.methods.toJSONLocalizedOnly(
+    const localizedResult = Model.schema.methods.toJSONLocalized(
       document,
       req.locale
     );
-    localizedResult = addTranslationFields(document, localizedResult);
+    // localizedResult = addTranslationFields(document, localizedResult);
     // const { title } = document;
     // localizedResult.translationTitle = title;
     // if (document.description) {
