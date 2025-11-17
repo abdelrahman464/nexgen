@@ -446,22 +446,49 @@ exports.getPosts = asyncHandler(async (req, res) => {
     },
     { $unwind: '$user' },
 
-    // Reactions count
+    // Reactions count and types with counts
     {
       $lookup: {
         from: 'reactions',
         let: { postId: '$_id' },
         pipeline: [
           { $match: { $expr: { $eq: ['$post', '$$postId'] } } },
-          { $count: 'count' },
+          {
+            $group: {
+              _id: '$type',
+              count: { $sum: 1 },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              totalCount: { $sum: '$count' },
+              typesCount: {
+                $push: {
+                  k: '$_id',
+                  v: '$count',
+                },
+              },
+            },
+          },
+          {
+            $project: {
+              _id: 0,
+              count: '$totalCount',
+              typesCount: { $arrayToObject: '$typesCount' },
+            },
+          },
         ],
-        as: 'reactionsCountArr',
+        as: 'reactionsAgg',
       },
     },
     {
       $addFields: {
         reactionsCount: {
-          $ifNull: [{ $first: '$reactionsCountArr.count' }, 0],
+          $ifNull: [{ $first: '$reactionsAgg.count' }, 0],
+        },
+        reactionTypes: {
+          $ifNull: [{ $first: '$reactionsAgg.typesCount' }, {}],
         },
       },
     },
@@ -563,6 +590,7 @@ exports.getPosts = asyncHandler(async (req, res) => {
         createdAt: 1,
         updatedAt: 1,
         reactionsCount: 1,
+        reactionTypes: 1,
         commentsCount: 1,
         loggedUserReaction: 1,
         lastComment: 1,
@@ -607,6 +635,7 @@ exports.getPosts = asyncHandler(async (req, res) => {
     updatedAt: post.updatedAt,
 
     reactionsCount: post.reactionsCount,
+    reactionTypes: post.reactionTypes || {},
     commentsCount: post.commentsCount,
     loggedUserReaction: post.loggedUserReaction || null,
 
