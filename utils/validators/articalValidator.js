@@ -50,7 +50,6 @@ exports.createArticalValidator = [
     .isLength({ min: 3 })
     .withMessage(`ar content must be at least 3 chars`),
 
-  check('videoUrl').isString().withMessage('video url must be a string'),
   check('imageCover')
     .notEmpty()
     .withMessage('Blog image required')

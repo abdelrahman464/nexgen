@@ -130,7 +130,7 @@ const courseSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["active", "inActive"],
+      enum: ["active", "inActive" , "pending"],
       default: "inActive",
     },
     promotionVideo: String,

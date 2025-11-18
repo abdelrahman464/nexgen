@@ -7,6 +7,7 @@ const factory = require("./handllerFactory");
 const Course = require("../models/courseModel");
 const { uploadSingleFile } = require("../middlewares/uploadImageMiddleware");
 const ApiError = require("../utils/apiError");
+const { checkIfCoursePackageHasAllFields } = require("../helpers/coursePackageHelper");
 //upload course image
 exports.uploadCoursePackageImage = uploadSingleFile("image");
 //image processing
@@ -78,7 +79,44 @@ exports.createCoursePackage = factory.createOne(CoursePackage);
 //@desc update specific CoursePackage
 //@route PUT /api/v1/coursePackages/:id
 //@access private
-exports.updateCoursePackage = factory.updateOne(CoursePackage);
+exports.updateCoursePackage = async (req, res, next) => {
+  try {
+    const coursePackage = await CoursePackage.findById(req.params.id).lean();
+    if (!coursePackage) {
+      return next(
+        new ApiError(res.__("errors.Not-Found", { document: "document" }), 404)
+      );
+    }
+    if (req.body.status && req.body.status === "active") {
+      //check if this coursePackage has all fields
+      const missedFields = await checkIfCoursePackageHasAllFields(coursePackage, req.body);
+      if (missedFields.length > 0) {
+        return next(
+          new ApiError(
+            `you cannot activate this CoursePackage, CoursePackage has missing required fields: ${missedFields.join(", ")}`,
+            400
+          )
+        );
+      }
+    }
+    const result = await CoursePackage.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    if (!result) {
+      return next(new ApiError("Failed to update coursePackage", 400));
+    }
+    const localizedCoursePackage = CoursePackage.schema.methods.toJSONLocalizedOnly(
+      result,
+      req.locale
+    );
+    res
+      .status(200)
+      .json({ status: "updated successfully", data: localizedCoursePackage });
+  } catch (error) {
+    console.error("Error updating document:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
 
 //@desc delete CoursePackage
 //@route DELETE /api/v1/coursePackages/:id

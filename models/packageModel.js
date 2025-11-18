@@ -20,13 +20,12 @@ const packageSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
     },
-    title: { type: String, required: true, i18n: true },
+    title: { type: String, i18n: true },
     slug: {
       type: String,
-      required: true,
       lowercase: true,
     },
-    description: { type: String, required: true, i18n: true },
+    description: { type: String, i18n: true },
     highlights: [{ type: Object, i18n: true }],
     whatWillLearn: [
       {
@@ -48,17 +47,15 @@ const packageSchema = new mongoose.Schema(
     ],
     subscriptionDurationDays: {
       type: Number,
-      required: true,
     },
     image: String,
     status: {
       type: String,
-      enum: ["active", "pending"],
+      enum: ["active", "pending" , "inActive"],
       default: "pending",
     },
     price: {
       type: Number,
-      required: [true, "Package price is required"],
       trim: true,
       max: [200000, "Too long Course price"],
     },

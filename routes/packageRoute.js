@@ -28,7 +28,7 @@ router
   )
   .post(
     authServices.protect,
-    authServices.allowedTo("admin"),
+    authServices.checkIfUserIsAdminOrInstructor,
     packageService.uploadPackageImage,
     packageService.resizeImage,
     packageService.convertToArray,
@@ -40,7 +40,7 @@ router
   .get(packageIdValidator, packageService.getOne)
   .put(
     authServices.protect,
-    authServices.allowedTo("admin"),
+    authServices.checkIfUserIsAdminOrInstructor,
     packageService.uploadPackageImage,
     packageService.resizeImage,
     packageIdValidator,
@@ -51,7 +51,7 @@ router
   .delete(
     authServices.protect,
     packageIdValidator,
-    authServices.allowedTo("admin"),
+    authServices.checkIfUserIsAdminOrInstructor,
     packageService.deleteOne
   );
 

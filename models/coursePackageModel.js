@@ -24,20 +24,18 @@ const coursePackageSchema = new mongoose.Schema(
     },
     title: {
       type: String,
-      required: [true, "Package title is required"],
       i18n: true,
     },
     slug: {
       type: String,
-      required: true,
       lowercase: true,
     },
     status: {
       type: String,
-      enum: ["active", "pending"],
+      enum: ["active", "pending" , "inActive"],
       default: "pending",
     },
-    description: { type: String, required: true, i18n: true },
+    description: { type: String, i18n: true },
     highlights: [{ type: Object, i18n: true }],
     whatWillLearn: [
       {
@@ -60,7 +58,6 @@ const coursePackageSchema = new mongoose.Schema(
     image: String,
     price: {
       type: Number,
-      required: [true, "Package price is required"],
       trim: true,
       max: [200000, "Too long Package price"],
     },

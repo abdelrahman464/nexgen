@@ -6,9 +6,10 @@ const Course = require("../../models/courseModel");
 const Package = require("../../models/packageModel");
 
 exports.createPackageValidator = [
-  body("title").isObject().withMessage("Title must be an object."),
+  body("title").optional().isObject().withMessage("Title must be an object."),
 
   body("title.en")
+    .optional()
     .isString()
     .withMessage(`en title must be a string.`)
     .isLength({ min: 3 })
@@ -19,20 +20,23 @@ exports.createPackageValidator = [
     }),
 
   body("title.ar")
+    .optional()
     .isString()
     .withMessage(`ar title must be a string.`)
     .isLength({ min: 3 })
     .withMessage(`ar title must be at least 3 chars`),
 
-  body("description").isObject().withMessage("description must be an object."),
+  body("description").optional().isObject().withMessage("description must be an object."),
 
   body("description.en")
+    .optional()
     .isString()
     .withMessage(`en description must be a string.`)
     .isLength({ min: 10 })
     .withMessage(`en description must at least 10 chars`),
 
   body("description.ar")
+    .optional()
     .isString()
     .withMessage(`ar description must be a string.`)
     .isLength({ min: 10 })

@@ -329,12 +329,13 @@ exports.getCourseAnalytics = async (req, res) => {
       if (order.user) {
         // userIds.add(order.user._id.toString());
         uniqueUsers.push({
-          _id: order.user._id,
-          name: order.user.name,
-          email: order.user.email,
-          profileImg: order.user.profileImg,
+          _id: order.user._id || "",
+          name: order.user.name || "",
+          email: order.user.email || "",
+          profileImg: order.user.profileImg || "",
           isResale: order.isResale || false,
-          paidAt: order.paidAt,
+          paidAt: order.paidAt || "",
+          createdAt: order.createdAt || "",
         });
       }
     });

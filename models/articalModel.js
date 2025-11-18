@@ -34,7 +34,6 @@ const ArticalSchema = new mongoose.Schema(
       type: Date,
       default: new Date(),
     },
-    videoUrl: String,
     imageCover: {
       type: String,
       required: true,

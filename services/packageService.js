@@ -106,7 +106,7 @@ exports.createOne = async (req, res, next) => {
   const courseDoc = await Course.findById(course);
   const isAllowed =
     req.user.role === "admin" ||
-    courseDoc.instructor.toString() === req.user._id.toString();
+    courseDoc.instructor._id.toString() === req.user._id.toString();
   if (!isAllowed) {
     return next(
       new ApiError(

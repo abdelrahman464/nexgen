@@ -23,7 +23,7 @@ router
   )
   .post(
     authServices.protect,
-    authServices.allowedTo("admin"),
+    authServices.checkIfUserIsAdminOrInstructor,
     coursePackage.uploadCoursePackageImage,
     coursePackage.resizeImage,
     coursePackageValidator.createCoursePackageValidator,
@@ -34,7 +34,7 @@ router
   .get(coursePackage.getCoursePackage)
   .put(
     authServices.protect,
-    authServices.allowedTo("admin"),
+    authServices.checkIfUserIsAdminOrInstructor,
     coursePackage.uploadCoursePackageImage,
     coursePackage.resizeImage,
     coursePackageValidator.updateCoursePackageValidator,
@@ -42,7 +42,7 @@ router
   )
   .delete(
     authServices.protect,
-    authServices.allowedTo("admin"),
+    authServices.checkIfUserIsAdminOrInstructor,
     coursePackage.deleteCoursePackage
   );
 router
