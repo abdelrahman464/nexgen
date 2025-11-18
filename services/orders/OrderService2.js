@@ -315,7 +315,7 @@ const createCourseOrder = async (id, userId, isPaid) => {
     if (isPaid) {
       let instructorId = null;
       if (course.instructorPercentage && course.instructorPercentage > 0) {
-        instructorId = course.instructor;
+        instructorId = course.instructor._id;
       }
 
       // await calculateProfits({

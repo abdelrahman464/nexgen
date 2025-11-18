@@ -51,7 +51,7 @@ exports.isTheSectionInstructor = async (req, res, next) => {
     return next(new ApiError("Course not found", 404));
   }
 
-  if (course.instructor.toString() !== req.user._id.toString()) {
+  if (course.instructor._id.toString() !== req.user._id.toString()) {
     return next(new ApiError("You are not the instructor of this course", 404));
   }
 

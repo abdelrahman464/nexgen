@@ -37,19 +37,6 @@ exports.createPackageValidator = [
     .withMessage(`ar description must be a string.`)
     .isLength({ min: 10 })
     .withMessage(`ar description must at least 10 chars`),
-
-  body("highlights").isArray().withMessage("highlights must be an array"),
-  body("highlights.*").isObject().withMessage("highlight must be an object"),
-  body("highlights.*.en")
-    .isString()
-    .withMessage(`en highlight must be a string.`)
-    .isLength({ min: 3 })
-    .withMessage(`en highlight must be at least 3 chars`),
-  body("highlights.*.ar")
-    .isString()
-    .withMessage(`ar highlight must be a string.`)
-    .isLength({ min: 3 })
-    .withMessage(`ar highlight must be at least 3 chars`),
   //-----------------------------------
   body("whatWillLearn")
     .optional()
@@ -115,8 +102,7 @@ exports.createPackageValidator = [
     .withMessage(`ar whoThisCourseFor must be at least 3 chars`),
   //-----------------------------------
   check("price")
-    .notEmpty()
-    .withMessage("Package price is required")
+    .optional()
     .isNumeric()
     .withMessage("Package price must be a number")
     .isLength({ max: 32 })
@@ -135,8 +121,7 @@ exports.createPackageValidator = [
     }),
 
   check("course")
-    .notEmpty()
-    .withMessage("Course is required")
+    .optional()
     .isMongoId()
     .withMessage("Invalid course id format")
     .custom(async (value, { req }) => {
@@ -192,22 +177,6 @@ exports.updatePackageValidator = [
     .withMessage(`ar description must be a string.`)
     .isLength({ min: 10 })
     .withMessage(`ar description must at least 10 chars`),
-
-  body("highlights")
-    .optional()
-    .isArray()
-    .withMessage("highlights must be an array"),
-  body("highlights.*").isObject().withMessage("highlight must be an object"),
-  body("highlights.*.en")
-    .isString()
-    .withMessage(`en highlight must be a string.`)
-    .isLength({ min: 3 })
-    .withMessage(`en highlight must be at least 3 chars`),
-  body("highlights.*.ar")
-    .isString()
-    .withMessage(`ar highlight must be a string.`)
-    .isLength({ min: 3 })
-    .withMessage(`ar highlight must be at least 3 chars`),
 
   check("price")
     .optional()

@@ -8,6 +8,7 @@ const Post = require("../models/postModel");
 const UserSubscription = require("../models/userSubscriptionModel");
 const { uploadSingleFile } = require("../middlewares/uploadImageMiddleware");
 const Course = require("../models/courseModel");
+const { checkIfPackageHasAllFields } = require("../helpers/packageHelper");
 
 //upload course image
 exports.uploadPackageImage = uploadSingleFile("image");
@@ -44,10 +45,22 @@ exports.resizeImage = async (req, res, next) => {
   next();
 };
 exports.convertToArray = (req, res, next) => {
-  if (req.body.highlights) {
+  if (req.body.whatWillLearn) {
     // If it's not an array, convert it to an array
-    if (!Array.isArray(req.body.highlights)) {
-      req.body.highlights = [req.body.highlights];
+    if (!Array.isArray(req.body.whatWillLearn)) {
+      req.body.whatWillLearn = [req.body.whatWillLearn];
+    }
+  }
+  if (req.body.coursePrerequisites) {
+    // If it's not an array, convert it to an array
+    if (!Array.isArray(req.body.coursePrerequisites)) {
+      req.body.coursePrerequisites = [req.body.coursePrerequisites];
+    }
+  }
+  if (req.body.whoThisCourseFor) {
+    // If it's not an array, convert it to an array
+    if (!Array.isArray(req.body.whoThisCourseFor)) {
+      req.body.whoThisCourseFor = [req.body.whoThisCourseFor];
     }
   }
   next();
@@ -109,7 +122,44 @@ exports.createOne = async (req, res, next) => {
 //@desc update specific collection
 //@route PUT /api/v1/collections/:id
 //@access private
-exports.updateOne = factory.updateOne(Package);
+exports.updateOne = async (req, res, next) => {
+  try {
+    const package = await Package.findById(req.params.id).lean();
+    if (!package) {
+      return next(
+        new ApiError(res.__("errors.Not-Found", { document: "document" }), 404)
+      );
+    }
+    if (req.body.status && req.body.status === "active") {
+      //check if this package has all fields
+      const missedFields = await checkIfPackageHasAllFields(package, req.body);
+      if (missedFields.length > 0) {
+        return next(
+          new ApiError(
+            `you cannot activate this Package, Package has missing required fields: ${missedFields.join(", ")}`,
+            400
+          )
+        );
+      }
+    }
+    const result = await Package.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    if (!result) {
+      return next(new ApiError("Failed to update package", 400));
+    }
+    const localizedPackage = Package.schema.methods.toJSONLocalizedOnly(
+      result,
+      req.locale
+    );
+    res
+      .status(200)
+      .json({ status: "updated successfully", data: localizedPackage });
+  } catch (error) {
+    console.error("Error updating document:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
 
 //@desc delete collection
 //@route DELETE /api/v1/collections/:id

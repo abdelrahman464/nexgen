@@ -212,7 +212,7 @@ exports.getInstructorAnalytics = async (req, res) => {
     if (!instructorProfits) {
       return res.status(404).json({
         status: "error",
-        message: "Instructor not found",
+        message: "InstructorProfits document not found",
       });
     }
     const courses = await Course.find({ instructor: instructorId }).select(
@@ -238,15 +238,12 @@ exports.getInstructorAnalytics = async (req, res) => {
       totalEnrollmentsDiff,
       avgRate,
       avgRateDiff,
-      instructorProfits,
+      instructorProfits: instructorProfits.profits || 0,
       instructorProfitsDiff,
-      withdrawals: 400,
+      withdrawals: instructorProfits.withdrawals || 0,
     });
   } catch (error) {
     console.log(error.message);
-    return res.status(500).json({
-      status: "internal server error",
-    });
   }
 };
 //------------------------------------------------------
@@ -326,23 +323,24 @@ exports.getCourseAnalytics = async (req, res) => {
 
     // Get unique registered users
     const uniqueUsers = [];
-    const userIds = new Set();
+    // const userIds = new Set();
 
     orders.forEach((order) => {
-      if (order.user && !userIds.has(order.user._id.toString())) {
-        userIds.add(order.user._id.toString());
+      if (order.user) {
+        // userIds.add(order.user._id.toString());
         uniqueUsers.push({
           _id: order.user._id,
           name: order.user.name,
           email: order.user.email,
           profileImg: order.user.profileImg,
+          isResale: order.isResale || false,
+          paidAt: order.paidAt,
         });
       }
     });
 
     return res.status(200).json({
       status: "success",
-
       item: {
         _id: item._id,
         title: item.title,

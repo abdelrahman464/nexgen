@@ -26,7 +26,6 @@ const {
 router.post(
   "/",
   authService.protect,
-  authService.allowedTo("admin", "moderator"),
   checkIfInstructorHasOneActiveCourse,
   uploadImages,
   resizeImages,

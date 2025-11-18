@@ -522,7 +522,7 @@ exports.checkCourseInstructorOrAdmin = async (req, res, next) => {
     }
 
     // Check if current user is the instructor of this course
-    if (course.instructor?.toString() === req.user._id.toString()) {
+    if (course.instructor._id?.toString() === req.user._id.toString()) {
       return next();
     }
 

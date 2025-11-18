@@ -339,7 +339,7 @@ exports.updateCourse = async (req, res, next) => {
 
       // Create the new group chat
       await Chat.create({
-        participants: [{ user: groupCreatorId, isAdmin: true }],
+        participants: [{ user: result.instructor._id, isAdmin: true },{ user: groupCreatorId, isAdmin: true }],
         isGroupChat: true,
         course: course._id,
         type: "course",
