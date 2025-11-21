@@ -10,6 +10,10 @@ const AnalyticSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    course: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Course",
+    },
     lesson: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Lesson",

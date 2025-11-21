@@ -47,15 +47,16 @@ exports.resizeImage = asyncHandler(async (req, res, next) => {
 //@access public
 exports.filterCoursePackages = async (req, res, next) => {
 
-  req.filterObj = {};
+  const filterObj = {};
   if (req.user.isInstructor) {
     const courses = await Course.find({ instructor: req.user._id });
 
     if (courses.length === 0) {
       return res.status(200).json({ results: 0, data: [] });
     }
-    req.filterObj.courses = { $in: courses.map((course) => course._id) };
+    filterObj.$or = [ { instructor: req.user._id }, { courses: { $in: courses.map((course) => course._id) } } ];
   }
+  req.filterObj = filterObj;
   return next();
 };
 
@@ -74,7 +75,10 @@ exports.getCoursePackage = factory.getOne(CoursePackage);
 //@desc create CoursePackage
 //@route POST /api/v1/coursePackages
 //@access private
-exports.createCoursePackage = factory.createOne(CoursePackage);
+exports.createCoursePackage = (req, res, next) => {
+  req.body.instructor = req.user._id;  
+  return factory.createOne(CoursePackage)(req, res, next);
+};
 
 //@desc update specific CoursePackage
 //@route PUT /api/v1/coursePackages/:id

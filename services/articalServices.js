@@ -68,7 +68,7 @@ exports.resizeImages = asyncHandler(async (req, res, next) => {
 
 exports.filterInstructorArticals = (req, res, next) => {
   if (req.user.role !== "admin") {
-    req.filterObj = { instructor: req.user._id };
+    req.filterObj = { author: req.user._id };
   }
   next();
 };
@@ -84,6 +84,7 @@ exports.createArtical = async (req, res, next) => {
   if (req.user.role === "admin") {
     req.body.status = "active";
   }
+  req.body.author = req.user._id;
   return factory.createOne(Artical)(req, res, next);
 };
 

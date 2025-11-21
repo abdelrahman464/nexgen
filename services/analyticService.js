@@ -112,21 +112,19 @@ exports.checkUserSubscription = async (req, res, next) => {
 //----- filters
 //3
 exports.filterOnUserRole = (req, res, next) => {
-  //initialize the filter object
-  req.filterObj = {};
+  if(!req.query.course){
+    return next(new ApiError("course is required", 400));
+  }
+  req.filterObj = {course: req.query.course};
   //initialize the new query object  ,i will use it to remove the 'asMarketer' key from the query and 'isPassed' key then => req.query = newQuery ,
   //cause req.query is passed in apiFeatures class and i don't want to pass the 'asMarketer' key to the apiFeatures class
   const newQuery = { ...req.query };
 
   //1-if this key exists in the query then the marketer is trying to get his own analytics
-  if (req.query.asMarketer) {
-    req.filterObj.marketer = req.params.id;
-    //remove the key from the query
-    delete newQuery.asMarketer;
-  }
-  //2-the marketer is trying to get the analytics of his users
-  else {
-    req.filterObj.user = req.params.id;
+  if (req.user.isMarketer && !req.user.isInstructor) {
+    req.filterObj.marketer = req.user._id;
+  }else if(!req.user.isMarketer && !req.user.isInstructor){
+    req.filterObj.user = req.user._id;
   }
   req.newQuery = newQuery;
   return next();
@@ -148,24 +146,21 @@ exports.filterStatus = async (req, res, next) => {
     //remove the key from the query
     delete req.newQuery.isPassed;
   }
-  if (req.query.course) {
-    const lessons = await Lesson.find({ course: req.query.course });
-    const lessonsIds = lessons.map((lesson) => lesson._id);
-    req.filterObj.lesson = { $in: lessonsIds };
-    delete req.newQuery.course;
-  } else if (req.query.lesson) {
-    req.filterObj.lesson = req.query.lesson;
-    delete req.newQuery.lesson;
-  }
-  if (req.query.user) {
-    req.filterObj.user = req.query.user;
-    delete req.newQuery.user;
-  }
+  // if (req.query.course) {
+  //   const lessons = await Lesson.find({ course: req.query.course });
+  //   const lessonsIds = lessons.map((lesson) => lesson._id);
+  //   req.filterObj.lesson = { $in: lessonsIds };
+  //   delete req.newQuery.course;
+  // } else if (req.query.lesson) {
+  //   req.filterObj.lesson = req.query.lesson;
+  //   delete req.newQuery.lesson;
+  // }
   if (req.query.isSeen) {
     req.filterObj.isSeen = req.query.isSeen;
     delete req.newQuery.isSeen;
   }
   req.query = req.newQuery;
+  req.filterObj ={...req.filterObj, ...req.query};
   return next();
 };
 //2
@@ -182,7 +177,7 @@ exports.getAll = factory.getALl(Analytic);
 exports.getOne = factory.getOne(Analytic);
 //assignIds
 exports.createOne = async (req, res, next) => {
-  const { lesson: lessonId } = req.query;
+  const lessonId = req.query.lesson || req.body.lesson;
 
   if (lessonId) {
     //step 1: check if the lesson exists

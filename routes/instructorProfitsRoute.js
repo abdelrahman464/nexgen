@@ -5,6 +5,7 @@ const {
   getInstructorAnalytics,
   createInstructorProfitsInvoice,
   setInstructorProfitsPaymentDetails,
+  getTotalSalesAnalytics
 } = require("../services/marketing/instructorProfitsService");
 
 const router = express.Router();
@@ -17,6 +18,11 @@ router.get(
   "/courseAnalytics/:itemId",
   authServices.allowedTo("user", "admin"),
   getCourseAnalytics
+);
+router.get(
+  "/total/:id?",
+  authServices.allowedTo("user", "admin"),
+  getTotalSalesAnalytics
 );
 
 // Get instructor analytics (existing function)

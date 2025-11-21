@@ -5,6 +5,7 @@ const Order = require("../../models/orderModel");
 const Package = require("../../models/packageModel");
 const CoursePackage = require("../../models/coursePackageModel");
 const User = require("../../models/userModel");
+const { calculateSalesAnalytics } = require("./marketingAnalyticsService");
 //-----------------------------------------------------
 exports.createInstructorProfitsDocument = async (instructor) => {
   // eslint-disable-next-line no-useless-catch
@@ -378,4 +379,66 @@ const getItemData = async (type, itemId) => {
     default:
       throw new Error("Invalid item type");
   }
+};
+
+//the coming functions are for page1 => analytics
+exports.getTotalSalesAnalytics = async (req, res, next) => {
+  try {
+    const lang = req.locale;
+    const instructorId = req.params.id || req.user._id;
+
+    const filter = {
+      instructor: instructorId,
+    };
+    if (req.query.month) {
+      filter.createdAt = getMonthRange(req.query.month);
+    }
+
+    const orders = await Order.find(filter);
+    //validation => if no orders return error
+    if (orders.length === 0)
+      throw new ApiError("No orders found for this instructor", 404);
+
+    //calculate percentage of each item has been sold
+    const result = calculateSalesAnalytics(orders, lang);
+    //get current sales and team size
+    const currentRegistrations = getCurrentMonthRegistrations(orders);
+
+    return res.status(200).json({
+      status: "success",
+      month: req.query.month,
+      totalSales: result.totalSales,
+      currentMonthRegistrations: currentRegistrations,
+      analytics: result.analytics,
+    });
+  } catch (error) {
+    // const statusCode = error instanceof ApiError ? error.statusCode : 500;
+    return next(new ApiError(error.message, 400));
+  }
+};
+
+function getMonthRange(yyyyMm) {
+  // Validate input format (yyyy-mm)
+  if (!/^\d{4}-\d{2}$/.test(yyyyMm)) {
+    throw new Error('Invalid date format. Please use "yyyy-mm"');
+  }
+
+  const [year, month] = yyyyMm.split("-").map(Number);
+
+  // Create date for the first moment of the month
+  const firstDay = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+
+  // Last millisecond of the month (UTC)
+  const lastDay = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
+  console.log(firstDay, lastDay);
+  return {
+    $gte: firstDay,
+    $lte: lastDay,
+  };
+}
+const getCurrentMonthRegistrations = (orders) => {
+  const filteredUsers = orders.filter(
+    (order) => order.user.createdAt?.getMonth() === new Date().getMonth()
+  );
+  return filteredUsers.length || 0;
 };

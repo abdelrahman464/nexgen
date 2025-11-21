@@ -141,7 +141,7 @@ exports.getTotalSalesAnalytics = async (req, res) => {
     const orders = await Order.find(filter);
     //validation => if no orders return error
     if (orders.length === 0)
-      throw new ApiError(404, "No orders found for this marketer");
+      throw new ApiError("No orders found for this marketer", 404);
 
     //calculate percentage of each item has been sold
     const result = this.calculateSalesAnalytics(orders, lang);

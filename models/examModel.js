@@ -2,6 +2,10 @@ const mongoose = require("mongoose");
 
 const examSchema = new mongoose.Schema(
   {
+    title: {
+      type: Object,
+      i18n: true,
+    },
     course: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Course",

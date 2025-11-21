@@ -4,8 +4,6 @@ const validatorMiddleware = require("../../middlewares/validatorMiddleware");
 const ApiError = require("../apiError");
 
 exports.createCoursePackageValidator = [
-  body("title").optional().isObject().withMessage("Title must be an object."),
-
   body("title.en")
     .optional()
     .isString()
@@ -23,8 +21,6 @@ exports.createCoursePackageValidator = [
     .withMessage(`ar title must be a string.`)
     .isLength({ min: 3 })
     .withMessage(`ar title must be at least 3 chars`),
-
-  body("description").isObject().withMessage("description must be an object."),
 
   body("description.en")
     .optional()
@@ -129,7 +125,6 @@ exports.createCoursePackageValidator = [
 
 exports.updateCoursePackageValidator = [
   check("id").isMongoId().withMessage("Invalid course package id format"),
-  body("title").optional().isObject().withMessage("Title must be an object."),
 
   body("title.en")
     .optional()
@@ -144,11 +139,6 @@ exports.updateCoursePackageValidator = [
     .withMessage(`ar title must be a string.`)
     .isLength({ min: 3 })
     .withMessage(`ar title must be at least 3 chars`),
-
-  body("description")
-    .optional()
-    .isObject()
-    .withMessage("description must be an object."),
 
   body("description.en")
     .optional()

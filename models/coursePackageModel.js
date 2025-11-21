@@ -2,6 +2,10 @@ const mongoose = require("mongoose");
 
 const coursePackageSchema = new mongoose.Schema(
   {
+    instructor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
     courses: [
       {
         type: mongoose.Schema.Types.ObjectId,

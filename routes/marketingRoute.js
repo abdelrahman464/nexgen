@@ -10,6 +10,7 @@ const {
   modifyInvitationKeys,
   updateMarketLogProfitsCalculationMethod,
   modifyProfitableItems,
+  getProfitableItemsByType,
 } = require("../services/marketing/marketingService");
 const {
   getInstructorAnalytics,
@@ -106,6 +107,13 @@ router.put(
   authServices.allowedTo("user", "admin"),
   checkTypeQueryParam,
   startMarketing
+);
+
+router.get(
+  "/getProfitableItemsByType",
+  authServices.protect,
+  authServices.allowedTo("user", "admin"),
+  getProfitableItemsByType
 );
 
 module.exports = router;

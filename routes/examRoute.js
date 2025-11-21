@@ -6,6 +6,7 @@ const { isTheLessonInstructor } = require("../services/lessonServices");
 const authService = require("../services/authServices");
 const {
   createExam,
+  updateExam,
   deleteExam,
   uploadQuestionAndOptions,
   processQuestionImages,
@@ -105,6 +106,7 @@ router.put(
 router
   .route("/:id")
   .get(authService.protect, isTheExamInstructor, getExam)
+  .put(authService.protect, isTheExamInstructor, updateExam)
   .delete(authService.protect, isTheExamInstructor, deleteExam);
 
 /////////////////////////////////////////////////////////////////////////

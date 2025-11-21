@@ -4,6 +4,9 @@ const User = require("../../models/userModel");
 const MarketingLog = require("../../models/MarketingModel");
 const Order = require("../../models/orderModel");
 const InstructorProfit = require("../../models/instructorProfitsModel");
+const Course = require("../../models/courseModel");
+const Package = require("../../models/packageModel");
+const CoursePackage = require("../../models/coursePackageModel");
 const { createMarketerGroupChat } = require("../ChatServices");
 const InstructorProfitService = require("./instructorProfitsService");
 const ApiError = require("../../utils/apiError");
@@ -777,5 +780,88 @@ exports.modifyProfitableItems = async (req, res) => {
     });
   } catch (err) {
     return res.status(500).json({ status: "failed", msg: err.message });
+  }
+};
+
+//@desc Get profitable items by type
+//@route GET /api/v1/marketing/getProfitableItemsByType
+//@access Private (User)
+exports.getProfitableItemsByType = async (req, res) => {
+  try {
+    const { type } = req.query;
+    const marketerId = req.user._id;
+
+    // Validate type parameter
+    const validTypes = ["course", "package", "coursePackage"];
+    if (!type || !validTypes.includes(type)) {
+      return res.status(400).json({
+        status: "failed",
+        msg: `Type must be one of: ${validTypes.join(", ")}`,
+      });
+    }
+
+    // Get marketing log for the current user
+    const marketLog = await MarketingLog.findOne({ marketer: marketerId });
+
+    if (!marketLog) {
+      return res.status(404).json({
+        status: "failed",
+        msg: "Marketing log not found for this user",
+      });
+    }
+
+    // Filter profitable items by type
+    const filteredItems = marketLog.profitableItems.filter(
+      (item) => item.itemType === type
+    );
+
+    if (filteredItems.length === 0) {
+      return res.status(404).json({
+        status: "failed",
+        msg: res.__("marketing-errors.No-Profitable-Items", { type }),
+        data: [],
+      });
+    }
+
+    // Get the item IDs
+    const itemIds = filteredItems.map((item) => item.itemId);
+
+    // Determine which model to query based on type
+    let Model;
+    if (type === "course") {
+      Model = Course;
+    } else if (type === "package") {
+      Model = Package;
+    } else if (type === "coursePackage") {
+      Model = CoursePackage;
+    }
+
+    // Fetch the actual items from the database
+    const items = await Model.find({ _id: { $in: itemIds } });
+    const localizedDocument = Model.schema.methods.toJSONLocalizedOnly(
+      items,
+      req.locale
+    );
+    // Merge the items with their percentage from profitableItems
+    const result = localizedDocument.map((item) => {
+      const profitableItem = filteredItems.find(
+        (pItem) => pItem.itemId.toString() === item._id.toString()
+      );
+      return {
+        ...item,
+        percentage: profitableItem ? profitableItem.percentage : 0,
+      };
+    });
+
+    return res.status(200).json({
+      status: "success",
+      results: result.length,
+      data: result,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: "failed",
+      msg: err.message,
+    });
   }
 };

@@ -26,7 +26,7 @@ const {
 const _ = require("lodash");
 const { generateCertificate } = require("../../utils/generateCertificate");
 const { modifyExamQuestionsNumber } = require("../../helpers/examHelper");
-
+const sendEmail = require("../../utils/sendEmail");
 // Middleware to upload question image and options images-------------
 exports.uploadQuestionAndOptions = uploadMixOfFiles([
   {
@@ -110,7 +110,7 @@ exports.createFilterObj = (examType) => async (req, res, next) => {
 //Basic CRUD------------------------------------------------------------
 exports.createExam = asyncHandler(async (req, res, next) => {
   try {
-    const { lesson, course, model, passingScore, type } = req.body;
+    const { title, lesson, course, model, passingScore, type } = req.body;
 
     let exam = {};
     // Create exam document
@@ -125,6 +125,7 @@ exports.createExam = asyncHandler(async (req, res, next) => {
         );
       }
       exam = await Exam.create({
+        title,
         lesson,
         model,
         passingScore,
@@ -142,6 +143,7 @@ exports.createExam = asyncHandler(async (req, res, next) => {
       }
 
       exam = await Exam.create({
+        title,
         course,
         model,
         passingScore,
@@ -160,6 +162,8 @@ exports.createExam = asyncHandler(async (req, res, next) => {
   }
 });
 exports.getExams = factory.getALl(Exam);
+
+exports.updateExam = factory.updateOne(Exam);
 
 exports.getExam = factory.getOne(Exam);
 
@@ -788,17 +792,17 @@ exports.submitCourseAnswers = async (req, res, next) => {
           ar: `لقد حصل ${req.user.name} علي شهادة إتمام ${course.title.ar}`,
         },
       });
+      //FIXME: send email to user to congragulate him in (html) template
+      await sendEmail({
+        to: req.user.email,
+        subject: "Congratulations on completing the course",
+        html: `
+        <h1>Congratulations on completing the course</h1>
+        <p>You have completed the course ${course.title.en}</p>
+        <p>You have earned a certificate for the course ${course.title.en}</p>
+      `,
+      });
     }
-
-    //FIXME: send email to user to congragulate him in (html) template
-    await sendEmail({
-      to: req.user.email,
-      subject: "Congratulations on completing the course",
-      html: htmlEmail({
-        courseName: course.title.en,
-        userName: req.user.name,
-      }),
-    });
 
     // Respond with success or failure message
     return handleExamResponse(

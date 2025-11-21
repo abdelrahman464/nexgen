@@ -6,8 +6,6 @@ const Course = require("../../models/courseModel");
 const Package = require("../../models/packageModel");
 
 exports.createPackageValidator = [
-  body("title").optional().isObject().withMessage("Title must be an object."),
-
   body("title.en")
     .optional()
     .isString()
@@ -25,8 +23,6 @@ exports.createPackageValidator = [
     .withMessage(`ar title must be a string.`)
     .isLength({ min: 3 })
     .withMessage(`ar title must be at least 3 chars`),
-
-  body("description").optional().isObject().withMessage("description must be an object."),
 
   body("description.en")
     .optional()
@@ -147,7 +143,6 @@ exports.createPackageValidator = [
 
 exports.updatePackageValidator = [
   check("id").isMongoId().withMessage("Invalid package id format"),
-  body("title").optional().isObject().withMessage("Title must be an object."),
 
   body("title.en")
     .optional()
@@ -162,11 +157,6 @@ exports.updatePackageValidator = [
     .withMessage(`ar title must be a string.`)
     .isLength({ min: 3 })
     .withMessage(`ar title must be at least 3 chars`),
-
-  body("description")
-    .optional()
-    .isObject()
-    .withMessage("description must be an object."),
 
   body("description.en")
     .optional()
