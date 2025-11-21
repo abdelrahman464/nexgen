@@ -42,7 +42,16 @@ class ApiFeatures {
       if (modelName === 'User') {
         query = { name: { $regex: this.queryStr.keyword, $options: 'i' } };
       } else {
-        query = { title: { $regex: this.queryStr.keyword, $options: 'i' } };
+        query.$or = [
+          { 'title.ar': { $regex: this.queryStr.keyword, $options: 'i' } },
+          { 'title.en': { $regex: this.queryStr.keyword, $options: 'i' } },
+          {
+            'description.ar': { $regex: this.queryStr.keyword, $options: 'i' },
+          },
+          {
+            'description.en': { $regex: this.queryStr.keyword, $options: 'i' },
+          },
+        ];
       }
       this.mongooseQuery = this.mongooseQuery.find(query);
     }

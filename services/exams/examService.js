@@ -638,7 +638,7 @@ exports.submitLessonAnswers = async (req, res, next) => {
       },
       { new: true }
     );
-    console.log("newProgress", newProgress);
+    
     // Respond with exam results
     return handleExamResponse(
       res,
@@ -753,13 +753,14 @@ exports.submitCourseAnswers = async (req, res, next) => {
     // Check if the user deserves a certificate
     if (avgCourseExamsPercentage >= 90 && passed) {
       const certificateId = new mongoose.Types.ObjectId();
+      console.log("course",course.instructor)
       const certificateDetails = {
         studentName: req.user.name,
         courseName: course.title[req.user.lang],
         courseDescription: course.certificateDescription[req.user.lang],
         rating: Number(course.rating) || 3,
         certificateId: certificateId.toString(),
-        signatureImageUrl: req.user.signatureImage,
+        signatureImageUrl: course.instructor.signatureImage,
         language: req.user.lang,
       };
       const certificate = await generateCertificate(certificateDetails);
@@ -803,6 +804,16 @@ exports.submitCourseAnswers = async (req, res, next) => {
       `,
       });
     }
+
+    //FIXME: send email to user to congratulate him in (html) template
+    // await sendEmail({
+    //   to: req.user.email,
+    //   subject: "Congratulations on completing the course",
+    //   html: htmlEmail({
+    //     courseName: course.title.en,
+    //     userName: req.user.name,
+    //   }),
+    // });
 
     // Respond with success or failure message
     return handleExamResponse(
