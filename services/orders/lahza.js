@@ -44,7 +44,7 @@ const createLahzaTransaction = async (email, firstName, amount, metadata) => {
       },
     );
 
-    console.log('Lahza response:', response.data);
+    
     return response.data.data.authorization_url;
   } catch (error) {
     console.error(

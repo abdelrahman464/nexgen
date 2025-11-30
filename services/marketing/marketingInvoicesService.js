@@ -33,7 +33,6 @@ const getProfitsInvoices = async (status, lang = "ar") => {
       marketer: log.marketer,
       invoices: log.invoices.filter((invoice) => invoice.status === status),
     }));
-    console.log(lang);
     // Localize titles for each order in each invoice
 
     //translate item's title in each order and reform each order

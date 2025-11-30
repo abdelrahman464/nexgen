@@ -95,7 +95,6 @@ router.put(
 );
 router.put(
   "/modifyProfitableItems/:id", //marketer id
-  authServices.protect,
   authServices.allowedTo("user", "admin"),
   checkAuthority,
   modifyProfitableItems

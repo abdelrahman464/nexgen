@@ -108,7 +108,6 @@ function getMonthRange(yyyyMm) {
 
   // Last millisecond of the month (UTC)
   const lastDay = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
-  console.log(firstDay, lastDay);
   return {
     $gte: firstDay,
     $lte: lastDay,
@@ -359,7 +358,6 @@ exports.getInvitationsAnalytics = async (req, res, next) => {
     const month = req.query.month || new Date().getMonth() + 1;
     const year = req.query.year || new Date().getFullYear();
 
-    console.log(marketerId + " " + month + " " + year);
     const clicksDetails = await InvitationLinkAnalytics.findOne({
       marketer: marketerId,
       month,

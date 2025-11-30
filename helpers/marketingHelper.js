@@ -47,6 +47,7 @@ exports.handleOrderCommissions = async (item, data) => {
     data.instructorPercentage = item.instructorPercentage;
     data.instructorId = item.instructor;
     let instructorProfit = (data.amount * data.instructorPercentage) / 100;
+    data.totalProfits = instructorProfit;
     if (marketerPercentage > 0) {
       marketerProfits = (instructorProfit * marketerPercentage) / 100;
       instructorProfit -= marketerProfits;

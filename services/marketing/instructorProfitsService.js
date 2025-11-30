@@ -66,7 +66,8 @@ exports.createInstructorProfitsInvoice = async (instructorId, reqBody) => {
   if (instructorProfits.profits === 0) {
     throw new ApiError("No profits found to be calculated", 404);
   }
-  if (amount > instructorProfits.profits) {
+  const availableProfits = instructorProfits.profits - instructorProfits.withdrawals;
+  if (amount > availableProfits) {
     throw new ApiError("amount is greater than profits", 404);
   }
 
@@ -81,7 +82,7 @@ exports.createInstructorProfitsInvoice = async (instructorId, reqBody) => {
   instructorProfits.invoices.push({
     totalSalesMoney: instructorProfits.totalSalesMoney,
     profits: amount,
-    desc: `wallet Invoice for period : ${startPointDate.toLocaleString(
+    desc: `Invoice for period : ${startPointDate.toLocaleString(
       "default",
       {
         month: "long",
@@ -94,8 +95,8 @@ exports.createInstructorProfitsInvoice = async (instructorId, reqBody) => {
       weekday: "long",
     })})`,
   });
-
-  instructorProfits.profits -= amount;
+  // instructorProfits.profits -= amount;
+  instructorProfits.withdrawals += amount;
   await instructorProfits.save();
   //9- return success
   return true;
@@ -162,10 +163,12 @@ exports.giveInstructorHisCommission = async (data, profit) => {
             order: data.order,
             type: data.itemType,
             amount: data.amount,
-            marketerPercentage: data.marketerPercentage,
-            marketerProfits: data.marketerProfits,
             percentage: data.instructorPercentage,
+            totalProfits: data.totalProfits,
             profit,
+            marketer: data.invitor || null,
+            marketerPercentage: data.marketerPercentage|| 0,
+            marketerProfits: data.marketerProfits|| 0,
             createdAt: new Date(),
           },
         },
@@ -235,7 +238,6 @@ exports.getInstructorAnalytics = async (req, res) => {
     //need to add avg rate
     return res.status(200).json({
       status: "success",
-      totalOrders:200,
       totalEnrollments,
       totalEnrollmentsDiff,
       avgRate,
@@ -243,6 +245,7 @@ exports.getInstructorAnalytics = async (req, res) => {
       instructorProfits: instructorProfits.profits || 0,
       instructorProfitsDiff,
       withdrawals: instructorProfits.withdrawals || 0,
+      totalSalesMoney: instructorProfits.totalSalesMoney || 0,
       commissions:instructorProfits.commissions || [],
       invoices:instructorProfits.invoices || [],
     });
@@ -433,7 +436,7 @@ function getMonthRange(yyyyMm) {
 
   // Last millisecond of the month (UTC)
   const lastDay = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
-  console.log(firstDay, lastDay);
+
   return {
     $gte: firstDay,
     $lte: lastDay,
@@ -445,3 +448,107 @@ const getCurrentMonthRegistrations = (orders) => {
   );
   return filteredUsers.length || 0;
 };
+//---------------------------
+exports.getSalesAnalytics = async (req, res) => {
+  try {
+    const instructorId = req.params.id || req.user._id;
+    
+    // Get all instructor's items
+    const courses = await Course.find({ instructor: instructorId });
+    const coursesIds = courses.map((course) => course._id);
+    const packages = await Package.find({ instructor: instructorId });
+    const packagesIds = packages.map((pack) => pack._id);
+    const coursePackages = await CoursePackage.find({ instructor: instructorId });
+    const coursePackagesIds = coursePackages.map((cp) => cp._id);
+    
+    // Initialize sales object
+    const sales = {};
+    
+    // Batch settings
+    const batchSize = 100; // Fetch 100 orders per batch
+    let skip = 0;
+    let hasMore = true;
+    
+    // Fetch orders in batches
+    while (hasMore) {
+      const orders = await Order.find({
+        $or: [
+          { course: { $in: coursesIds } },
+          { package: { $in: packagesIds } },
+          { coursePackage: { $in: coursePackagesIds } }
+        ],
+        isPaid: true // Only count paid orders
+      })
+      .select('course package coursePackage totalOrderPrice')
+      .skip(skip)
+      .limit(batchSize)
+      .lean();
+      
+      // If no orders returned, stop the loop
+      if (orders.length === 0) {
+        hasMore = false;
+        break;
+      }
+      
+      orders.forEach((order) => {
+        const itemId = order.course || order.package || order.coursePackage;
+        
+        if (itemId) {
+          const itemIdStr = itemId._id.toString();
+          
+          // Initialize if not exists
+          if (!sales[itemIdStr]) {
+            sales[itemIdStr] = {
+              itemId: itemIdStr,
+              itemType: order.course ? "course" : order.package ? "package" : "coursePackage",
+              itemTitle: order.course ? order.course.title : order.package ? order.package.title : order.coursePackage.title,
+              totalSalesMoney: 0,
+              ordersCount: 0
+            };
+          }
+          
+          // Add to total sales
+          sales[itemIdStr].totalSalesMoney += order.totalOrderPrice || 0;
+          sales[itemIdStr].ordersCount += 1;
+        }
+      });
+      
+      // If we got less than batchSize, we've reached the end
+      if (orders.length < batchSize) {
+        hasMore = false;
+      } else {
+        skip += batchSize;
+      }
+    }
+    
+    const salesArray = Object.values(sales);
+    
+    const totalSalesMoney = salesArray.reduce((sum, item) => sum + item.totalSalesMoney, 0);
+    const totalOrders = salesArray.reduce((sum, item) => sum + item.ordersCount, 0);
+    
+    // Add percentage to each item
+    const salesWithPercentage = salesArray.map((item) => ({
+      ...item,
+      percentageOfTotalSales: totalSalesMoney > 0 
+        ? parseFloat(((item.totalSalesMoney / totalSalesMoney) * 100).toFixed(2))
+        : 0
+    }));
+    
+    // Sort by percentage in descending order
+    salesWithPercentage.sort((a, b) => b.percentageOfTotalSales - a.percentageOfTotalSales);
+    
+    return res.status(200).json({
+      status: "success",
+      sales: salesWithPercentage,
+      totalSalesMoney: totalSalesMoney,
+      totalOrders: totalOrders
+    });
+    
+  } catch (error) {
+    console.log(error.message);
+    return res.status(500).json({
+      status: "failed",
+      message: error.message
+    });
+  }
+}

@@ -71,7 +71,6 @@ router.get(
   authServices.protect,
   authServices.checkIfUserIsAdminOrInstructor,
   (req, res, next) => {
-    console.log("hey");
     if (req.user.role === "admin") {
       req.filterObj = {};
     } else if (req.user.isInstructor) {

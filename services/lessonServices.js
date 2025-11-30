@@ -426,7 +426,7 @@ exports.getSectionLessons = async (req, res, next) => {
         lessons: sectionLessons,
       });
     });
-    console.log("dsadas" + orderedLessons);
+   
     let lastSectionUserStoppedAt;
     if (currentLessonOrder) {
       // that's mean user completed the course

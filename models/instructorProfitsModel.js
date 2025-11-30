@@ -12,7 +12,12 @@ const commissionSchema = new mongoose.Schema(
     type: String,
     amount: Number,
     percentage: Number,
+    totalProfits: Number,
     profit: Number,
+    marketer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
     marketerPercentage: Number,
     marketerProfits: Number,
     createdAt: {
@@ -33,6 +38,10 @@ const InstructorProfitsSchema = new mongoose.Schema(
       default: 0,
     },
     profits: {
+      type: Number,
+      default: 0,
+    },
+    withdrawals: {
       type: Number,
       default: 0,
     },
@@ -66,7 +75,10 @@ const InstructorProfitsSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
+InstructorProfitsSchema.pre(/^find/, function(next){
+    this.populate({ path: "commissions.marketer", select: "name email profileImg" })
+  next();
+});
 const InstructorProfit = mongoose.model(
   "InstructorProfits",
   InstructorProfitsSchema

@@ -24,17 +24,14 @@ const {
 exports.startMarketing = async (req, res) => {
   try {
     const userId = req.params.userId;
-    const { type } = req.query;
+    let { type } = req.query;
     const { fallBackCoach } = req.body;
     if (type && type === "instructor") {
       const result = await createInstructorProfitsDocument(userId);
       if (typeof result === "string") {
         return res.status(400).json({ status: "failed", msg: result });
       }
-      return res.status(200).json({
-        msg: "success",
-        message: `this instructor can take profits now`,
-      });
+      type = "marketer";
     }
 
     const isMarketer = await MarketingLog.exists({ marketer: userId });
@@ -317,7 +314,6 @@ exports.getMarketLog = async (req, res, next) => {
         monthBoundaries.lastMonth.firstDay,
         monthBoundaries.lastMonth.lastDay
       );
-      console.log(lastMonthAnalytics);
       if (lastMonthAnalytics.monthSalesMoney !== 0)
         marketLog.salesMoneyDifference =
           marketLog.totalSalesMoney - lastMonthAnalytics.monthSalesMoney;

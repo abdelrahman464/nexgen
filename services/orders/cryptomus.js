@@ -44,7 +44,6 @@ const createCryptomusOrder = async (amount, currency, additionalData) => {
       'https://api.nexgen-academy.com/api/v1/orders/webhook/cryptomus',
   };
 
-  console.log(data);
   const jsonData = JSON.stringify(data);
   const sign = crypto
     .createHash('md5')
@@ -114,7 +113,6 @@ exports.courseCheckoutSessionCryptomus = asyncHandler(
         currency,
         additionalData,
       );
-      console.log('cryptomusOrder', cryptomusOrder);
       res.status(200).json({
         status: 'success',
         redirectUrl: cryptomusOrder.result.url, // URL for Cryptomus payment

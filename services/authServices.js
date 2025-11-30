@@ -80,7 +80,6 @@ exports.signup = asyncHandler(async (req, res, next) => {
   let invitorId = null;
   let coachId = null;
   // if (req.body.invitationKey) {
-  //   console.log("invitationKey", req.body.invitationKey);
 
   //   //check if invitor is valid
   //   invitorId = await getMarketerFromInvitationKey(req.body.invitationKey);

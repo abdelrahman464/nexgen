@@ -334,7 +334,6 @@ exports.getLessonPerformance = asyncHandler(async (req, res, next) => {
     const lessonQuestions =
       await this.checkExamQuestionsStatus(lessonExamResult);
 
-    // console.log('lessonQuestions', lessonQuestions);
     return res.status(200).json({
       status: "success",
       lessonQuestions,
@@ -753,7 +752,6 @@ exports.submitCourseAnswers = async (req, res, next) => {
     // Check if the user deserves a certificate
     if (avgCourseExamsPercentage >= 90 && passed) {
       const certificateId = new mongoose.Types.ObjectId();
-      console.log("course",course.instructor)
       const certificateDetails = {
         studentName: req.user.name,
         courseName: course.title[req.user.lang],
