@@ -235,6 +235,7 @@ exports.getInstructorAnalytics = async (req, res) => {
     //need to add avg rate
     return res.status(200).json({
       status: "success",
+      totalOrders:200,
       totalEnrollments,
       totalEnrollmentsDiff,
       avgRate,
@@ -242,6 +243,8 @@ exports.getInstructorAnalytics = async (req, res) => {
       instructorProfits: instructorProfits.profits || 0,
       instructorProfitsDiff,
       withdrawals: instructorProfits.withdrawals || 0,
+      commissions:instructorProfits.commissions || [],
+      invoices:instructorProfits.invoices || [],
     });
   } catch (error) {
     console.log(error.message);

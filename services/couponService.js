@@ -13,7 +13,7 @@ exports.validateCoupon = async (couponName, marketerId) => {
   if (coupon.maxUsageTimes <= coupon.usedTimes) {
     return 'coupon-errors.Expired';
   }
-  if (coupon.marketer?._id.toString() !== marketerId?.toString())
+  if (!coupon.marketer.isInstructor && coupon.marketer?._id.toString() !== marketerId?.toString())
     return 'coupon-errors.Un-Authorized';
   return coupon;
 };
@@ -26,16 +26,12 @@ exports.validateCoupon = async (couponName, marketerId) => {
  * @returns {Object} - { canApply: boolean, errorMessage?: string }
  */
 exports.canCouponApplyToScope = (coupon, scope, itemId) => {
-  // If coupon applies to all, it can be used for any scope
-  if (coupon.appliesTo && coupon.appliesTo.scope === 'all') {
-    return { canApply: true };
-  }
-
-  // Check specific scope restrictions
   switch (scope) {
     case 'course':
-      if (coupon.appliesTo && coupon.appliesTo.scope === 'courses') {
-        const canApply = coupon.appliesTo.courses.includes(itemId);
+      if (coupon.courses && coupon.courses.length > 0) {
+        const canApply = coupon.courses.some(
+          (courseId) => courseId.toString() === itemId.toString()
+        );
         return {
           canApply,
           errorMessage: canApply
@@ -46,8 +42,10 @@ exports.canCouponApplyToScope = (coupon, scope, itemId) => {
       break;
 
     case 'coursePackage':
-      if (coupon.appliesTo && coupon.appliesTo.scope === 'coursePackages') {
-        const canApply = coupon.appliesTo.coursePackages.includes(itemId);
+      if (coupon.coursePackages && coupon.coursePackages.length > 0) {
+        const canApply = coupon.coursePackages.some(
+          (packageId) => packageId.toString() === itemId.toString()
+        );
         return {
           canApply,
           errorMessage: canApply
@@ -58,11 +56,15 @@ exports.canCouponApplyToScope = (coupon, scope, itemId) => {
       break;
 
     case 'package':
-      // Packages can only use coupons with 'all' scope
-      if (coupon.appliesTo && coupon.appliesTo.scope !== 'all') {
+      if (coupon.packages && coupon.packages.length > 0) {
+        const canApply = coupon.packages.some(
+          (packageId) => packageId.toString() === itemId.toString()
+        );
         return {
-          canApply: false,
-          errorMessage: 'This coupon cannot be used for this package',
+          canApply,
+          errorMessage: canApply
+            ? null
+            : 'This coupon cannot be used for this package',
         };
       }
       break;

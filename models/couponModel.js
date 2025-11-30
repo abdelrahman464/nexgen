@@ -28,28 +28,29 @@ const couponSchema = mongoose.Schema(
       enum: ['pending', 'active', 'rejected'],
     },
     // apply for specific courses or courses package
-    appliesTo: {
-      scope: {
-        type: String,
-        enum: ['all', 'courses', 'coursePackages'],
-        default: 'all',
-      },
-      courses: {
-        type: [
-          {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Course',
-          },
-        ],
-      },
-      coursePackages: {
-        type: [
-          {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'CoursePackage',
-          },
-        ],
-      },
+    courses: {
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Course',
+        },
+      ],
+    },
+    coursePackages: {
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'CoursePackage',
+        },
+      ],
+    },
+    packages: {
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Package',
+        },
+      ],
     },
   },
   { timestamps: true },
@@ -57,7 +58,7 @@ const couponSchema = mongoose.Schema(
 // ^find => it mean if part of of teh word contains find
 couponSchema.pre(/^find/, function (next) {
   // this => query
-  this.populate({ path: 'marketer', select: 'name email profileImg' });
+  this.populate({ path: 'marketer', select: 'name email profileImg isInstructor' });
   next();
 });
 
