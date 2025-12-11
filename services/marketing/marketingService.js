@@ -24,14 +24,14 @@ const {
 exports.startMarketing = async (req, res) => {
   try {
     const userId = req.params.userId;
-    let { type } = req.query;
+    let { role } = req.body;
     const { fallBackCoach } = req.body;
-    if (type && type === "instructor") {
+    if (role && role === "instructor") {
       const result = await createInstructorProfitsDocument(userId);
       if (typeof result === "string") {
         return res.status(400).json({ status: "failed", msg: result });
       }
-      type = "marketer";
+      role = "marketer";
     }
 
     const isMarketer = await MarketingLog.exists({ marketer: userId });
@@ -49,12 +49,12 @@ exports.startMarketing = async (req, res) => {
     await MarketingLog.create({
       marketer: userId,
       invitor: user.invitor,
-      role: type,
+      role: role,
       fallBackCoach,
     });
     //4-update user startMarketing field
     let updateBody;
-    if (type && type === "affiliate") {
+    if (role && role === "affiliate") {
       updateBody = { isAffiliateMarketer: true };
     } else {
       updateBody = { isMarketer: true };
@@ -73,7 +73,7 @@ exports.startMarketing = async (req, res) => {
 };
 //--------------------------------------New One
 
-const updateSellerSales = async (data, profitPercentage = null) => {
+const updateSellerSales = async (data) => {
   console.log("updating seller sales");
   //**update the sales */
   await MarketingLog.findOneAndUpdate(
@@ -168,7 +168,7 @@ exports.calculateProfits = async (
     };
 
     //7- calculate the percentage
-    let profitPercentage;
+    // let profitPercentage;
     // if (
     //   marketerMarketLog.profitsCalculationMethod &&
     //   marketerMarketLog.profitsCalculationMethod == "manual"
@@ -181,17 +181,19 @@ exports.calculateProfits = async (
     //   );
     // }
     //8- update marketLog with this sale
-    await updateSellerSales(data, data.marketerPercentage);
+    await updateSellerSales(data);
     //9- update current user object in his head.transaction (not sure about this approach till now)
-    // if (marketerMarketLog.role !== "head" && marketerMarketLog.invitor) {
-    //   //create or update current marketer object in his father.treeProfits
-    //   await updateHeadCommission({
-    //     marketerId: marketerMarketLog.marketer,
-    //     invitorId: marketerMarketLog.invitor,
-    //     marketerTotalSalesMoney: data.totalSalesMoney,
-    //     marketerProfitsPercentage: data.marketerPercentage,
-    //   });
-    // }
+    if (marketerMarketLog.invitor) {
+      //create or update current marketer object in his father.treeProfits
+      await updateHeadCommission({
+        marketerId: marketerMarketLog.marketer,
+        invitorId: marketerMarketLog.invitor,
+        marketerPercentage: data.marketerPercentage,
+        totalProfits : data.totalProfits,
+        itemId : data.item._id,
+        itemType : data.itemType,
+      });
+    }
     //10- end of function , thank you :)
     console.log("(calculateProfits) completed");
     return true;
@@ -211,8 +213,10 @@ const updateHeadCommission = async (data) => {
   const {
     marketerId,
     invitorId,
-    marketerTotalSalesMoney,
-    marketerProfitsPercentage,
+    marketerPercentage : sellerPercentage,
+    totalProfits,
+    itemId,
+    itemType,
   } = data;
   //get head marketLog
   const headMarketLog = await MarketingLog.findOne({
@@ -224,17 +228,25 @@ const updateHeadCommission = async (data) => {
   }
   //----------------------------------------
   let commissionsProfitsPercentage;
-  if (
-    headMarketLog.commissionsProfitsCalculationMethod &&
-    headMarketLog.commissionsProfitsCalculationMethod === "manual"
-  ) {
-    commissionsProfitsPercentage = headMarketLog.commissionsProfitsPercentage;
-  } else {
-    commissionsProfitsPercentage =
-      headMarketLog.profitPercentage - marketerProfitsPercentage;
+  // if (
+  //   headMarketLog.commissionsProfitsCalculationMethod &&
+  //   headMarketLog.commissionsProfitsCalculationMethod === "manual"
+  // ) {
+  //   commissionsProfitsPercentage = headMarketLog.commissionsProfitsPercentage;
+  // } else {
+  //   commissionsProfitsPercentage =
+  //     headMarketLog.profitPercentage - marketerProfitsPercentage;
+  // }
+  const itemObj = headMarketLog.profitableItems?.find(item => item.itemId.toString() === itemId.toString() && item.itemType === itemType);
+  if (!itemObj) {
+    return;
+  }
+  commissionsProfitsPercentage = itemObj.percentage - sellerPercentage;
+  if (commissionsProfitsPercentage <= 0) {
+    return;
   }
   //--------------------------------------
-  const profit = (commissionsProfitsPercentage / 100) * marketerTotalSalesMoney;
+  const profit = (commissionsProfitsPercentage / 100) * totalProfits;
 
   let hasBeenUpdated = false;
   headMarketLog.commissions.map((commission) => {
@@ -431,7 +443,6 @@ const createWalletInvoice = async (marketLog, reqBody) => {
 exports.createInvoice = async (req, res, next) => {
   try {
     //1- Get all marketerLof data
-
     if (!req.query.type || req.query.type === "marketer") {
       const marketLog = await MarketingLog.findOne({ marketer: req.params.id });
       //2- check existance
@@ -615,18 +626,16 @@ const filterTeamMembers = async (teamMembers, lang) => {
 //-----------------------------------------------------------------
 exports.modifyInvitationKeys = async (req, res) => {
   try {
-    const { option } = req.query;
     const marketLog = await MarketingLog.findOne({
       marketer: req.params.id,
     }).select("_id invitationKeys");
     if (!marketLog) throw new ApiError("No marketerLog found", 404);
+    const { invitationKey , option } = req.body;
 
     if (!option || option === "add") {
-      const { invitationKey } = req.body;
       marketLog.invitationKeys.push(invitationKey);
     }
     if (option === "remove") {
-      const { invitationKey } = req.body;
       marketLog.invitationKeys = marketLog.invitationKeys.filter(
         (key) => key !== invitationKey
       );

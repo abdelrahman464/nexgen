@@ -111,7 +111,7 @@ exports.createFilterObj = (examType) => async (req, res, next) => {
 exports.createExam = asyncHandler(async (req, res, next) => {
   try {
     const { title, lesson, course, model, passingScore, type } = req.body;
-
+   
     let exam = {};
     // Create exam document
     if (type === "lesson") {
@@ -493,28 +493,24 @@ const getCourseExam = async (req) => {
       401
     );
   }
+  
 
   if (examResult.status === "Completed")
     throw new ApiError("You have already completed this course", 401);
-  //1- checking if the last exam is completed
-  const lastProgress = examResult.progress[examResult.progress.length - 1];
 
-  if (lastProgress.status !== "Completed")
-    throw new ApiError(
-      "You must complete all lessons before taking the exam",
-      401
-    );
-  //2- checking if the last progress is the last lesson in the course
-  const lastLesson = await Lesson.findOne({ course: params.id }).sort({
+  const lastLesson = await Lesson.findOne({ course: params.id , hasQuiz:true }).sort({
     order: -1,
   });
+  //1- checking if the last exam is completed
+  const lastProgress = examResult.progress.find(
+    prog => prog.lesson.order === lastLesson.order
+  );
 
-  if (lastLesson._id.toString() !== lastProgress.lesson._id.toString()) {
+  if (!lastProgress || lastProgress.status != "Completed")
     throw new ApiError(
       "You must complete all lessons before taking the exam",
       401
     );
-  }
 
   let examModelType = "A";
   if (examResult.status === "failed" && examResult.modelExam === "B") {

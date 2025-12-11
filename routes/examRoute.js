@@ -92,7 +92,7 @@ router
   );
 
 // to create course exam or lesson exam or placement exam
-router.post("/", authService.protect, isTheExamInstructor, createExam);
+router.post("/", authService.protect, createExam);
 
 router.put(
   "/:examId/questions",

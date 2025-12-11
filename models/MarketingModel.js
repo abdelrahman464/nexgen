@@ -111,7 +111,7 @@ const MarketingLogsSchema = new mongoose.Schema(
         ],
         status: {
           type: String,
-          Enum: ["pending", "paid"],
+          Enum: ["pending", "paid","rejected"],
           default: "pending",
         },
         paidAt: {

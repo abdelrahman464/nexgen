@@ -29,11 +29,16 @@ exports.isAuthorized = async (req, res, next) => {
   if (req.user.role === "admin") {
     return next();
   }
-  const analytic = await Analytic.findById(id);
+  const analytic = await Analytic.findById(id).populate("course" , "instructor");
   if (!analytic) {
     return next(new ApiError(res.__("analytics-errors.One-Not-Found"), 404));
   }
+  //check if actor is 
+  // instructor of the course
+  // owner of the analytic
+  // coach of the analytic's user
   if (
+    req.user._id.toString() !== analytic.course?.instructor?._id.toString() &&
     analytic.user.toString() !== req.user._id.toString() && //not owner
     analytic.marketer &&
     analytic.marketer.toString() !== req.user._id.toString() //not marketer

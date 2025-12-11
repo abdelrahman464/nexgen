@@ -44,7 +44,6 @@ exports.isTheExamInstructor = async (req, res, next) => {
     } else {
       examData = req.body;
     }
-
     // Validate instructor permission based on exam type
     const course = await getCourseForExam(examData);
 

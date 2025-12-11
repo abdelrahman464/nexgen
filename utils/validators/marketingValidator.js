@@ -114,3 +114,29 @@ exports.checkTypeQueryParam = [
 
   validatorMiddleware,
 ];
+
+exports.checkTypeQueryParam2 = [
+  check("role")
+    .notEmpty()
+    .withMessage("role is required")
+    .isIn(["instructor", "marketer", "affiliate"])
+    .withMessage(
+      'role must be either "instructor", "marketer", or "affiliate"'
+    ),
+
+  // Custom validator for fallBackCoach
+  check("fallBackCoach").custom((value, { req }) => {
+    if (req.query.type === "affiliate") {
+      if (!value) {
+        throw new Error("fallBackCoach is required for affiliate type");
+      }
+      // Optionally validate it’s a MongoId
+      if (!mongoose.Types.ObjectId.isValid(value)) {
+        throw new Error("Invalid fallBackCoach id format");
+      }
+    }
+    return true;
+  }),
+
+  validatorMiddleware,
+];

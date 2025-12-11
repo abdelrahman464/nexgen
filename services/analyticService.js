@@ -119,7 +119,6 @@ exports.filterOnUserRole = (req, res, next) => {
   //initialize the new query object  ,i will use it to remove the 'asMarketer' key from the query and 'isPassed' key then => req.query = newQuery ,
   //cause req.query is passed in apiFeatures class and i don't want to pass the 'asMarketer' key to the apiFeatures class
   const newQuery = { ...req.query };
-
   //1-if this key exists in the query then the marketer is trying to get his own analytics
   if (req.user.isMarketer && !req.user.isInstructor) {
     req.filterObj.marketer = req.user._id;
@@ -156,11 +155,10 @@ exports.filterStatus = async (req, res, next) => {
   //   delete req.newQuery.lesson;
   // }
   if (req.query.isSeen) {
-    req.filterObj.isSeen = req.query.isSeen;
+    req.filterObj.isSeen = req.query.isSeen==='0'? false : true;
     delete req.newQuery.isSeen;
   }
   req.query = req.newQuery;
-  req.filterObj ={...req.filterObj, ...req.query};
   return next();
 };
 //2

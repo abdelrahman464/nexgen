@@ -132,7 +132,7 @@ exports.getCouponDetails = async (req, res, next) => {
     const { couponName } = req.params;
     const coupon = await Coupon.findOne({ couponName }).select(
       '-__v -updatedAt',
-    );
+    ).populate('courses', 'title').populate('coursePackages', 'title').populate('packages', 'title');
     if (!coupon) {
       return next(new ApiError(res.__('coupon-errors.Not-Found'), 404));
     }
@@ -144,6 +144,7 @@ exports.getCouponDetails = async (req, res, next) => {
     }
 
     if (
+      !coupon.marketer.isInstructor &&
       coupon.marketer._id.toString() !== req.user._id.toString() &&
       coupon.marketer._id.toString() !== req.user.invitor?.toString()
     )

@@ -12,7 +12,7 @@ exports.checkMongoId = (variableName) => [
 ];
 //------------------------------------------------
 exports.isUserSubscribed = async (req, res, next) => {
-  if (req.user.role === "admin" || req.user.authToReview) {
+  if (req.user.role === "admin" || req.user.isInstructor ||req.user.authToReview) {
     return next();
   }
   return next(new ApiError(res.__("user-errors.unSubscribe"), 401));

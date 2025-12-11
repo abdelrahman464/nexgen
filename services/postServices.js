@@ -147,6 +147,13 @@ exports.createFilterObjAllowedCoursePosts = asyncHandler(
         if (!package) {
           return next(new ApiError('No package found for this course', 404));
         }
+        //check if he is the instructor of course
+        const instructorId = package.instructor || package.course.instructor._id
+
+        if(instructorId && instructorId.toString() === req.user._id.toString() ){
+          req.filterObj = { sharedTo: 'course', course: { $in: [course] } };
+          return next();
+        }
         //-------------------------------------------------------------
 
         const userSubscription = await UserSubscription.findOne({
@@ -210,6 +217,16 @@ exports.createFilterObjPackagesPosts = asyncHandler(async (req, res, next) => {
     if (!package) {
       return next(new ApiError('package not found', 404));
     }
+    const instructorId = package.instructor || package.course.instructor._id
+
+    if(instructorId && instructorId.toString() === req.user._id.toString() ){
+      req.filterObj = {
+        sharedTo: 'package',
+        package: { $in: [package._id] },
+      };  
+      return next();
+    }
+
     const {
       title: { en: packageTitle },
     } = package;

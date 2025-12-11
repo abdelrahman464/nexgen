@@ -12,6 +12,7 @@ const {
   modifyProfitableItems,
   getProfitableItemsByType,
 } = require("../services/marketing/marketingService");
+// const { fixMarketingSalesData } = require("../services/marketing/fixBugs");
 const {
   getInstructorAnalytics,
 } = require("../services/marketing/instructorProfitsService");
@@ -22,6 +23,7 @@ const {
   modifyInvitationKeysValidator,
   validateProfitCalculation,
   checkTypeQueryParam,
+  checkTypeQueryParam2
 } = require("../utils/validators/marketingValidator");
 
 const router = express.Router();
@@ -104,7 +106,7 @@ router.put(
   "/startMarketing/:userId",
   authServices.protect,
   authServices.allowedTo("user", "admin"),
-  checkTypeQueryParam,
+  checkTypeQueryParam2,
   startMarketing
 );
 
@@ -114,5 +116,12 @@ router.get(
   authServices.allowedTo("user", "admin"),
   getProfitableItemsByType
 );
+
+// router.post(
+//   "/fixSalesData",
+//   // authServices.protect,
+//   // authServices.allowedTo("admin"),
+//   fixMarketingSalesData
+// );
 
 module.exports = router;

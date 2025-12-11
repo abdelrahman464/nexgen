@@ -90,7 +90,6 @@ packageSchema.pre(/^find/, function (next) {
     path: "course",
     select: "title colors -accessibleCourses -category",
   });
-
   next();
 });
 const setImageURL = (doc) => {

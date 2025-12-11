@@ -115,7 +115,7 @@ exports.createOne = async (req, res, next) => {
       )
     );
   }
-  req.body.instructor = courseDoc.instructor;
+  req.body.instructor = courseDoc.instructor._id;
   return factory.createOne(Package)(req, res, next);
 };
 

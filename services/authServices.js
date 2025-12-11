@@ -108,9 +108,9 @@ exports.signup = asyncHandler(async (req, res, next) => {
     }
     invitorId = marketLog.marketer;
     if (marketLog.role === "affiliate") {
-      coachId = marketLog.marketer;
-    } else {
       coachId = marketLog.fallBackCoach;
+    } else {
+      coachId = marketLog.marketer;
     }
   }
 
@@ -829,11 +829,7 @@ exports.getLoggedUserData = async (req, res, next) => {
       }
     } //----------------------
     // Select specific fields for logged-in user
-    const user = await User.findById(currentUser._id).select(
-      "name email profileImg authToReview coverImg role timeSpent " +
-        "isMarketer isInstructor isCustomerService startMarketing " +
-        "idNumber phone country idVerification note lang"
-    );
+    const user = await User.findById(currentUser._id)
 
     if (!user) {
       return next(new ApiError("User not found", 404));

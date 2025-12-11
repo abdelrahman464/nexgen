@@ -60,8 +60,8 @@ const InstructorProfitsSchema = new mongoose.Schema(
         desc: String,
         status: {
           type: String,
-          Enum: ["unpaid", "paid"],
-          default: "unpaid",
+          Enum: ["pending", "paid","rejected"],
+          default: "pending",
         },
         createdAt: {
           type: Date,
