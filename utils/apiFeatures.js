@@ -5,14 +5,9 @@ class ApiFeatures {
   }
 
   filter() {
-    const queryStringObj = { ...this.queryStr };
-    const excludesFields = ['page', 'sort', 'limit', 'fields'];
-    excludesFields.forEach((field) => delete queryStringObj[field]);
-
-    let queryStr = JSON.stringify(queryStringObj);
-    queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, (match) => `$${match}`);
-
-    this.mongooseQuery = this.mongooseQuery.find(JSON.parse(queryStr));
+    // Filter is already applied in handllerFactory.js via Model.find(filter)
+    // This method is kept for backward compatibility but doesn't need to do anything
+    // since the query is already created with the filter conditions
     return this;
   }
 
@@ -38,11 +33,23 @@ class ApiFeatures {
 
   search(modelName) {
     if (this.queryStr.keyword) {
-      let query = {};
+      let searchQuery = {};
       if (modelName === 'User') {
-        query = { name: { $regex: this.queryStr.keyword, $options: 'i' } };
+        searchQuery = {
+          name: { $regex: this.queryStr.keyword, $options: 'i' },
+        };
+      } else if (modelName === 'Notification') {
+        searchQuery.$or = [
+          { 'message.ar': { $regex: this.queryStr.keyword, $options: 'i' } },
+          { 'message.en': { $regex: this.queryStr.keyword, $options: 'i' } },
+        ];
+      } else if (modelName === 'Analytic') {
+        searchQuery = {
+          content: { $regex: this.queryStr.keyword, $options: 'i' },
+        };
       } else {
-        query.$or = [
+        // Default search for models with title/description
+        searchQuery.$or = [
           { 'title.ar': { $regex: this.queryStr.keyword, $options: 'i' } },
           { 'title.en': { $regex: this.queryStr.keyword, $options: 'i' } },
           {
@@ -53,7 +60,8 @@ class ApiFeatures {
           },
         ];
       }
-      this.mongooseQuery = this.mongooseQuery.find(query);
+      // Use and() to merge search conditions with existing query conditions
+      this.mongooseQuery = this.mongooseQuery.and([searchQuery]);
     }
     return this;
   }
@@ -62,7 +70,6 @@ class ApiFeatures {
     const page = parseInt(this.queryStr.page, 10) || 1;
     const limit = parseInt(this.queryStr.limit, 10) || 50;
     const startIndex = (page - 1) * limit;
-    const endIndex = page * limit;
 
     this.mongooseQuery = this.mongooseQuery.skip(startIndex).limit(limit);
 

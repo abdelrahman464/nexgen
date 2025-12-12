@@ -1,21 +1,21 @@
-const asyncHandler = require("express-async-handler");
-const sharp = require("sharp");
-const { v4: uuidv4 } = require("uuid");
-const fs = require("fs/promises");
-const path = require("path");
-const ApiError = require("../utils/apiError");
-const Analytic = require("../models/analyticsModel");
-const CourseProgress = require("../models/courseProgressModel");
-const factory = require("./handllerFactory");
-const { uploadMixOfFiles } = require("../middlewares/uploadImageMiddleware");
-const Lesson = require("../models/lessonModel");
-const _ = require("lodash");
-const { checkUserSubscription } = require("./userSubscriptionService");
-const Course = require("../models/courseModel");
+const asyncHandler = require('express-async-handler');
+const sharp = require('sharp');
+const { v4: uuidv4 } = require('uuid');
+const fs = require('fs/promises');
+const path = require('path');
+const ApiError = require('../utils/apiError');
+const Analytic = require('../models/analyticsModel');
+const CourseProgress = require('../models/courseProgressModel');
+const factory = require('./handllerFactory');
+const { uploadMixOfFiles } = require('../middlewares/uploadImageMiddleware');
+const Lesson = require('../models/lessonModel');
+const _ = require('lodash');
+const { checkUserSubscription } = require('./userSubscriptionService');
+const Course = require('../models/courseModel');
 
 exports.uploadMedia = uploadMixOfFiles([
   {
-    name: "media",
+    name: 'media',
     maxCount: 15,
   },
 ]);
@@ -34,20 +34,20 @@ exports.resize = asyncHandler(async (req, res, next) => {
       // Check if the file type is allowed
       if (
         [
-          "image/jpeg",
-          "image/webp",
-          "image/png",
-          "image/gif",
-          "application/pdf",
-          "application/msword",
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          'image/jpeg',
+          'image/webp',
+          'image/png',
+          'image/gif',
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         ].includes(file.mimetype)
       ) {
         // Save each file to the uploads directory
         // eslint-disable-next-line no-await-in-loop
         await fs.writeFile(
-          path.join("uploads", "analytics", newFileName),
-          file.buffer
+          path.join('uploads', 'analytics', newFileName),
+          file.buffer,
         );
         req.body.media.push(newFileName); // Append the new file name to the media array
       } else {
@@ -61,9 +61,9 @@ exports.resize = asyncHandler(async (req, res, next) => {
     if (!req.body.media.length) {
       return next(
         new ApiError(
-          "Unsupported file types provided. Only images, PDF, and Word documents are allowed.",
-          400
-        )
+          'Unsupported file types provided. Only images, PDF, and Word documents are allowed.',
+          400,
+        ),
       );
     }
   }
@@ -93,14 +93,14 @@ exports.resize = asyncHandler(async (req, res, next) => {
 // });
 exports.checkUserSubscription = async (req, res, next) => {
   try {
-    if (req.user.role === "admin") {
+    if (req.user.role === 'admin') {
       return next();
     }
     let course = null;
     const { lesson } = req.query;
     if (lesson) {
       const courseDoc = await Lesson.findOne({ _id: lesson });
-      if (!courseDoc) return next(new ApiError("Lesson not found", 404));
+      if (!courseDoc) return next(new ApiError('Lesson not found', 404));
       course = courseDoc.course._id;
     }
     await checkUserSubscription(req.user._id, course);
@@ -112,17 +112,17 @@ exports.checkUserSubscription = async (req, res, next) => {
 //----- filters
 //3
 exports.filterOnUserRole = (req, res, next) => {
-  if(!req.query.course){
-    return next(new ApiError("course is required", 400));
+  if (!req.query.course) {
+    return next(new ApiError('course is required', 400));
   }
-  req.filterObj = {course: req.query.course};
+  req.filterObj = { course: req.query.course };
   //initialize the new query object  ,i will use it to remove the 'asMarketer' key from the query and 'isPassed' key then => req.query = newQuery ,
   //cause req.query is passed in apiFeatures class and i don't want to pass the 'asMarketer' key to the apiFeatures class
   const newQuery = { ...req.query };
   //1-if this key exists in the query then the marketer is trying to get his own analytics
   if (req.user.isMarketer && !req.user.isInstructor) {
     req.filterObj.marketer = req.user._id;
-  }else if(!req.user.isMarketer && !req.user.isInstructor){
+  } else if (!req.user.isMarketer && !req.user.isInstructor) {
     req.filterObj.user = req.user._id;
   }
   req.newQuery = newQuery;
@@ -137,11 +137,11 @@ exports.filterStatus = async (req, res, next) => {
   }
 
   if (req.query.isPassed) {
-    if (req.query.isPassed === "1" || req.query.isPassed === "true")
+    if (req.query.isPassed === '1' || req.query.isPassed === 'true')
       req.filterObj.isPassed = true;
-    else if (req.query.isPassed === "0" || req.query.isPassed === "false")
+    else if (req.query.isPassed === '0' || req.query.isPassed === 'false')
       req.filterObj.isPassed = false;
-    else return next(new ApiError("Invalid query", 400));
+    else return next(new ApiError('Invalid query', 400));
     //remove the key from the query
     delete req.newQuery.isPassed;
   }
@@ -155,7 +155,7 @@ exports.filterStatus = async (req, res, next) => {
   //   delete req.newQuery.lesson;
   // }
   if (req.query.isSeen) {
-    req.filterObj.isSeen = req.query.isSeen==='0'? false : true;
+    req.filterObj.isSeen = req.query.isSeen === '0' ? false : true;
     delete req.newQuery.isSeen;
   }
   req.query = req.newQuery;
@@ -170,7 +170,7 @@ exports.assignIds = (req, res, next) => {
 
 //----CRUD Operations
 //@access : admin
-exports.getAll = factory.getALl(Analytic);
+exports.getAll = factory.getALl(Analytic, 'Analytic');
 //@access : admin || owner || marketer
 exports.getOne = factory.getOne(Analytic);
 //assignIds
@@ -182,19 +182,19 @@ exports.createOne = async (req, res, next) => {
     const lesson = await Lesson.findById(lessonId);
     if (!lesson) {
       return next(
-        new ApiError(res.__("errors.Not-Found", { document: "lesson" }), 404)
+        new ApiError(res.__('errors.Not-Found', { document: 'lesson' }), 404),
       );
     }
     if (!lesson.course) {
       return next(
-        new ApiError(`this lesson don't belong to specific course`, 404)
+        new ApiError(`this lesson don't belong to specific course`, 404),
       );
     }
     //step 2: check if the lesson is required to have an analytic
     const userCourseProgress = await CourseProgress.findOne({
       user: req.user._id,
       course: lesson.course._id,
-    }).populate("progress.lesson");
+    }).populate('progress.lesson');
 
     //step 3 update it's course progress object
     let flag = false;
@@ -222,12 +222,12 @@ exports.updateOne = async (req, res, next) => {
     });
     if (!document) {
       return next(
-        new ApiError(res.__("errors.Not-Found", { document: "document" }), 404)
+        new ApiError(res.__('errors.Not-Found', { document: 'document' }), 404),
       );
     }
-    return res.status(200).json({ status: "success", data: document });
+    return res.status(200).json({ status: 'success', data: document });
   } catch (error) {
-    console.error("Error updating document:", error);
+    console.error('Error updating document:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -254,7 +254,7 @@ function filterAnalyticsDocs(analytics) {
 function toISOFormat(dateString) {
   // Parse the input date (MM/DD/YYYY)
   // const [day, month, year] = dateString.split("-").map(Number);
-  const [year, month, day] = dateString.split("-").map(Number);
+  const [year, month, day] = dateString.split('-').map(Number);
   // Create a Date object
   const date = new Date(Date.UTC(year, month - 1, day));
   // Convert to ISO format
@@ -277,13 +277,13 @@ exports.getAnalyticsPerformance = async (req, res, next) => {
   const analyticsDocs = await Analytic.find({
     user: userId,
     createdAt: { $gte: startDate, $lte: endDate },
-  }).select("-__v -updatedAt");
+  }).select('-__v -updatedAt');
 
   const result = filterAnalyticsDocs(analyticsDocs, startDate, endDate);
   //get analytics with the same period
   const analyticsCount = analyticsDocs.length;
   return res.status(200).json({
-    status: "success",
+    status: 'success',
     passedAnalyticsCount,
     totalAnalytics: analyticsCount,
     passedDocs: result.passedDocs,

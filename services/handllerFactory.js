@@ -1,6 +1,6 @@
-const ApiError = require("../utils/apiError");
-const ApiFeatures = require("../utils/apiFeatures");
-const { addTranslationFields } = require("../helpers/courseHelper");
+const ApiError = require('../utils/apiError');
+const ApiFeatures = require('../utils/apiFeatures');
+const { addTranslationFields } = require('../helpers/courseHelper');
 
 exports.updateOne = (Model) => async (req, res, next) => {
   try {
@@ -10,19 +10,19 @@ exports.updateOne = (Model) => async (req, res, next) => {
 
     if (!document) {
       return next(
-        new ApiError(res.__("errors.Not-Found", { document: "document" }), 404)
+        new ApiError(res.__('errors.Not-Found', { document: 'document' }), 404),
       );
     }
     const localizedDocument = Model.schema.methods.toJSONLocalizedOnly(
       document,
-      req.locale
+      req.locale,
     );
     res
       .status(200)
       .json({ status: `updated successfully`, data: localizedDocument });
   } catch (error) {
-    console.error("Error updating document:", error);
-    res.status(500).json({ error: "Internal server error" });
+    console.error('Error updating document:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
@@ -31,13 +31,13 @@ exports.createOne = (Model) => async (req, res) => {
     const document = await Model.create(req.body);
     const localizedDocument = Model.schema.methods.toJSONLocalizedOnly(
       document,
-      req.locale
+      req.locale,
     );
     return res
       .status(201)
       .json({ status: `created successfully`, data: localizedDocument });
   } catch (error) {
-    console.error("Error creating document:", error);
+    console.error('Error creating document:', error);
     return res.status(500).json({ error: error.message });
   }
 };
@@ -56,10 +56,10 @@ exports.getOne = (Model, populationOpt) => async (req, res, next) => {
     if (!document) {
       return next(new ApiError(`No document For this id ${id}`, 404));
     }
-    
+
     const localizedResult = Model.schema.methods.toJSONLocalized(
       document,
-      req.locale
+      req.locale,
     );
     // localizedResult = addTranslationFields(document, localizedResult);
     // const { title } = document;
@@ -101,12 +101,12 @@ exports.getOne = (Model, populationOpt) => async (req, res, next) => {
     // }
     return res.status(200).json({ data: localizedResult });
   } catch (error) {
-    console.error("Error fetching document:", error);
-    res.status(500).json({ error: "Internal server error" });
+    console.error('Error fetching document:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 exports.getALl =
-  (Model, modelName = "", populationOpt) =>
+  (Model, modelName = '', populationOpt) =>
   async (req, res) => {
     try {
       let filter = {};
@@ -118,7 +118,7 @@ exports.getALl =
 
       // If no initial filter, build from query params
       if (Object.keys(filter).length === 0) {
-        const excludesFields = ["page", "sort", "limit", "fields"];
+        const excludesFields = ['page', 'sort', 'limit', 'fields', 'keyword'];
         const queryObj = { ...req.query };
         excludesFields.forEach((field) => delete queryObj[field]);
         filter = { ...queryObj };
@@ -142,13 +142,12 @@ exports.getALl =
 
       // Get paginated results
       const results = await apiFeatures.paginate();
-
       // Apply localization if method exists
       let localizedResult = results;
       if (Model.schema.methods && Model.schema.methods.toJSONLocalizedOnly) {
         localizedResult = Model.schema.methods.toJSONLocalizedOnly(
           results,
-          req.locale
+          req.locale,
         );
       }
 
@@ -174,9 +173,9 @@ exports.getALl =
         data: localizedResult,
       });
     } catch (error) {
-      console.error("Error fetching documents:", error);
+      console.error('Error fetching documents:', error);
       res.status(500).json({
-        error: "Internal server error",
+        error: 'Internal server error',
         message: error.message,
       });
     }
@@ -193,7 +192,7 @@ exports.deleteOne = (Model) => async (req, res, next) => {
     document.remove();
     res.status(204).send();
   } catch (error) {
-    console.error("Error deleting document:", error);
-    res.status(500).json({ error: "Internal server error" });
+    console.error('Error deleting document:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
