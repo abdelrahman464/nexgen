@@ -1,16 +1,17 @@
-const asyncHandler = require("express-async-handler");
-const mongoose = require("mongoose");
-const sharp = require("sharp");
-const { v4: uuidv4 } = require("uuid");
-const ApiError = require("../../utils/apiError");
-const Exam = require("../../models/examModel");
-const CourseProgress = require("../../models/courseProgressModel");
-const Lesson = require("../../models/lessonModel");
-const Course = require("../../models/courseModel");
-const User = require("../../models/userModel");
-const Notification = require("../../models/notificationModel");
-const factory = require("../handllerFactory");
-const { uploadMixOfFiles } = require("../../middlewares/uploadImageMiddleware");
+const asyncHandler = require('express-async-handler');
+const mongoose = require('mongoose');
+const sharp = require('sharp');
+const { v4: uuidv4 } = require('uuid');
+const _ = require('lodash');
+const ApiError = require('../../utils/apiError');
+const Exam = require('../../models/examModel');
+const CourseProgress = require('../../models/courseProgressModel');
+const Lesson = require('../../models/lessonModel');
+const Course = require('../../models/courseModel');
+const User = require('../../models/userModel');
+const Notification = require('../../models/notificationModel');
+const factory = require('../handllerFactory');
+const { uploadMixOfFiles } = require('../../middlewares/uploadImageMiddleware');
 const {
   checkUserProgress,
   fetchExam,
@@ -22,19 +23,18 @@ const {
   handleExamResponse,
   getTotalGrades,
   getCorrectAndWrongAnswers,
-} = require("./examUtils");
-const _ = require("lodash");
-const { generateCertificate } = require("../../utils/generateCertificate");
-const { modifyExamQuestionsNumber } = require("../../helpers/examHelper");
-const sendEmail = require("../../utils/sendEmail");
+} = require('./examUtils');
+const { generateCertificate } = require('../../utils/generateCertificate');
+const { modifyExamQuestionsNumber } = require('../../helpers/examHelper');
+const sendEmail = require('../../utils/sendEmail');
 // Middleware to upload question image and options images-------------
 exports.uploadQuestionAndOptions = uploadMixOfFiles([
   {
-    name: "questionImage",
+    name: 'questionImage',
     maxCount: 1,
   },
   {
-    name: "options",
+    name: 'options',
     maxCount: 6,
   },
 ]);
@@ -43,38 +43,38 @@ exports.processQuestionImages = asyncHandler(async (req, res, next) => {
   try {
     if (
       req.files.questionImage &&
-      req.files.questionImage[0].mimetype.startsWith("image/")
+      req.files.questionImage[0].mimetype.startsWith('image/')
     ) {
       const questionImageFileName = `questions-${uuidv4()}-${Date.now()}-cover.webp`;
 
       await sharp(req.files.questionImage[0].buffer)
-        .toFormat("webp")
+        .toFormat('webp')
         .webp({ quality: 95 })
         .toFile(`uploads/questions/${questionImageFileName}`);
 
       req.body.questionImage = questionImageFileName;
     } else if (req.files.questionImage) {
-      return next(new ApiError("Question image is not an image file", 400));
+      return next(new ApiError('Question image is not an image file', 400));
     }
 
     if (req.files.options) {
       const imageProcessingPromises = req.files.options.map(
         async (img, index) => {
-          if (!img.mimetype.startsWith("image/")) {
+          if (!img.mimetype.startsWith('image/')) {
             return next(
-              new ApiError(`Option ${index + 1} is not an image file.`, 400)
+              new ApiError(`Option ${index + 1} is not an image file.`, 400),
             );
           }
 
           const imageName = `option-${uuidv4()}-${Date.now()}-${index + 1}.webp`;
 
           await sharp(img.buffer)
-            .toFormat("webp")
+            .toFormat('webp')
             .webp({ quality: 95 })
             .toFile(`uploads/questions/options/${imageName}`);
 
           return imageName;
-        }
+        },
       );
 
       req.body.options = await Promise.all(imageProcessingPromises);
@@ -90,17 +90,17 @@ exports.createFilterObj = (examType) => async (req, res, next) => {
   let filterObject = {};
 
   switch (examType) {
-    case "course":
-      filterObject = { course: req.params.courseId, type: "course" };
+    case 'course':
+      filterObject = { course: req.params.courseId, type: 'course' };
       break;
-    case "lesson":
-      filterObject = { lesson: req.params.lessonId, type: "lesson" };
+    case 'lesson':
+      filterObject = { lesson: req.params.lessonId, type: 'lesson' };
       break;
-    case "placement":
-      filterObject = { course: req.params.courseId, type: "placement" };
+    case 'placement':
+      filterObject = { course: req.params.courseId, type: 'placement' };
       break;
     default:
-      return next(new ApiError("Invalid exam type", 400));
+      return next(new ApiError('Invalid exam type', 400));
   }
 
   req.filterObj = filterObject;
@@ -111,17 +111,17 @@ exports.createFilterObj = (examType) => async (req, res, next) => {
 exports.createExam = asyncHandler(async (req, res, next) => {
   try {
     const { title, lesson, course, model, passingScore, type } = req.body;
-   
+
     let exam = {};
     // Create exam document
-    if (type === "lesson") {
+    if (type === 'lesson') {
       const existExam = await Exam.findOne({ lesson, model });
       if (existExam) {
         return next(
           new ApiError(
             `Exam already exists for this lesson with Model ${model}`,
-            400
-          )
+            400,
+          ),
         );
       }
       exam = await Exam.create({
@@ -131,14 +131,14 @@ exports.createExam = asyncHandler(async (req, res, next) => {
         passingScore,
         type,
       });
-    } else if (type === "course" || type === "placement") {
+    } else if (type === 'course' || type === 'placement') {
       const existExam = await Exam.findOne({ course, model, type });
       if (existExam) {
         return next(
           new ApiError(
             `Exam already exists for this course with Model ${model}`,
-            400
-          )
+            400,
+          ),
         );
       }
 
@@ -152,7 +152,7 @@ exports.createExam = asyncHandler(async (req, res, next) => {
     }
 
     res.status(201).json({
-      status: "success",
+      status: 'success',
       data: {
         exam,
       },
@@ -190,17 +190,17 @@ exports.addQuestionToExam = asyncHandler(async (req, res, next) => {
     const updatedExam = await Exam.findByIdAndUpdate(
       examId,
       { $push: { questions: newQuestion } },
-      { new: true, safe: true, upsert: true }
+      { new: true, safe: true, upsert: true },
     );
 
     if (!updatedExam) {
-      return next(new ApiError("Exam not found", 404));
+      return next(new ApiError('Exam not found', 404));
     }
     //increment numOfquestions
     await modifyExamQuestionsNumber(updatedExam);
 
     res.status(200).json({
-      status: "success",
+      status: 'success',
       data: {
         exam: updatedExam,
       },
@@ -226,24 +226,24 @@ exports.updateQuestionInExam = asyncHandler(async (req, res, next) => {
       { _id: examId },
       { $set: update },
       {
-        arrayFilters: [{ "elem._id": questionId }], // Specify the condition to identify the correct question to update
+        arrayFilters: [{ 'elem._id': questionId }], // Specify the condition to identify the correct question to update
         new: true, // Return the updated document
-      }
+      },
     );
 
     if (result.matchedCount === 0) {
-      return next(new ApiError("Exam not found", 404));
+      return next(new ApiError('Exam not found', 404));
     }
 
     if (result.modifiedCount === 0) {
-      return next(new ApiError("Question not found or no update made", 404));
+      return next(new ApiError('Question not found or no update made', 404));
     }
 
     // Since updateOne doesn't return the updated document, we fetch it to return in response
     const updatedExam = await Exam.findById(examId);
 
     res.status(200).json({
-      status: "success",
+      status: 'success',
       data: updatedExam,
     });
   } catch (err) {
@@ -257,18 +257,18 @@ exports.removeQuestionsFromExam = asyncHandler(async (req, res, next) => {
     const exam = await Exam.findByIdAndUpdate(
       examId,
       { $pull: { questions: { _id: questionId } } },
-      { new: true }
+      { new: true },
     );
 
     if (!exam) {
-      return next(new ApiError("Exam not found", 404));
+      return next(new ApiError('Exam not found', 404));
     }
     //decrement numOfquestions
     await modifyExamQuestionsNumber(exam);
 
     res.status(200).json({
-      status: "success",
-      message: "Question removed successfully",
+      status: 'success',
+      message: 'Question removed successfully',
       data: exam.questions,
     });
   } catch (err) {
@@ -287,15 +287,15 @@ exports.getCourseProgress = asyncHandler(async (req, res, next) => {
     });
 
     if (!courseProgress) {
-      return next(new ApiError("Course progress not found", 404));
+      return next(new ApiError('Course progress not found', 404));
     }
 
     const localizedCourseProgress =
       CourseProgress.schema.methods.toJSONLocalizedOnly(
         courseProgress,
-        req.locale
+        req.locale,
       );
-    res.status(200).json({ status: "success", data: localizedCourseProgress });
+    res.status(200).json({ status: 'success', data: localizedCourseProgress });
   } catch (err) {
     next(new ApiError(err.message, 500));
   }
@@ -310,32 +310,35 @@ exports.getLessonPerformance = asyncHandler(async (req, res, next) => {
 
     const courseProgress = await CourseProgress.findOne({
       user: userId,
-      "progress.lesson": lessonId,
+      'progress.lesson': lessonId,
     });
 
     if (!courseProgress) {
-      return next(new ApiError("Course progress not found", 404));
+      return next(new ApiError('Course progress not found', 404));
     }
     const { progress } = courseProgress;
     //get the completed lesson object Not failed lessons
     const lessonExamResult = _.maxBy(
-      progress.filter(
-        (p) =>
-          _.get(p, "lesson._id")?.toString() === lessonId &&
-          p.status === "Completed"
-      ),
-      (p) => new Date(p.attemptDate)
+      progress.filter((p) => {
+        const lessonIdFromProgress = _.get(p, 'lesson._id');
+        return (
+          lessonIdFromProgress &&
+          lessonIdFromProgress.toString() === lessonId &&
+          p.status === 'Completed'
+        );
+      }),
+      (p) => new Date(p.attemptDate),
     );
     //return Lesson_exam_object
     if (!lessonExamResult) {
-      return next(new ApiError("Lesson progress not found", 404));
+      return next(new ApiError('Lesson progress not found', 404));
     }
 
     const lessonQuestions =
       await this.checkExamQuestionsStatus(lessonExamResult);
 
     return res.status(200).json({
-      status: "success",
+      status: 'success',
       lessonQuestions,
       wrongAnswers: lessonExamResult.wrongAnswers,
     });
@@ -352,17 +355,19 @@ exports.checkExamQuestionsStatus = async (lessonExamResult) => {
   const lessonExam = await Exam.findOne({
     lesson: lessonExamResult.lesson._id,
     model: lessonExamResult.modelExam,
-  }).select("questions");
+  }).select('questions');
   // Convert each question to a plain JavaScript object
   //This allows you to freely add new properties
   const lessonExamQuestions = lessonExam.questions.map((question) =>
-    question.toObject()
+    question.toObject(),
   );
   // Iterate over questions and find wrong answered question
   lessonExamQuestions.forEach((question) => {
-    const wrongAnsweredQuestion = lessonExamResult.wrongAnswers.find(
-      (ans) => ans.question?.toString() === question?._id?.toString()
-    );
+    const wrongAnsweredQuestion = lessonExamResult.wrongAnswers.find((ans) => {
+      const ansQuestion = ans.question && ans.question.toString();
+      const questionId = question && question._id && question._id.toString();
+      return ansQuestion === questionId;
+    });
     if (wrongAnsweredQuestion) {
       question.wrongAnswer = wrongAnsweredQuestion.answer;
     }
@@ -395,7 +400,7 @@ exports.getCoursePerformance = asyncHandler(async (req, res, next) => {
       await this.checkCourseQuestionsStatus(courseExamResult);
 
     return res.status(200).json({
-      status: "success",
+      status: 'success',
       courseQuestions,
       wrongAnswers: courseExamResult.wrongAnswers,
     });
@@ -412,17 +417,17 @@ exports.checkCourseQuestionsStatus = async (courseExamResult) => {
   const courseExam = await Exam.findOne({
     course: courseExamResult.course,
     model: courseExamResult.modelExam,
-  }).select("questions");
+  }).select('questions');
   // Convert each question to a plain JavaScript object
   //This allows you to freely add new properties
   const courseExamQuestions = courseExam.questions.map((question) =>
-    question.toObject()
+    question.toObject(),
   );
 
   // Iterate over questions and find wrong answered question
   courseExamQuestions.forEach((question) => {
     const wrongAnsweredQuestion = courseExamResult.wrongAnswers.find(
-      (ans) => ans.question.toString() === question._id.toString()
+      (ans) => ans.question.toString() === question._id.toString(),
     );
     if (wrongAnsweredQuestion) {
       question.wrongAnswer = wrongAnsweredQuestion.answer;
@@ -447,29 +452,29 @@ const getLessonExam = async (lesson, courseProgress, user) => {
   // Determine exam model based on user's previous progress
   const lastProgress =
     courseProgress.progress[courseProgress.progress.length - 1];
-  let examModelType = "A";
-  if (lastProgress && lastProgress.status === "failed") {
+  let examModelType = 'A';
+  if (lastProgress && lastProgress.status === 'failed') {
     const modelBExists = await Exam.exists({
       lesson: lesson._id,
-      model: "B",
+      model: 'B',
     });
     if (modelBExists) {
-      if (lastProgress.modelExam === "A") {
-        examModelType = "B";
+      if (lastProgress.modelExam === 'A') {
+        examModelType = 'B';
       } else {
-        examModelType = "A";
+        examModelType = 'A';
       }
     } else {
-      examModelType = "A";
+      examModelType = 'A';
     }
   }
 
   const exam = await fetchExam({
     id: lesson._id,
-    type: "lesson",
+    type: 'lesson',
     model: examModelType,
   });
-  if (!exam) throw new ApiError("No exam found for this lesson", 404);
+  if (!exam) throw new ApiError('No exam found for this lesson', 404);
 
   return excludeCorrectOptions(exam);
 };
@@ -483,46 +488,48 @@ const getCourseExam = async (req) => {
   });
   if (!examResult) {
     throw new ApiError(
-      "You must purchase course before taking the final exam",
-      401
+      'You must purchase course before taking the final exam',
+      401,
     );
   }
   if (examResult.progress.length === 0) {
     throw new ApiError(
       "You must complete all lesson's exam before taking the final exam",
-      401
+      401,
     );
   }
-  
 
-  if (examResult.status === "Completed")
-    throw new ApiError("You have already completed this course", 401);
+  if (examResult.status === 'Completed')
+    throw new ApiError('You have already completed this course', 401);
 
-  const lastLesson = await Lesson.findOne({ course: params.id , hasQuiz:true }).sort({
+  const lastLesson = await Lesson.findOne({
+    course: params.id,
+    hasQuiz: true,
+  }).sort({
     order: -1,
   });
   //1- checking if the last exam is completed
   const lastProgress = examResult.progress.find(
-    prog => prog.lesson.order === lastLesson.order
+    (prog) => prog.lesson.order === lastLesson.order,
   );
 
-  if (!lastProgress || lastProgress.status != "Completed")
+  if (!lastProgress || lastProgress.status !== 'Completed')
     throw new ApiError(
-      "You must complete all lessons before taking the exam",
-      401
+      'You must complete all lessons before taking the exam',
+      401,
     );
 
-  let examModelType = "A";
-  if (examResult.status === "failed" && examResult.modelExam === "B") {
-    examModelType = "B";
+  let examModelType = 'A';
+  if (examResult.status === 'failed' && examResult.modelExam === 'B') {
+    examModelType = 'B';
   }
 
   const exam = await fetchExam({
     id: params.id,
-    type: "course",
+    type: 'course',
     model: examModelType,
   });
-  if (!exam) throw new ApiError("No exam found for this course", 404);
+  if (!exam) throw new ApiError('No exam found for this course', 404);
 
   return excludeCorrectOptions(exam);
 };
@@ -534,22 +541,22 @@ const getPlacementExam = async (req) => {
 
   const placementExam = await Exam.findOne({
     course: courseId,
-    type: "placement",
+    type: 'placement',
   });
   if (!placementExam)
-    throw new ApiError("No placement exam found for this course", 404);
+    throw new ApiError('No placement exam found for this course', 404);
 
-  let modelExamType = "A";
-  if (user.placementExam && user.placementExam.status === "failed") {
-    modelExamType = user.placementExam.modelExam === "A" ? "B" : "A";
+  let modelExamType = 'A';
+  if (user.placementExam && user.placementExam.status === 'failed') {
+    modelExamType = user.placementExam.modelExam === 'A' ? 'B' : 'A';
   }
 
   const exam = await fetchExam({
     id: courseId,
-    type: "placement",
+    type: 'placement',
     model: modelExamType,
   });
-  if (!exam) throw new ApiError("No exam found for this course", 404);
+  if (!exam) throw new ApiError('No exam found for this course', 404);
 
   return excludeCorrectOptions(exam);
 };
@@ -564,7 +571,7 @@ exports.lessonExam = async (req, res, next) => {
   try {
     const { lesson, courseProgress, user } = req;
     const exam = await getLessonExam(lesson, courseProgress, user);
-    res.status(200).json({ status: "success", exam });
+    res.status(200).json({ status: 'success', exam });
   } catch (error) {
     next(error);
   }
@@ -577,13 +584,13 @@ exports.submitLessonAnswers = async (req, res, next) => {
 
   try {
     // Fetch the exam and lesson
-    const exam = await Exam.findOne({ _id: id, type: "lesson" });
+    const exam = await Exam.findOne({ _id: id, type: 'lesson' });
     if (!exam) {
-      return next(new ApiError("Exam not found", 404));
+      return next(new ApiError('Exam not found', 404));
     }
     const lesson = await Lesson.findById(exam.lesson);
     if (!lesson) {
-      return next(new ApiError("Lesson not found", 404));
+      return next(new ApiError('Lesson not found', 404));
     }
 
     // Check if the user has already completed the lesson
@@ -601,7 +608,7 @@ exports.submitLessonAnswers = async (req, res, next) => {
     const passed = hasPassed(
       examResult.score,
       totalPossibleGrade,
-      exam.passingScore
+      exam.passingScore,
     );
     let examAnalytics = null;
     if (passed) {
@@ -612,7 +619,7 @@ exports.submitLessonAnswers = async (req, res, next) => {
     const newProgress = {
       lesson: lesson._id,
       modelExam: exam.model,
-      status: passed ? "Completed" : "failed",
+      status: passed ? 'Completed' : 'failed',
       examScore: examResult.score,
       attemptDate: new Date(),
       wrongAnswers: examResult.wrongAnswers.map((wa) => ({
@@ -631,16 +638,16 @@ exports.submitLessonAnswers = async (req, res, next) => {
       {
         $push: { progress: newProgress },
       },
-      { new: true }
+      { new: true },
     );
-    
+
     // Respond with exam results
     return handleExamResponse(
       res,
       passed,
       examResult.score,
       totalPossibleGrade,
-      examAnalytics
+      examAnalytics,
     );
   } catch (error) {
     return next(new ApiError(error.message, 500));
@@ -654,7 +661,7 @@ exports.submitLessonAnswers = async (req, res, next) => {
 exports.courseExam = async (req, res, next) => {
   try {
     const exam = await getCourseExam(req);
-    res.status(200).json({ status: "success", exam });
+    res.status(200).json({ status: 'success', exam });
   } catch (error) {
     next(error);
   }
@@ -663,16 +670,16 @@ exports.submitCourseAnswers = async (req, res, next) => {
   try {
     const { id } = req.params; // exam ID
     const { answers } = req.body;
-    const adminId = new mongoose.Types.ObjectId("66447ad7a7957a07c0ae9e69");
+    const adminId = new mongoose.Types.ObjectId('66447ad7a7957a07c0ae9e69');
 
     const exam = await Exam.findById(id);
     if (!exam) {
-      return next(new ApiError("Exam not found", 404));
+      return next(new ApiError('Exam not found', 404));
     }
 
     const course = await Course.findById(exam.course);
     if (!course) {
-      return next(new ApiError("Course not found", 404));
+      return next(new ApiError('Course not found', 404));
     }
 
     // const localizedCourse = Course.schema.methods.toJSONLocalizedOnly(
@@ -685,8 +692,8 @@ exports.submitCourseAnswers = async (req, res, next) => {
       user: req.user._id,
       course: exam.course,
     });
-    if (existingProgress && existingProgress.status === "Completed") {
-      return next(new ApiError("You have already passed this exam.", 400));
+    if (existingProgress && existingProgress.status === 'Completed') {
+      return next(new ApiError('You have already passed this exam.', 400));
     }
 
     // Calculate the score and determine if passed
@@ -696,7 +703,7 @@ exports.submitCourseAnswers = async (req, res, next) => {
     const passed = hasPassed(
       examResult.score,
       totalPossibleGrade,
-      exam.passingScore
+      exam.passingScore,
     );
     let examAnalytics = null;
     if (passed) {
@@ -705,7 +712,7 @@ exports.submitCourseAnswers = async (req, res, next) => {
     // Update course progress
     const updateData = {
       modelExam: exam.model,
-      status: passed ? "Completed" : "failed",
+      status: passed ? 'Completed' : 'failed',
       score: examResult.score,
       attemptDate: Date.now(),
       wrongAnswers: examResult.wrongAnswers,
@@ -714,7 +721,7 @@ exports.submitCourseAnswers = async (req, res, next) => {
       existingProgress = await CourseProgress.findOneAndUpdate(
         { user: req.user._id, course: exam.course },
         { $set: updateData },
-        { new: true, upsert: true }
+        { new: true, upsert: true },
       );
     } else {
       updateData.user = req.user._id;
@@ -723,7 +730,7 @@ exports.submitCourseAnswers = async (req, res, next) => {
     }
     // Fetch user's completed lessons
     const completedLessons = existingProgress.progress.filter(
-      (item) => item.status === "Completed"
+      (item) => item.status === 'Completed',
     );
 
     // Fetch Possible grades for completed lessons
@@ -736,7 +743,7 @@ exports.submitCourseAnswers = async (req, res, next) => {
     // Calculate total possible lessons exams score
     const totalPossibleLessonExamsGrade = possibleLessonExamsGrade.reduce(
       (total, item) => total + item.grade,
-      0
+      0,
     );
 
     // Calculate avgCourseExamsPercentage
@@ -762,16 +769,16 @@ exports.submitCourseAnswers = async (req, res, next) => {
         { user: req.user._id, course: exam.course },
         {
           $set: {
-            "certificate._id": certificateId,
-            "certificate.file": certificate,
+            'certificate._id': certificateId,
+            'certificate.file': certificate,
           },
-        }
+        },
       );
       await Notification.create({
         user: req.user._id,
         course: course._id,
         file: certificate,
-        type: "certificate",
+        type: 'certificate',
         message: {
           en: `Congratulations ${req.user.name} you have earned a certificate for the course ${course.title.en}.`,
           ar: `تهانينا ${req.user.name} لقد حصلت علي شهادة إتمام ${course.title.ar}`,
@@ -780,7 +787,7 @@ exports.submitCourseAnswers = async (req, res, next) => {
       await Notification.create({
         user: adminId,
         course: course._id,
-        type: "certificate",
+        type: 'certificate',
         file: certificate,
         message: {
           en: `User ${req.user.name} has earned a certificate for the course ${course.title.en}.`,
@@ -790,7 +797,7 @@ exports.submitCourseAnswers = async (req, res, next) => {
       //FIXME: send email to user to congragulate him in (html) template
       await sendEmail({
         to: req.user.email,
-        subject: "Congratulations on completing the course",
+        subject: 'Congratulations on completing the course',
         html: `
         <h1>Congratulations on completing the course</h1>
         <p>You have completed the course ${course.title.en}</p>
@@ -815,10 +822,10 @@ exports.submitCourseAnswers = async (req, res, next) => {
       passed,
       examResult.score,
       totalPossibleGrade,
-      examAnalytics
+      examAnalytics,
     );
   } catch (err) {
-    return res.status(400).json({ status: "error", message: err.message });
+    return res.status(400).json({ status: 'error', message: err.message });
   }
 };
 
@@ -829,7 +836,7 @@ exports.submitCourseAnswers = async (req, res, next) => {
 exports.placementExam = async (req, res, next) => {
   try {
     const exam = await getPlacementExam(req);
-    res.status(200).json({ status: "success", exam });
+    res.status(200).json({ status: 'success', exam });
   } catch (error) {
     next(error);
   }
@@ -844,15 +851,15 @@ exports.submitCoursePlacementAnswers = async (req, res, next) => {
     // Fetch the exam
     const exam = await Exam.findById(id);
     if (!exam) {
-      return next(new ApiError("Exam not found", 404));
+      return next(new ApiError('Exam not found', 404));
     }
 
     // Check if user has already failed this exam
     if (
-      user.placementExam.status === "failed" &&
+      user.placementExam.status === 'failed' &&
       exam.model === user.placementExam.modelExam
     ) {
-      return next(new ApiError("You have already failed this exam.", 400));
+      return next(new ApiError('You have already failed this exam.', 400));
     }
 
     // Calculate the score and determine if passed
@@ -876,14 +883,14 @@ exports.submitCoursePlacementAnswers = async (req, res, next) => {
           placementExam: {
             exam: exam._id,
             score: examResult.score,
-            status: passed ? "Completed" : "failed",
+            status: passed ? 'Completed' : 'failed',
             course: exam.course,
             attemptDate: new Date(),
             wrongAnswers: examResult.wrongAnswers,
           },
         },
       },
-      { new: true }
+      { new: true },
     );
 
     // Respond with success or failure message
@@ -892,7 +899,7 @@ exports.submitCoursePlacementAnswers = async (req, res, next) => {
       passed,
       examResult.score,
       totalPossibleScore,
-      examAnalytics
+      examAnalytics,
     );
   } catch (err) {
     return next(new ApiError(err.message, 500));
@@ -908,51 +915,65 @@ exports.userScores = async (req, res, next) => {
   try {
     // const locales = req.locale;
     // console.log('locales', locales);
-
     const { courseId, userId } = req.params;
-
     if (!userId) {
-      return next(new ApiError("User not found", 404));
+      return next(new ApiError('User not found', 404));
     }
-
     // Fetch the user's course progress
     const courseProgress = await CourseProgress.findOne({
       user: userId,
       course: courseId,
-    }).populate("progress.lesson", "title order");
-
+    }).populate('progress.lesson', 'title order');
     if (!courseProgress) {
       // return next(new ApiError('No course progress found for this user.', 404));
       return next(
-        new ApiError(res.__("errors.Not-Found", { document: "course" }), 404)
+        new ApiError(res.__('errors.Not-Found', { document: 'course' }), 404),
       );
     }
-
     const localizedCourseProgress =
       CourseProgress.schema.methods.toJSONLocalizedOnly(
         courseProgress,
-        req.locale
+        req.locale,
       );
-    // Fetch all lessons associated with the course
-    const allLessons = await Lesson.find(
+    // Fetch all lessons associated with the course (including hasQuiz field)
+    let allLessons = await Lesson.find(
       { course: courseId },
-      "_id title order"
+      '_id title order hasQuiz',
     );
+    //localize the lessons
+     allLessons = Lesson.schema.methods.toJSONLocalizedOnly(
+      allLessons,
+      req.locale,
+    );
+
+    // Separate lessons into those with quizzes and those without
+    const lessonsWithQuiz = allLessons.filter(
+      (lesson) => lesson.hasQuiz === true,
+    );
+    const lessonsWithoutQuiz = allLessons.filter(
+      (lesson) => lesson.hasQuiz !== true,
+    );
+
+    // Create a set of lesson IDs that have quizzes for quick lookup
+    const lessonsWithQuizIds = new Set(
+      lessonsWithQuiz.map((lesson) => lesson._id.toString()),
+    );
+
     const completedLessons = [];
     const seenIds = new Set();
-    // Filter completed lessons and calculate total exam score
+    // Filter completed lessons (only those with quizzes) and calculate total exam score
     localizedCourseProgress.progress.forEach((item) => {
       if (
         !_.isNull(item.lesson) &&
-        item.status === "Completed" &&
-        !seenIds.has(item.lesson._id)
+        item.status === 'Completed' &&
+        !seenIds.has(item.lesson._id) &&
+        lessonsWithQuizIds.has(item.lesson._id.toString())
       ) {
         completedLessons.push(item);
         seenIds.add(item.lesson._id);
       }
     });
     const completedLessonsCount = completedLessons.length;
-
     // Fetch Possible grades for completed lessons
     const possibleLessonExamsGrade = await getTotalGrades(completedLessons); // Make sure getTotalGrades works and returns { lessonId, grade }
     // Calculate total exam score user has got
@@ -961,26 +982,22 @@ exports.userScores = async (req, res, next) => {
     // Calculate total possible lessons exams score
     const totalPossibleLessonExamsGrade = possibleLessonExamsGrade.reduce(
       (total, item) => total + item.grade,
-      0
+      0,
     );
-
     //calculate the percentage of completed lessons exams
     const avgLessonsExamsPercentage =
       ((totalExamScore / totalPossibleLessonExamsGrade) * 100).toFixed(2) || 0;
-
     // Calculate the percentage for each lesson
     const lessonsScores = completedLessons.map((item) => {
       // Find the corresponding total possible score for the lesson
       const possibleExam = possibleLessonExamsGrade.find(
-        (exam) => exam.lessonId.toString() === item.lesson._id.toString()
+        (exam) => exam.lessonId.toString() === item.lesson._id.toString(),
       );
-
       // Calculate the percentage: (obtained score / possible score) * 100
       const percentage =
         possibleExam && possibleExam.grade
           ? ((item.examScore / possibleExam.grade) * 100).toFixed(2)
           : 0;
-
       return {
         lessonId: item.lesson._id,
         lessonTitle: item.lesson.title,
@@ -989,24 +1006,19 @@ exports.userScores = async (req, res, next) => {
         modelExam: item.modelExam,
       };
     });
-
     const lessonExamsAttemptedCount = completedLessonsCount; // Since only completed lessons are attempted
-
-    // Track attempted lesson IDs
+    // Track attempted lesson IDs (only for lessons with quizzes)
     const attemptedLessonIds = new Set(
-      completedLessons.map((item) => item.lesson._id.toString())
+      completedLessons.map((item) => item.lesson._id.toString()),
     );
 
-    // Calculate the number of lessons not attempted
-    const notAttemptedLessonsCount = allLessons.filter(
-      (lesson) => !attemptedLessonIds.has(lesson._id.toString())
+    // Calculate the number of lessons with quizzes not attempted
+    const notAttemptedLessonsCount = lessonsWithQuiz.filter(
+      (lesson) => !attemptedLessonIds.has(lesson._id.toString()),
     ).length;
-
-    const totalLessons = allLessons.length;
-
+    const totalLessons = lessonsWithQuiz.length; // Only count lessons with quizzes
     // Calculate the total possible course score (assuming each lesson's score is out of 100)
     // const totalPossibleCourseScore = totalLessons * 100;
-
     // Calculate the average lesson grade for completed lessons
     // const averageLessonExamGrade =
     //   lessonExamsAttemptedCount > 0
@@ -1017,7 +1029,6 @@ exports.userScores = async (req, res, next) => {
     //     (totalExamScore + courseProgress.score) /
     //     (lessonExamsAttemptedCount + 1)
     //   ).toFixed(2) || 0;
-
     // Calculate the percentages of exams completed and not attempted
     const examsCompletedPercentage = (
       (completedLessonsCount / totalLessons) *
@@ -1027,10 +1038,8 @@ exports.userScores = async (req, res, next) => {
       (notAttemptedLessonsCount / totalLessons) *
       100
     ).toFixed(2);
-
     // Final exam score and percentage (adjust based on your data structure)
     const finalExamScore = courseProgress.score || 0;
-
     let finalExam = {};
     //check on the course exam model
     if (courseProgress.modelExam) {
@@ -1044,28 +1053,22 @@ exports.userScores = async (req, res, next) => {
       course: courseProgress.course,
     });
     const finalExamGrade = getTotalPossibleGrade(finalExam.questions);
-
     // Calculate the finale exam grade percentage
     const finalExamPercentage =
       ((finalExamScore / finalExamGrade) * 100).toFixed(2) || 0;
-
     const courseScore = {
       finalExamPercentage,
       attemptDate: courseProgress.attemptDate,
       modelExam: courseProgress.modelExam,
     };
-
     const finalExamCompletionPercentage =
-      courseProgress.status === "Completed" ? 100 : 0;
-
+      courseProgress.status === 'Completed' ? 100 : 0;
     //calculate the total percentage of the total course exams
-
     const avgCourseExamsPercentage = (
       ((totalExamScore + finalExamScore) /
         (totalPossibleLessonExamsGrade + (finalExamGrade || 0))) *
       100
     ).toFixed(2);
-
     // Calculate the total progress with weighted averages (lesson exams 80%, final exam 20%)
     const lessonExamsWeight = 0.8;
     const finalExamWeight = 0.2;
@@ -1073,17 +1076,29 @@ exports.userScores = async (req, res, next) => {
       examsCompletedPercentage * lessonExamsWeight +
       finalExamCompletionPercentage * finalExamWeight
     ).toFixed(2);
-
     // Determine the completion status of the course
     const completionStatus =
       completedLessonsCount === totalLessons &&
       finalExamCompletionPercentage === 100
-        ? "Course completed"
-        : "Course in progress";
+        ? 'Course completed'
+        : 'Course in progress';
+
+    // Format lessons with and without quizzes for response
+    const lessonsWithQuizInfo = lessonsWithQuiz.map((lesson) => ({
+      lessonId: lesson._id,
+      lessonTitle: lesson.title,
+      hasQuiz: true,
+    }));
+
+    const lessonsWithoutQuizInfo = lessonsWithoutQuiz.map((lesson) => ({
+      lessonId: lesson._id,
+      lessonTitle: lesson.title,
+      hasQuiz: false,
+    }));
 
     // Return the calculated statistics
     res.status(200).json({
-      status: "success",
+      status: 'success',
       data: {
         //These stats give insights into how well the user performed in the completed lessons.
         // averageGrade,
@@ -1092,7 +1107,7 @@ exports.userScores = async (req, res, next) => {
         //These percentages show how many exams the user has completed and how many are still pending.
         examsCompletedPercentage,
         examsNotAttemptedPercentage,
-        totalLessons,
+        totalLessons, // Only lessons with quizzes
         completedLessonsCount,
         notAttemptedLessonsCount,
         avgLessonsExamsPercentage,
@@ -1100,10 +1115,12 @@ exports.userScores = async (req, res, next) => {
         lessonExamsAttemptedCount,
         lessonsScores,
         avgCourseExamsPercentage:
-          completionStatus === "Course completed"
+          completionStatus === 'Course completed'
             ? avgCourseExamsPercentage
             : undefined,
         completionStatus,
+        lessonsWithQuiz: lessonsWithQuizInfo,
+        lessonsWithoutQuiz: lessonsWithoutQuizInfo,
       },
     });
   } catch (err) {
