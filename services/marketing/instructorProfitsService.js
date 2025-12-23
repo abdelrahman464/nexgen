@@ -147,7 +147,7 @@ exports.updateInstructorProfitsInvoiceStatus = async (invoiceId, status) => {
 };
 //---------------------------------------------------
 //make function to give instructor
-exports.giveInstructorHisCommission = async (data, profit) => {
+exports.giveInstructorHisCommission = async (data) => {
   try {
     console.log("giving instructor percentage");
     // const profit = (data.amount * data.instructorPercentage) / 100;
@@ -155,7 +155,7 @@ exports.giveInstructorHisCommission = async (data, profit) => {
       { instructor: data.instructorId },
       {
         $inc: {
-          profits: profit,
+          profits: data.netInstructorProfit,
           totalSalesMoney: data.amount,
         },
         $push: {
@@ -165,10 +165,10 @@ exports.giveInstructorHisCommission = async (data, profit) => {
             amount: data.amount,
             percentage: data.instructorPercentage,
             totalProfits: data.totalProfits,
-            profit,
+            profit : data.netInstructorProfit,
             marketer: data.invitor || null,
-            marketerPercentage: data.marketerPercentage|| 0,
-            marketerProfits: data.marketerProfits|| 0,
+            marketerPercentage: (data.headMarketerPercentage || data.marketerPercentage)|| 0,
+            marketerProfits: data.totalMarketingProfits|| 0,
             createdAt: new Date(),
           },
         },
@@ -178,7 +178,7 @@ exports.giveInstructorHisCommission = async (data, profit) => {
       { _id: data.order },
       {
         instructorPercentage: data.instructorPercentage,
-        instructorProfits: profit,
+        instructorProfits: data.totalProfits,
       }
     );
     return;

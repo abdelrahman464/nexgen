@@ -24,6 +24,7 @@ const { handleOrderCommissions } = require("../../helpers/marketingHelper");
 //** ==> helpers functions => i distribute the code to small functions to make it more readable and easy to maintain
 
 const checkSpecificOrderExistance = async (filter) => {
+  return false;
   const order = await Order.findOne(filter);
   if (order) return true;
   return false;

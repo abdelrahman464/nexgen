@@ -91,9 +91,9 @@ const updateSellerSales = async (data) => {
           item: data.item || null,
         },
       },
-      $set: {
-        totalSalesMoney: (data.totalSalesMoney || 0).toFixed(2),
-        profits: data.totalProfits,
+      $inc: {
+        totalSalesMoney: parseFloat((data.amount || 0).toFixed(2)),
+        profits: data.marketerProfits || 0,
       },
     }
   );
@@ -149,6 +149,7 @@ exports.calculateProfits = async (
       console.log("seller has no marketLog");
       throw new Error("seller has no marketLog");
     }
+    // console.log(`marketerMarketLog: ${JSON.stringify(details)}`);
     //6-create data object (instead of sending all these params 'clean code')
     const data = {
       marketerId: marketerMarketLog.marketer,
@@ -157,14 +158,9 @@ exports.calculateProfits = async (
       amount: details.amount,
       itemType: details.itemType,
       item: details.item,
-      instructorProfits:
-        details.instructorProfits + details.marketerProfits || 0,
-      marketerPercentage: details.marketerPercentage || 0,
-      marketerProfits: details.marketerProfits || 0,
-      totalSalesMoney:
-        marketerMarketLog.totalSalesMoney + parseFloat(details.amount),
-      totalProfits:
-        marketerMarketLog.profits + parseFloat(details.marketerProfits),
+      instructorProfits: details.totalProfits,
+      marketerPercentage: details.sellerPercentage || 0,
+      marketerProfits: details.sellerProfits || 0,
     };
 
     //7- calculate the percentage
@@ -183,15 +179,12 @@ exports.calculateProfits = async (
     //8- update marketLog with this sale
     await updateSellerSales(data);
     //9- update current user object in his head.transaction (not sure about this approach till now)
-    if (marketerMarketLog.invitor) {
+    if (details.headMarketerPercentage > 0 && details.headMarketerProfits > 0) {
       //create or update current marketer object in his father.treeProfits
       await updateHeadCommission({
         marketerId: marketerMarketLog.marketer,
         invitorId: marketerMarketLog.invitor,
-        marketerPercentage: data.marketerPercentage,
-        totalProfits : data.totalProfits,
-        itemId : data.item._id,
-        itemType : data.itemType,
+        headMarketerProfits : details.headMarketerProfits,
       });
     }
     //10- end of function , thank you :)
@@ -213,10 +206,7 @@ const updateHeadCommission = async (data) => {
   const {
     marketerId,
     invitorId,
-    marketerPercentage : sellerPercentage,
-    totalProfits,
-    itemId,
-    itemType,
+    headMarketerProfits,
   } = data;
   //get head marketLog
   const headMarketLog = await MarketingLog.findOne({
@@ -226,33 +216,14 @@ const updateHeadCommission = async (data) => {
     console.warn(`head not found`);
     return;
   }
-  //----------------------------------------
-  let commissionsProfitsPercentage;
-  // if (
-  //   headMarketLog.commissionsProfitsCalculationMethod &&
-  //   headMarketLog.commissionsProfitsCalculationMethod === "manual"
-  // ) {
-  //   commissionsProfitsPercentage = headMarketLog.commissionsProfitsPercentage;
-  // } else {
-  //   commissionsProfitsPercentage =
-  //     headMarketLog.profitPercentage - marketerProfitsPercentage;
-  // }
-  const itemObj = headMarketLog.profitableItems?.find(item => item.itemId.toString() === itemId.toString() && item.itemType === itemType);
-  if (!itemObj) {
-    return;
-  }
-  commissionsProfitsPercentage = itemObj.percentage - sellerPercentage;
-  if (commissionsProfitsPercentage <= 0) {
-    return;
-  }
-  //--------------------------------------
-  const profit = (commissionsProfitsPercentage / 100) * totalProfits;
+
+  const profit = headMarketerProfits;
 
   let hasBeenUpdated = false;
   headMarketLog.commissions.map((commission) => {
     if (commission.member.toString() === marketerId.toString()) {
       //update data
-      commission.profit = profit.toFixed(2);
+      commission.profit += profit;
       commission.lastUpdate = new Date();
       hasBeenUpdated = true;
     }

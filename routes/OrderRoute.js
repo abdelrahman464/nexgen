@@ -57,9 +57,9 @@ const router = express.Router();
 // purchase for user
 router.put(
   '/purchaseForUser',
-  authServices.protect,
-  authServices.allowedTo('admin'),
-  purchaseForUserValidator,
+  // authServices.protect,
+  // authServices.allowedTo('admin'),
+  // purchaseForUserValidator,
   purchaseForUser,
 );
 // free courses
