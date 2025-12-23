@@ -1,0 +1,485 @@
+# Marketing endpoints documentation
+
+paths:
+  /marketing/getInstructorAnalytics/{id}:
+    get:
+      tags:
+        - Marketing
+      summary: Get instructor analytics
+      description: Get comprehensive analytics for an instructor (same as instructorProfits endpoint)
+      operationId: getInstructorAnalyticsMarketing
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: false
+          description: Instructor ID (optional, defaults to authenticated user)
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstructorAnalytics"
+        "404":
+          description: InstructorProfits document not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /marketing/getMarketLog/{id}:
+    get:
+      tags:
+        - Marketing
+      summary: Get market log by ID
+      description: Get marketing log for a specific marketer (requires ownership or admin)
+      operationId: getMarketLog
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Marketer ID
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      responses:
+        "200":
+          description: Market log retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: object
+                    description: Market log data
+        "403":
+          description: Forbidden - Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /marketing/getMyMarketLog:
+    get:
+      tags:
+        - Marketing
+      summary: Get current user's market log
+      description: Get marketing log for the authenticated user
+      operationId: getMyMarketLog
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Market log retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: object
+                    description: Market log data
+
+  /marketing/getMarketerChildren/{id}:
+    get:
+      tags:
+        - Marketing
+      summary: Get marketer's children/network
+      description: Get all children (downline) of a specific marketer
+      operationId: getMarketerChildren
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Marketer ID
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      responses:
+        "200":
+          description: Children retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      description: Child marketer data
+
+  /marketing/updateMarketLogProfitsCalculationMethod/{id}:
+    patch:
+      tags:
+        - Marketing
+      summary: Update profit calculation method
+      description: Update the profit calculation method for a marketer (admin only)
+      operationId: updateMarketLogProfitsCalculationMethod
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Marketer ID
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - profitsCalculationMethod
+              properties:
+                profitsCalculationMethod:
+                  type: string
+                  enum: [direct, indirect, both]
+                  example: "both"
+      responses:
+        "200":
+          description: Profit calculation method updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /marketing/modifyInvitationKeys/{id}:
+    put:
+      tags:
+        - Marketing
+      summary: Modify invitation keys
+      description: Update invitation keys for a marketer
+      operationId: modifyInvitationKeys
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Marketer ID
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                invitationKeys:
+                  type: array
+                  items:
+                    type: string
+                  example: ["INV-ABC123", "INV-XYZ789"]
+      responses:
+        "200":
+          description: Invitation keys updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /marketing/setPaymentDetails/{id}:
+    put:
+      tags:
+        - Marketing
+      summary: Set payment details
+      description: Set payment method and receiver account for a marketer
+      operationId: setPaymentDetails
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Marketer ID
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+        - name: type
+          in: query
+          required: true
+          description: Type of payment (marketer or instructor)
+          schema:
+            type: string
+            enum: [marketer, instructor]
+            example: "marketer"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - paymentMethod
+                - receiverAcc
+              properties:
+                paymentMethod:
+                  type: string
+                  example: "bank_transfer"
+                receiverAcc:
+                  type: string
+                  example: "1234567890"
+      responses:
+        "200":
+          description: Payment details updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /marketing/calculateProfitsManual:
+    put:
+      tags:
+        - Marketing
+      summary: Calculate profits manually (Testing)
+      description: Manually trigger profit calculation (for testing purposes, not for production)
+      operationId: calculateProfitsManual
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Profits calculated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /marketing/withdrawMoney/{id}:
+    put:
+      tags:
+        - Marketing
+      summary: Withdraw money
+      description: Create an invoice to withdraw money for a marketer
+      operationId: withdrawMoney
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Marketer ID
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+        - name: type
+          in: query
+          required: true
+          description: Type of withdrawal (marketer or instructor)
+          schema:
+            type: string
+            enum: [marketer, instructor]
+            example: "marketer"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - amount
+              properties:
+                amount:
+                  type: number
+                  minimum: 0
+                  example: 1000.00
+      responses:
+        "200":
+          description: Withdrawal invoice created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Bad request - Insufficient funds or invalid amount
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /marketing/modifyProfitableItems/{id}:
+    put:
+      tags:
+        - Marketing
+      summary: Modify profitable items
+      description: Update profitable items configuration for a marketer
+      operationId: modifyProfitableItems
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Marketer ID
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                profitableItems:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      itemId:
+                        type: string
+                      itemType:
+                        type: string
+                        enum: [course, package, coursePackage]
+      responses:
+        "200":
+          description: Profitable items updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /marketing/startMarketing/{userId}:
+    put:
+      tags:
+        - Marketing
+      summary: Start marketing for user
+      description: Enable marketing/affiliate program for a user
+      operationId: startMarketing
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: User ID to start marketing for
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+        - name: type
+          in: query
+          required: true
+          description: Type of marketing (marketer or instructor)
+          schema:
+            type: string
+            enum: [marketer, instructor]
+            example: "marketer"
+      responses:
+        "200":
+          description: Marketing started successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /marketing/getProfitableItemsByType:
+    get:
+      tags:
+        - Marketing
+      summary: Get profitable items by type
+      description: Get list of profitable items filtered by type
+      operationId: getProfitableItemsByType
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          required: false
+          description: Filter by item type
+          schema:
+            type: string
+            enum: [course, package, coursePackage]
+            example: "course"
+      responses:
+        "200":
+          description: Profitable items retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                        title:
+                          type: string
+                        type:
+                          type: string
+
+components:
+  schemas:
+    InstructorAnalytics:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        totalEnrollments:
+          type: integer
+          example: 500
+        totalEnrollmentsDiff:
+          type: number
+          example: 32
+        avgRate:
+          type: number
+          example: 4.5
+        avgRateDiff:
+          type: number
+          example: 1.3
+        instructorProfits:
+          type: number
+          example: 15000.00
+        instructorProfitsDiff:
+          type: number
+          example: 300
+        withdrawals:
+          type: number
+          example: 5000.00
+        totalSalesMoney:
+          type: number
+          example: 100000.00
+        commissions:
+          type: array
+          items:
+            type: object
+        invoices:
+          type: array
+          items:
+            type: object

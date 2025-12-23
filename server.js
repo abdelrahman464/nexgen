@@ -78,6 +78,25 @@ app.use(
 //serve static files inside 'uploads'
 app.use(express.static(path.join(__dirname, "uploads")));
 
+// Swagger UI setup
+const swaggerUi = require("swagger-ui-express");
+const swaggerSpec = require("./config/swagger");
+
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    customCss: ".swagger-ui .topbar { display: none }",
+    customSiteTitle: "NexGen Pro API Documentation",
+  })
+);
+
+// Serve Swagger JSON
+app.get("/api-docs.json", (req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  res.send(swaggerSpec);
+});
+
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
   console.log(process.env.NODE_ENV);
