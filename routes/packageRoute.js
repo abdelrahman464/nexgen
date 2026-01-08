@@ -16,6 +16,7 @@ router.get(
   authServices.protect,
   authServices.checkIfUserIsAdminOrInstructor,
   packageService.filterInstructorPackages,
+  packageService.applyObjectFilters,
   packageService.getAll
 );
 
@@ -24,6 +25,7 @@ router
   .get(
     authServices.optionalAuth,
     packageService.filterPackages,
+    packageService.applyObjectFilters,
     packageService.getAll
   )
   .post(

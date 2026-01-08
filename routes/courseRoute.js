@@ -32,6 +32,7 @@ const {
   getCertificate,
   getInstructorCourses,
   getCertificateLink,
+  applyFilter
 } = require("../services/courseService");
 const authServices = require("../services/authServices");
 // nested routes
@@ -78,12 +79,13 @@ router.get(
     }
     return next();
   },
+  applyFilter,
   getAllCourses
 );
 // Get all active courses
-router.get("/", filterActiveCourses, getAllCourses);
+router.get("/", filterActiveCourses, applyFilter, getAllCourses);
 
-router.get("/instructorCourses/:id?", getInstructorCourses, getAllCourses);
+router.get("/instructorCourses/:id?", getInstructorCourses, applyFilter, getAllCourses);
 // Get a specific course by ID
 router.get("/:id", checkCourseIdParamValidator, getCourseById);
 

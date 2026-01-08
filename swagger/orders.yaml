@@ -168,7 +168,7 @@ paths:
       tags:
         - Orders
       summary: Purchase for user (Admin)
-      description: Admin can purchase items on behalf of a user
+      description: Admin can purchase items on behalf of a user , user send money to admin and admin will purchase the item on behalf of the user
       operationId: purchaseForUser
       security:
         - bearerAuth: []
@@ -438,77 +438,7 @@ paths:
                     type: string
                     example: "https://lahza.com/checkout/abc123"
 
-  /orders/plisio/payment/callback:
-    post:
-      tags:
-        - Orders
-      summary: Plisio payment callback
-      description: Webhook endpoint for Plisio payment callbacks
-      operationId: plisioPaymentCallback
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        "200":
-          description: Callback processed
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
 
-  /orders/lahza/payment/callback:
-    get:
-      tags:
-        - Orders
-      summary: Lahza payment callback
-      description: Callback endpoint for Lahza payment redirects
-      operationId: LahzaPaymentCallback
-      parameters:
-        - name: order_id
-          in: query
-          schema:
-            type: string
-        - name: status
-          in: query
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Callback processed
-          content:
-            text/html:
-              schema:
-                type: string
-
-  /orders/webhook/plisio:
-    post:
-      tags:
-        - Orders
-      summary: Plisio webhook
-      description: Webhook endpoint for Plisio payment notifications
-      operationId: plisioWebhook
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        "200":
-          description: Webhook processed
-          content:
-            application/json:
-              schema:
-                type: object
-
-  /orders/webhook/lahza:
     post:
       tags:
         - Orders

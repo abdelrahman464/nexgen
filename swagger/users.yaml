@@ -541,6 +541,87 @@ paths:
                           type: array
                         packages:
                           type: array
+  /users/push-notifications:
+    put:
+      tags:
+        - Users
+      summary: Toggle push notifications
+      description: Toggle push notifications for logged-in user
+      operationId: togglePushNotifications
+      security:
+        - bearerAuth: ["user"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                  example: true
+      responses:
+        "200":
+          description: Push notifications toggled successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /users/fcm-token:
+    patch:
+      tags:
+        - Users
+      summary: Register FCM token
+      description: Register or unregister FCM token for push notifications
+      operationId: registerFcmToken
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fcmToken
+                - method
+              properties:
+                fcmToken:
+                  type: string
+                  description: Firebase Cloud Messaging device token
+                  example: "fcmToken123..."
+                method:
+                  type: string
+                  enum: [register, unregister]
+                  description: Use 'register' to add token, 'unregister' to remove
+                  example: "register"
+      responses:
+        "200":
+          description: FCM token registered/unregistered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "FCM token registered successfully"
+        "400":
+          description: Bad request - FCM token is required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
 components:
   schemas:

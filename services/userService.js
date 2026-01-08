@@ -1,45 +1,45 @@
-const jwt = require('jsonwebtoken');
-const sharp = require('sharp');
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
-const { v4: uuidv4 } = require('uuid');
-const ApiError = require('../utils/apiError');
-const factory = require('./handllerFactory');
-const User = require('../models/userModel');
-const Order = require('../models/orderModel');
-const generateToken = require('../utils/generateToken');
-const { uploadMixOfFiles } = require('../middlewares/uploadImageMiddleware');
-const CourseProgress = require('../models/courseProgressModel');
-const Message = require('../models/MessageModel');
-const Chat = require('../models/ChatModel');
-const Notification = require('../models/notificationModel');
-const React = require('../models/reactionModel');
-const Comment = require('../models/commentModel');
-const Course = require('../models/courseModel');
-const MarketLog = require('../models/MarketingModel');
-const UserSubscription = require('../models/userSubscriptionModel');
-const { moveOrdersFromOneToOne } = require('./marketing/marketingService');
-const Article = require('../models/articalModel');
-const Package = require('../models/packageModel');
-const CoursePackage = require('../models/coursePackageModel');
-const Live = require('../models/liveModel');
+const jwt = require("jsonwebtoken");
+const sharp = require("sharp");
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
+const { v4: uuidv4 } = require("uuid");
+const ApiError = require("../utils/apiError");
+const factory = require("./handllerFactory");
+const User = require("../models/userModel");
+const Order = require("../models/orderModel");
+const generateToken = require("../utils/generateToken");
+const { uploadMixOfFiles } = require("../middlewares/uploadImageMiddleware");
+const CourseProgress = require("../models/courseProgressModel");
+const Message = require("../models/MessageModel");
+const Chat = require("../models/ChatModel");
+const Notification = require("../models/notificationModel");
+const React = require("../models/reactionModel");
+const Comment = require("../models/commentModel");
+const Course = require("../models/courseModel");
+const MarketLog = require("../models/MarketingModel");
+const UserSubscription = require("../models/userSubscriptionModel");
+const { moveOrdersFromOneToOne } = require("./marketing/marketingService");
+const Article = require("../models/articalModel");
+const Package = require("../models/packageModel");
+const CoursePackage = require("../models/coursePackageModel");
+const Live = require("../models/liveModel");
 
 //upload user images
 exports.uploadImages = uploadMixOfFiles([
   {
-    name: 'profileImg',
+    name: "profileImg",
     maxCount: 1,
   },
   {
-    name: 'coverImg',
+    name: "coverImg",
     maxCount: 1,
   },
   {
-    name: 'signatureImage',
+    name: "signatureImage",
     maxCount: 1,
   },
   {
-    name: 'idDocuments',
+    name: "idDocuments",
     maxCount: 3,
   },
 ]);
@@ -57,13 +57,13 @@ exports.resizeImage = async (req, res, next) => {
       file,
       folderName,
       fieldName,
-      isArray = false,
+      isArray = false
     ) => {
-      if (file && file.mimetype.startsWith('image/')) {
+      if (file && file.mimetype.startsWith("image/")) {
         const newFileName = `${fieldName}-${uuidv4()}-${Date.now()}.webp`;
 
         await sharp(file.buffer)
-          .toFormat('webp')
+          .toFormat("webp")
           .webp({ quality: 95 })
           .toFile(`uploads/users/${folderName}/${newFileName}`);
 
@@ -82,22 +82,22 @@ exports.resizeImage = async (req, res, next) => {
     // Process profile image
     await processImage(
       req.files.profileImg ? req.files.profileImg[0] : null,
-      '',
-      'profileImg',
+      "",
+      "profileImg"
     );
 
     // Process signature image
     await processImage(
       req.files.signatureImage ? req.files.signatureImage[0] : null,
-      '',
-      'signatureImage',
+      "",
+      "signatureImage"
     );
 
     // Process cover image
     await processImage(
       req.files.coverImg ? req.files.coverImg[0] : null,
-      '',
-      'coverImg',
+      "",
+      "coverImg"
     );
 
     // Process each ID document image if present
@@ -105,7 +105,7 @@ exports.resizeImage = async (req, res, next) => {
       // eslint-disable-next-line no-restricted-syntax
       for (const file of req.files.idDocuments) {
         // eslint-disable-next-line no-await-in-loop
-        await processImage(file, 'idDocuments', 'idDocuments', true);
+        await processImage(file, "idDocuments", "idDocuments", true);
       }
     }
 
@@ -117,7 +117,7 @@ exports.resizeImage = async (req, res, next) => {
 
 //filter to get all user (isInstructor:true or role:admin)
 exports.createFilterObjToGetInstructors = async (req, res, next) => {
-  const filterObject = { $or: [{ isInstructor: true }, { role: 'admin' }] };
+  const filterObject = { $or: [{ isInstructor: true }, { role: "admin" }] };
 
   req.filterObj = filterObject;
   next();
@@ -128,31 +128,31 @@ exports.getUsersWithoutCourse = async (req, res, next) => {
   try {
     const { courseId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
-      throw new Error('Invalid course ID');
+      throw new Error("Invalid course ID");
     }
 
     const usersByCourseProgress = await User.aggregate([
       {
         $match: {
-          role: { $nin: ['admin', 'campaign'] }, // Exclude admins & campaign users
+          role: { $nin: ["admin", "campaign"] }, // Exclude admins & campaign users
         },
       },
       {
         $lookup: {
-          from: 'courseprogresses', // Reference CourseProgress collection
-          localField: '_id',
-          foreignField: 'user',
-          as: 'courseProgress',
+          from: "courseprogresses", // Reference CourseProgress collection
+          localField: "_id",
+          foreignField: "user",
+          as: "courseProgress",
         },
       },
       {
         $facet: {
           // Users who have CourseProgress but not for the specific course
           purchasers: [
-            { $match: { 'courseProgress.0': { $exists: true } } }, // Users with at least one course progress
+            { $match: { "courseProgress.0": { $exists: true } } }, // Users with at least one course progress
             {
               $match: {
-                'courseProgress.course': {
+                "courseProgress.course": {
                   $ne: new mongoose.Types.ObjectId(courseId),
                 }, // Users without the specific course
               },
@@ -168,12 +168,12 @@ exports.getUsersWithoutCourse = async (req, res, next) => {
                   $cond: {
                     if: {
                       $and: [
-                        { $ifNull: ['$profileImg', false] },
-                        { $ne: ['$profileImg', ''] },
+                        { $ifNull: ["$profileImg", false] },
+                        { $ne: ["$profileImg", ""] },
                       ],
                     }, // Check if profileImg exists and is not empty
                     then: {
-                      $concat: [process.env.BASE_URL, '/users/', '$profileImg'],
+                      $concat: [process.env.BASE_URL, "/users/", "$profileImg"],
                     }, // Append BASE_URL
                     else: null, // Set to null if missing or empty
                   },
@@ -183,7 +183,7 @@ exports.getUsersWithoutCourse = async (req, res, next) => {
           ],
           // Users who have no CourseProgress at all
           nonPurchasers: [
-            { $match: { 'courseProgress.0': { $exists: false } } }, // Users with no course progress
+            { $match: { "courseProgress.0": { $exists: false } } }, // Users with no course progress
             {
               $project: {
                 _id: 1,
@@ -195,12 +195,12 @@ exports.getUsersWithoutCourse = async (req, res, next) => {
                   $cond: {
                     if: {
                       $and: [
-                        { $ifNull: ['$profileImg', false] },
-                        { $ne: ['$profileImg', ''] },
+                        { $ifNull: ["$profileImg", false] },
+                        { $ne: ["$profileImg", ""] },
                       ],
                     }, // Check if profileImg exists and is not empty
                     then: {
-                      $concat: [process.env.BASE_URL, '/users/', '$profileImg'],
+                      $concat: [process.env.BASE_URL, "/users/", "$profileImg"],
                     }, // Append BASE_URL
                     else: null, // Set to null if missing or empty
                   },
@@ -237,20 +237,20 @@ exports.getUsersCourse = async (req, res, next) => {
     const usersWhoHaveCourseProgress = await User.aggregate([
       {
         $match: {
-          role: { $nin: ['admin', 'campaign'] }, // Exclude admins & campaign users
+          role: { $nin: ["admin", "campaign"] }, // Exclude admins & campaign users
         },
       },
       {
         $lookup: {
-          from: 'courseprogresses', // Reference the CourseProgress collection
-          localField: '_id',
-          foreignField: 'user',
-          as: 'courseProgress',
+          from: "courseprogresses", // Reference the CourseProgress collection
+          localField: "_id",
+          foreignField: "user",
+          as: "courseProgress",
         },
       },
       {
         $match: {
-          'courseProgress.course': new mongoose.Types.ObjectId(courseId), // Ensure the course exists in CourseProgress
+          "courseProgress.course": new mongoose.Types.ObjectId(courseId), // Ensure the course exists in CourseProgress
         },
       },
       {
@@ -264,12 +264,12 @@ exports.getUsersCourse = async (req, res, next) => {
             $cond: {
               if: {
                 $and: [
-                  { $ifNull: ['$profileImg', false] },
-                  { $ne: ['$profileImg', ''] },
+                  { $ifNull: ["$profileImg", false] },
+                  { $ne: ["$profileImg", ""] },
                 ],
               }, // Ensure profileImg exists
               then: {
-                $concat: [process.env.BASE_URL, '/users/', '$profileImg'], // Ensure correct path
+                $concat: [process.env.BASE_URL, "/users/", "$profileImg"], // Ensure correct path
               },
               else: null, // Set to null if missing
             },
@@ -295,22 +295,22 @@ exports.getPurchasersUsersAndNon = async (req, res, next) => {
     const usersWithAndWithoutOrders = await User.aggregate([
       {
         $match: {
-          role: { $nin: ['admin', 'campaign'] },
+          role: { $nin: ["admin", "campaign"] },
         },
       },
       {
         $lookup: {
-          from: 'orders',
-          localField: '_id',
-          foreignField: 'user',
-          as: 'userOrders',
+          from: "orders",
+          localField: "_id",
+          foreignField: "user",
+          as: "userOrders",
         },
       },
       {
         $facet: {
           // Users who have orders
           purchasers: [
-            { $match: { 'userOrders.0': { $exists: true } } }, // Match users with at least one order
+            { $match: { "userOrders.0": { $exists: true } } }, // Match users with at least one order
             {
               $project: {
                 _id: 1,
@@ -318,14 +318,14 @@ exports.getPurchasersUsersAndNon = async (req, res, next) => {
                 email: 1,
                 phone: 1,
                 country: 1,
-                orderCount: { $size: '$userOrders' }, // Optional: to show the number of orders
+                orderCount: { $size: "$userOrders" }, // Optional: to show the number of orders
                 // Add other user fields as needed
               },
             },
           ],
           // Users who have no orders
           nonPurchasers: [
-            { $match: { 'userOrders.0': { $exists: false } } }, // Match users without orders
+            { $match: { "userOrders.0": { $exists: false } } }, // Match users without orders
             {
               $project: {
                 _id: 1,
@@ -378,7 +378,7 @@ exports.getPurchasersUsersAndNon = async (req, res, next) => {
 //@route GET /api/v1/users
 //@access private
 
-exports.getUsers = factory.getALl(User, 'User');
+exports.getUsers = factory.getALl(User, "User");
 //@desc get specific User by id
 //@route GET /api/v1/User/:id
 //@access public
@@ -419,15 +419,15 @@ exports.getUser = async (req, res, next) => {
     //   }
     // } //----------------------
     let user = {};
-    if (req.user.role === 'admin') {
+    if (req.user.role === "admin") {
       user = await User.findById(req.params.id);
     } else {
       user = await User.findById(req.params.id).select(
-        'name email profileImg authToReview coverImg role timeSpent isMarketer isInstructor isCustomerService startMarketing idNumber phone country idVerification note signatureImage',
+        "name email profileImg authToReview coverImg role timeSpent isMarketer isInstructor isCustomerService startMarketing idNumber phone country idVerification note signatureImage"
       );
     }
     if (!user) {
-      return next(new ApiError('No user found', 404));
+      return next(new ApiError("No user found", 404));
     }
     res.status(200).json({ data: user });
   } catch (err) {
@@ -453,7 +453,7 @@ exports.changeUserPassword = async (req, res, next) => {
     },
     {
       new: true,
-    },
+    }
   );
   if (!user) {
     return next(new ApiError(`No document For this id ${req.params.id}`, 404));
@@ -472,7 +472,7 @@ exports.deleteUser = async (req, res, next) => {
       // Check if user exists
       if (!user) {
         return next(
-          new ApiError(`User not found for this id ${req.params.id}`, 404),
+          new ApiError(`User not found for this id ${req.params.id}`, 404)
         );
       }
 
@@ -487,12 +487,12 @@ exports.deleteUser = async (req, res, next) => {
         MarketLog.deleteOne({ marketer: user._id }).session(session),
         // Remove user from group chats
         Chat.updateMany(
-          { 'participants.user': user._id, isGroupChat: true },
-          { $pull: { participants: { user: user._id } } },
+          { "participants.user": user._id, isGroupChat: true },
+          { $pull: { participants: { user: user._id } } }
         ).session(session),
         // Delete direct chats
         Chat.deleteMany({
-          'participants.user': user._id,
+          "participants.user": user._id,
           isGroupChat: false,
         }).session(session),
       ]);
@@ -502,8 +502,8 @@ exports.deleteUser = async (req, res, next) => {
     })
     .catch((error) => {
       // Handle any transaction-related errors
-      console.error('Transaction error:', error);
-      return next(new ApiError('Error during transaction', 500));
+      console.error("Transaction error:", error);
+      return next(new ApiError("Error during transaction", 500));
     });
 };
 
@@ -528,7 +528,7 @@ exports.updateLoggedUserPassword = async (req, res, next) => {
     },
     {
       new: true,
-    },
+    }
   );
   //generate token
   const token = generateToken(req.user._id);
@@ -543,7 +543,7 @@ exports.updateLoggedUserData = async (req, res, next) => {
     const user = await User.findById(req.user._id);
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
     // Update only if country or phone is not set in the database
@@ -585,7 +585,7 @@ exports.unActiveUser = async (req, res, next) => {
 //@access protect
 exports.activeUser = async (req, res, next) => {
   await User.findByIdAndUpdate(req.params.id, { active: true });
-  res.status(201).json({ data: 'success' });
+  res.status(201).json({ data: "success" });
 };
 //---------
 //@desc avail user to review
@@ -596,14 +596,14 @@ exports.availUserToReview = async (userId) => {
     { _id: userId, authToReview: false },
     {
       authToReview: true,
-    },
+    }
   );
   return true;
 };
 //@desc get specific User by filter and  select fields if exist and populate
 //@route null
 //@access internal
-exports.getUserAsDoc = async (filter, selectFields = '', populate = '') => {
+exports.getUserAsDoc = async (filter, selectFields = "", populate = "") => {
   //1-initialize the query
   let query = User.findOne(filter);
   //2- check if selectFields
@@ -628,15 +628,15 @@ exports.getUserData = async (req, res, next) => {
   const user = await User.findById(req.params.id);
   // check if user exist
   if (!user) {
-    return next(new ApiError('No user found', 404));
+    return next(new ApiError("No user found", 404));
   }
 
   // get user course progress
   const courseProgress = await CourseProgress.find({
     user: req.params.id,
   }).populate({
-    path: 'course',
-    select: 'title -category -accessibleCourses ',
+    path: "course",
+    select: "title -category -accessibleCourses ",
   });
 
   //get all courses from course progress
@@ -663,7 +663,7 @@ exports.getUserData = async (req, res, next) => {
 
   //send response
   res.status(200).json({
-    status: 'success',
+    status: "success",
     data,
   });
 };
@@ -677,13 +677,13 @@ exports.followUser = async (req, res, next) => {
 
     // Check if the user is trying to follow themselves
     if (req.user._id.toString() === userIdToFollow.toString()) {
-      return next(new ApiError('You cannot follow yourself', 400));
+      return next(new ApiError("You cannot follow yourself", 400));
     }
 
     // Check if the user to follow exists
     const userToFollow = await User.findById(userIdToFollow);
     if (!userToFollow) {
-      return next(new ApiError('User not found', 404));
+      return next(new ApiError("User not found", 404));
     }
 
     // Check if already following
@@ -692,7 +692,7 @@ exports.followUser = async (req, res, next) => {
       following: { $elemMatch: { user: userIdToFollow } },
     });
     if (alreadyFollowing) {
-      return next(new ApiError('You are already following this user', 400));
+      return next(new ApiError("You are already following this user", 400));
     }
 
     // Update the following list of the logged-in user
@@ -717,14 +717,14 @@ exports.followUser = async (req, res, next) => {
         ar: ` ${req.user.name} قام بمتابعتك`,
         en: `${req.user.name} followed you`,
       },
-      type: 'follow',
+      type: "follow",
       followedUser: req.user._id,
     });
 
     // Send response
     res.status(200).json({
-      status: 'success',
-      message: 'You followed this user',
+      status: "success",
+      message: "You followed this user",
     });
   } catch (err) {
     next(new ApiError(err.message, 400));
@@ -744,18 +744,18 @@ exports.activeNotificationBell = async (req, res, next) => {
     });
 
     if (!user) {
-      return next(new ApiError('You are not following this user', 400));
+      return next(new ApiError("You are not following this user", 400));
     }
 
     // Update the notification bell status to active (true)
     await User.updateOne(
-      { _id: req.user._id, 'following.user': followedUserId },
-      { $set: { 'following.$.notificationBell': true } },
+      { _id: req.user._id, "following.user": followedUserId },
+      { $set: { "following.$.notificationBell": true } }
     );
 
     res
       .status(200)
-      .json({ success: true, message: 'Notification bell activated' });
+      .json({ success: true, message: "Notification bell activated" });
   } catch (err) {
     return next(new ApiError(err.message, 400));
   }
@@ -774,18 +774,18 @@ exports.deActiveNotificationBell = async (req, res, next) => {
     });
 
     if (!user) {
-      return next(new ApiError('You are not following this user', 400));
+      return next(new ApiError("You are not following this user", 400));
     }
 
     // Update the notification bell status to inactive (false)
     await User.updateOne(
-      { _id: req.user._id, 'following.user': followedUserId },
-      { $set: { 'following.$.notificationBell': false } },
+      { _id: req.user._id, "following.user": followedUserId },
+      { $set: { "following.$.notificationBell": false } }
     );
 
     res
       .status(200)
-      .json({ success: true, message: 'Notification bell deactivated' });
+      .json({ success: true, message: "Notification bell deactivated" });
   } catch (err) {
     return next(new ApiError(err.message, 400));
   }
@@ -799,13 +799,13 @@ exports.unFollowUser = async (req, res, next) => {
 
     // Check if the user is trying to unfollow themselves
     if (req.user._id.toString() === userIdToUnfollow.toString()) {
-      return next(new ApiError('You cannot unfollow yourself', 400));
+      return next(new ApiError("You cannot unfollow yourself", 400));
     }
 
     // Check if the user to unfollow exists
     const userToUnfollow = await User.findById(userIdToUnfollow);
     if (!userToUnfollow) {
-      return next(new ApiError('User not found', 404));
+      return next(new ApiError("User not found", 404));
     }
 
     // Check if already not following
@@ -814,7 +814,7 @@ exports.unFollowUser = async (req, res, next) => {
       following: { $elemMatch: { user: userIdToUnfollow } },
     });
     if (!isFollowing) {
-      return next(new ApiError('You are not following this user', 400));
+      return next(new ApiError("You are not following this user", 400));
     }
 
     // Update the following list of the logged-in user
@@ -829,8 +829,8 @@ exports.unFollowUser = async (req, res, next) => {
 
     // Send response
     res.status(200).json({
-      status: 'success',
-      message: 'You unfollowed this user',
+      status: "success",
+      message: "You unfollowed this user",
     });
   } catch (err) {
     next(new ApiError(err.message, 400));
@@ -842,10 +842,10 @@ exports.unFollowUser = async (req, res, next) => {
 //@access protected
 exports.getMyFollowersAndFollowing = async (req, res, next) => {
   const user = await User.findById(req.user._id)
-    .populate('followers', 'name email profileImg')
-    .populate('following', 'name email profileImg');
+    .populate("followers", "name email profileImg")
+    .populate("following", "name email profileImg");
   res.status(200).json({
-    status: 'success',
+    status: "success",
     data: {
       followers: user.followers,
       following: user.following,
@@ -858,50 +858,50 @@ exports.getMyFollowersAndFollowing = async (req, res, next) => {
 exports.actionOnIdDocument = async (req, res, next) => {
   try {
     const { action, note, idNumber, name } = req.body;
-    if (action === 'verified') {
+    if (action === "verified") {
       if (!idNumber || !name) {
-        return next(new ApiError('Please provide idNumber and name', 400));
+        return next(new ApiError("Please provide idNumber and name", 400));
       }
     }
     // Toggle approval status of ID document
     const user = await User.findById(req.params.id);
 
     if (!user) {
-      return next(new ApiError('User not found', 404));
+      return next(new ApiError("User not found", 404));
     }
 
     // Toggle the `approveIdDocument` field in one step
     const updatedUser = await User.findByIdAndUpdate(
       req.params.id,
       { $set: { idVerification: action, note, idNumber, name } },
-      { new: true },
+      { new: true }
     );
 
-    if (updatedUser && action === 'verified') {
+    if (updatedUser && action === "verified") {
       // Send a notification to the user
       await Notification.create({
         user: req.params.id,
         message: {
-          ar: 'تهانينا! تمت الموافقة على وثائق الهوية الخاصة بك',
-          en: 'Congratulations! Your ID documents have been approved',
+          ar: "تهانينا! تمت الموافقة على وثائق الهوية الخاصة بك",
+          en: "Congratulations! Your ID documents have been approved",
         },
-        type: 'system',
+        type: "system",
       });
     }
-    if (updatedUser && action === 'rejected') {
+    if (updatedUser && action === "rejected") {
       // Send a notification to the user
       await Notification.create({
         user: req.params.id,
         message: {
-          ar: 'تم رفض الوثائق الخاصة بك يرجى تحميل وثيقة صالحة',
-          en: 'Your ID documents have been rejected please upload a valid one',
+          ar: "تم رفض الوثائق الخاصة بك يرجى تحميل وثيقة صالحة",
+          en: "Your ID documents have been rejected please upload a valid one",
         },
-        type: 'system',
+        type: "system",
       });
     }
 
     res.status(200).json({
-      status: 'success',
+      status: "success",
       data: {
         user: updatedUser,
       },
@@ -919,12 +919,12 @@ exports.uploadIdDocument = async (req, res, next) => {
     let token;
     if (
       req.headers.authorization &&
-      req.headers.authorization.startsWith('Bearer')
+      req.headers.authorization.startsWith("Bearer")
     ) {
-      token = req.headers.authorization.split(' ')[1];
+      token = req.headers.authorization.split(" ")[1];
     }
     if (!token) {
-      return next(new ApiError('you are not login,please login first', 401));
+      return next(new ApiError("you are not login,please login first", 401));
     }
     //2- verify token (no change happens,expired token)
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
@@ -932,32 +932,32 @@ exports.uploadIdDocument = async (req, res, next) => {
     // 3- Check if user exists
     const currentUser = await User.findById(decoded.userId);
     if (!currentUser) {
-      return next(new ApiError('User no longer exists', 401));
+      return next(new ApiError("User no longer exists", 401));
     }
     //4-check if user changed password after token generated
     if (currentUser.passwordChangedAt) {
       //convert data to timestamp by =>getTime()
       const passwordChangedTimestamp = parseInt(
         currentUser.passwordChangedAt.getTime() / 1000,
-        10,
+        10
       );
       //it mean password changer after token generated
       if (passwordChangedTimestamp > decoded.iat) {
         return next(
           new ApiError(
-            'user recently changed his password,please login again',
-            401,
-          ),
+            "user recently changed his password,please login again",
+            401
+          )
         );
       }
     }
     //5-check if user is active
     if (!currentUser.active) {
-      return next(new ApiError('You Are Not Active', 401));
+      return next(new ApiError("You Are Not Active", 401));
     }
 
-    if (currentUser.idVerification === 'verified') {
-      throw new ApiError('You have already verified your ID document', 400);
+    if (currentUser.idVerification === "verified") {
+      throw new ApiError("You have already verified your ID document", 400);
     }
 
     //  Validate documents
@@ -966,7 +966,7 @@ exports.uploadIdDocument = async (req, res, next) => {
       !Array.isArray(req.body.idDocuments) ||
       req.body.idDocuments.length === 0
     ) {
-      throw new ApiError('Please provide at least one ID document', 400);
+      throw new ApiError("Please provide at least one ID document", 400);
     }
 
     // 5) Update user documents and set status to pending
@@ -974,15 +974,15 @@ exports.uploadIdDocument = async (req, res, next) => {
       currentUser._id,
       {
         idDocuments: req.body.idDocuments,
-        idVerification: 'pending',
+        idVerification: "pending",
         note: null, // Reset any previous notes
       },
-      { new: true },
+      { new: true }
     );
 
     res.status(200).json({
-      status: 'success',
-      message: 'ID documents uploaded successfully and pending verification',
+      status: "success",
+      message: "ID documents uploaded successfully and pending verification",
       data: {
         idVerification: updatedUser.idVerification,
         idDocuments: updatedUser.idDocuments,
@@ -1000,16 +1000,79 @@ exports.getUsersByFilter = async (filter, fields) => {
   } else users = await User.find(filter);
   return users;
 };
+
+//@desc Register FCM token for push notifications
+//@route POST /api/v1/users/fcm-token
+//@access protected
+exports.registerFcmToken = async (req, res, next) => {
+  try {
+    const { fcmToken, method } = req.body;
+
+    if (!fcmToken) {
+      return next(new ApiError("FCM token is required", 400));
+    }
+    let message = "";
+    if (method === "register") {
+      await User.findByIdAndUpdate(
+        req.user._id,
+        { $addToSet: { fcmTokens: fcmToken } },
+        { new: true }
+      );
+      message = "FCM token registered successfully";
+    } else if (method === "unregister") {
+      await User.findByIdAndUpdate(
+        req.user._id,
+        { $pull: { fcmTokens: fcmToken } },
+        { new: true }
+      );
+      message = "FCM token unregistered successfully";
+    }
+    res.status(200).json({
+      status: "success",
+      message: message,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 400));
+  }
+};
+//@desc Toggle push notifications on/off
+//@route PUT /api/v1/users/push-notifications
+//@access protected
+exports.togglePushNotifications = async (req, res, next) => {
+  try {
+    const { enabled } = req.body;
+
+    if (typeof enabled !== "boolean") {
+      return next(new ApiError("enabled field must be a boolean", 400));
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { pushNotificationsEnabled: enabled },
+      { new: true }
+    );
+
+    res.status(200).json({
+      status: "success",
+      message: `Push notifications ${enabled ? "enabled" : "disabled"}`,
+      data: {
+        pushNotificationsEnabled: user.pushNotificationsEnabled,
+      },
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 400));
+  }
+};
 //-----------------------------------------
 exports.moveOneUserToAnother = async (req, res, next) => {
   const user = await User.findById(req.body.user);
   if (!user) {
-    return next(new ApiError('No user found for this id', 404));
+    return next(new ApiError("No user found for this id", 404));
   }
   if (!user.invitor) {
     const invitorExistance = await User.exists({ _id: req.body.newInvitor });
     if (!invitorExistance) {
-      return next(new ApiError('No invitor found for this id', 404));
+      return next(new ApiError("No invitor found for this id", 404));
     }
     user.invitor = req.body.newInvitor;
   } else {
@@ -1017,7 +1080,7 @@ exports.moveOneUserToAnother = async (req, res, next) => {
     user.invitor = req.body.newInvitor;
   }
   user.save();
-  return res.status(200).json({ status: 'success', msg: 'mission done' });
+  return res.status(200).json({ status: "success", msg: "mission done" });
 };
 
 //@desc get all courses ,,Blogs ,packages that his course related to instructor
@@ -1029,15 +1092,15 @@ exports.moveOneUserToAnother = async (req, res, next) => {
 //@access private admin
 exports.getAllInstructorsWithBelongings = async (req, res, next) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== "admin") {
       return next(
-        new ApiError('You are not authorized to access this resource', 403),
+        new ApiError("You are not authorized to access this resource", 403)
       );
     }
 
     // Get all instructors
     const instructors = await User.find({ isInstructor: true }).select(
-      'name email profileImg bio',
+      "name email profileImg bio"
     );
 
     // Get belongings for each instructor and calculate active courses count
@@ -1048,7 +1111,7 @@ exports.getAllInstructorsWithBelongings = async (req, res, next) => {
 
         // Count active courses
         const activeCoursesCount = courses.filter(
-          (course) => course.status === 'active',
+          (course) => course.status === "active"
         ).length;
 
         // Get packages related to instructor's courses
@@ -1107,21 +1170,21 @@ exports.getAllInstructorsWithBelongings = async (req, res, next) => {
           },
           activeCoursesCount, // For sorting
         };
-      }),
+      })
     );
 
     // Sort by active courses count (descending) - instructors with active courses come first
     instructorsWithBelongings.sort(
-      (a, b) => b.activeCoursesCount - a.activeCoursesCount,
+      (a, b) => b.activeCoursesCount - a.activeCoursesCount
     );
 
     // Remove the sorting field from final response
     const finalResponse = instructorsWithBelongings.map(
-      ({ activeCoursesCount, ...rest }) => rest,
+      ({ activeCoursesCount, ...rest }) => rest
     );
 
     res.status(200).json({
-      status: 'success',
+      status: "success",
       results: finalResponse.length,
       data: finalResponse,
     });

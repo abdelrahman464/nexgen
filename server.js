@@ -137,9 +137,12 @@ initSocket(server);
 //schedule the cron job
 const { cronJobs } = require("./utils/cronJob/automatedTasks");
 
-// cronJobs();
+if (process.env.NODE_ENV !== "development") {
+  cronJobs();
+  console.log("Cron jobs started");
+}
 
-// invoicesCronJob();
+
 //handle Rejection out side express
 //Events =>list =>callback(err)
 process.on("unhandledRejection", async (err) => {

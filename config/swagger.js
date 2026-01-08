@@ -64,10 +64,6 @@ const baseDefinition = {
   },
   tags: [
     {
-      name: "Instructor Profits",
-      description: "Endpoints for managing instructor profits and analytics",
-    },
-    {
       name: "Authentication",
       description: "User authentication and authorization endpoints",
     },
@@ -80,12 +76,28 @@ const baseDefinition = {
       description: "Course management endpoints",
     },
     {
+      name: "Sections",
+      description: "Course section management - organize lessons into logical groups within courses",
+    },
+    {
+      name: "Lessons",
+      description: "Lesson management - video content, quizzes, attachments, and progress tracking",
+    },
+    {
       name: "Orders",
       description: "Order management endpoints",
     },
     {
+      name: "Instructor Profits",
+      description: "Endpoints for managing instructor profits and analytics",
+    },
+    {
       name: "Marketing",
       description: "Marketing and affiliate endpoints",
+    },
+    {
+      name: "Notifications",
+      description: "Notification and push notification endpoints",
     },
   ],
 };

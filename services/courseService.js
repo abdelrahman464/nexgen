@@ -284,18 +284,39 @@ exports.getMyCourses = asyncHandler(async (req, res, next) => {
     data: coursesWithProgress,
   });
 });
-
-exports.filterActiveCourses = (req, res, next) => {
-  req.filterObj = { status: 'active' };
-  if (req.query.keyword) {
-    const textPattern = new RegExp(req.query.keyword, 'i');
-    req.filterObj.$or = [
+exports.applyFilter = (req, res, next) => {
+  req.filterObj = req.filterObj || {};
+  const { title, description, keyword } = req.query;
+  const orFilters = [];
+  if (keyword) {
+    const textPattern = new RegExp(keyword, 'i');
+    orFilters.push(
       { 'title.ar': { $regex: textPattern } },
       { 'title.en': { $regex: textPattern } },
       { 'description.ar': { $regex: textPattern } },
       { 'description.en': { $regex: textPattern } },
-    ];
+    );
   }
+  if (title) {
+    orFilters.push(
+      { 'title.ar': title },
+      { 'title.en': title },
+    );
+  }
+  if (description) {
+    orFilters.push(
+      { 'description.ar':  description },
+      { 'description.en':  description },
+    );
+  }
+  if(orFilters.length > 0){
+    req.filterObj.$or = [ ...(req.filterObj.$or || []), ...orFilters];
+  }
+  return next();
+};
+
+exports.filterActiveCourses = (req, res, next) => {
+  req.filterObj = { status: 'active' };
   return next();
 };
 // Get all courses

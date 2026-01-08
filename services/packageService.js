@@ -92,6 +92,37 @@ exports.filterPackages = async (req, res, next) => {
   }
   return next();
 };
+exports.applyObjectFilters = (req, res, next) => {
+  req.filterObj = req.filterObj || {};
+  const { title, description, keyword } = req.query;
+  const orFilters = [];
+  if (keyword) {
+    const textPattern = new RegExp(keyword, 'i');
+    orFilters.push(
+      { 'title.ar': { $regex: textPattern } },
+      { 'title.en': { $regex: textPattern } },
+      { 'description.ar': { $regex: textPattern } },
+      { 'description.en': { $regex: textPattern } },
+    );
+  }
+  if (title) {
+    orFilters.push(
+      { 'title.ar': title },
+      { 'title.en': title },
+    );
+  }
+  if (description) {
+    orFilters.push(
+      { 'description.ar':  description },
+      { 'description.en':  description },
+    );
+  }
+  if(orFilters.length > 0){
+    req.filterObj.$or = [ ...(req.filterObj.$or || []), ...orFilters];
+  }
+  return next();
+};
+
 exports.getAll = factory.getALl(Package, "Package");
 //@desc get specific collection by id
 //@route GET /api/v1/collections/:id

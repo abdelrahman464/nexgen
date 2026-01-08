@@ -36,11 +36,11 @@ paths:
     get:
       tags:
         - Marketing
-      summary: Get market log by ID
-      description: Get marketing log for a specific marketer (requires ownership or admin)
+      summary: Get market log by ID For Admin
+      description: Get marketing log for a specific marketer (requires admin)
       operationId: getMarketLog
       security:
-        - bearerAuth: []
+        - bearerAuth: ["admin"]
       parameters:
         - name: id
           in: path
@@ -78,7 +78,7 @@ paths:
       description: Get marketing log for the authenticated user
       operationId: getMyMarketLog
       security:
-        - bearerAuth: []
+        - bearerAuth: ["user", "admin"]
       responses:
         "200":
           description: Market log retrieved successfully
@@ -102,7 +102,7 @@ paths:
       description: Get all children (downline) of a specific marketer
       operationId: getMarketerChildren
       security:
-        - bearerAuth: []
+        - bearerAuth: ["user", "admin"]
       parameters:
         - name: id
           in: path
@@ -176,11 +176,11 @@ paths:
     put:
       tags:
         - Marketing
-      summary: Modify invitation keys
+      summary: Modify invitation keys , add or remove invitation keys
       description: Update invitation keys for a marketer
       operationId: modifyInvitationKeys
       security:
-        - bearerAuth: []
+        - bearerAuth: ["user", "admin"]
       parameters:
         - name: id
           in: path
@@ -195,12 +195,17 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - option
+                - invitationKey
               properties:
-                invitationKeys:
-                  type: array
-                  items:
-                    type: string
-                  example: ["INV-ABC123", "INV-XYZ789"]
+                option:
+                  type: string
+                  enum: [add, remove]
+                  example: "add"
+                invitationKey:
+                  type: string
+                  example: "INV-ABC123"
       responses:
         "200":
           description: Invitation keys updated
@@ -258,23 +263,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
-  /marketing/calculateProfitsManual:
-    put:
-      tags:
-        - Marketing
-      summary: Calculate profits manually (Testing)
-      description: Manually trigger profit calculation (for testing purposes, not for production)
-      operationId: calculateProfitsManual
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: Profits calculated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SuccessResponse"
-
   /marketing/withdrawMoney/{id}:
     put:
       tags:
@@ -283,7 +271,7 @@ paths:
       description: Create an invoice to withdraw money for a marketer
       operationId: withdrawMoney
       security:
-        - bearerAuth: []
+        - bearerAuth: ["user", "admin"]
       parameters:
         - name: id
           in: path
@@ -292,7 +280,7 @@ paths:
           schema:
             type: string
             example: "507f1f77bcf86cd799439011"
-        - name: type
+        - name: type (marketer or instructor)
           in: query
           required: true
           description: Type of withdrawal (marketer or instructor)
@@ -361,6 +349,12 @@ paths:
                       itemType:
                         type: string
                         enum: [course, package, coursePackage]
+                      percentage:
+                        type: number
+                        minimum: 0
+                        maximum: 100
+                        example: 10
+
       responses:
         "200":
           description: Profitable items updated
@@ -373,26 +367,26 @@ paths:
     put:
       tags:
         - Marketing
-      summary: Start marketing for user
-      description: Enable marketing/affiliate program for a user
+      summary: Start marketing for user By Admin to Avail marketing benefits
+      description: Enable marketing/affiliate program for a user by admin
       operationId: startMarketing
       security:
-        - bearerAuth: []
+        - bearerAuth: ["admin"]
       parameters:
         - name: userId
           in: path
           required: true
-          description: User ID to start marketing for
+          description: User ID to start marketing for by admin
           schema:
             type: string
             example: "507f1f77bcf86cd799439011"
         - name: type
           in: query
           required: true
-          description: Type of marketing (marketer or instructor)
+          description: Type of marketing (marketer or Affiliate ,instructor)
           schema:
             type: string
-            enum: [marketer, instructor]
+            enum: [marketer, affiliate, instructor]
             example: "marketer"
       responses:
         "200":
@@ -410,12 +404,12 @@ paths:
       description: Get list of profitable items filtered by type
       operationId: getProfitableItemsByType
       security:
-        - bearerAuth: []
+        - bearerAuth: ["user", "admin"]
       parameters:
-        - name: type
+        - name: type (course, package, coursePackage)
           in: query
           required: false
-          description: Filter by item type
+          description: Filter by item type (course, package, coursePackage)
           schema:
             type: string
             enum: [course, package, coursePackage]

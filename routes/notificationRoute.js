@@ -37,4 +37,12 @@ router.post(
   notificationService.sendSystemNotificationToAll,
 );
 
+// Push notification only (without saving to database) - for marketing/broadcast
+router.post(
+  '/pushOnly',
+  authServices.protect,
+  authServices.allowedTo('admin'),
+  notificationService.sendPushNotificationOnly,
+);
+
 module.exports = router;

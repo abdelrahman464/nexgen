@@ -3,6 +3,7 @@ const ApiError = require('../utils/apiError');
 const Notification = require('../models/notificationModel');
 const User = require('../models/userModel');
 const factory = require('./handllerFactory');
+const { sendPushNotificationToTopic, sendPushNotificationToMultiple } = require('../utils/pushNotification');
 
 exports.createFilterObj = (req, res, next) => {
   const filterObject = { user: req.user._id };
@@ -113,5 +114,66 @@ exports.sendSystemNotificationToAll = asyncHandler(async (req, res, next) => {
   res.status(201).json({
     status: 'success',
     message: 'Notifications sent successfully',
+  });
+});
+
+//@desc send push notification only (without saving to database) - for marketing/broadcast
+//@route Post /api/v1/notifications/pushOnly
+//@access private (admin)
+exports.sendPushNotificationOnly = asyncHandler(async (req, res, next) => {
+  const { title, body, userIds, sendToAll, topic } = req.body;
+
+  if (!title || !body) {
+    return next(new ApiError('Title and body are required', 400));
+  }
+
+  const notification = { title, body };
+  let result;
+
+  if (topic) {
+    // Send to a topic (users must subscribe to this topic from mobile app)
+    result = await sendPushNotificationToTopic(topic, notification);
+  } else if (sendToAll) {
+    // Get all users with FCM tokens
+    const users = await User.find({ 
+      role: 'user', 
+      pushNotificationsEnabled: { $ne: false },
+      fcmTokens: { $exists: true, $ne: [] }
+    }).select('fcmTokens');
+    
+    const allTokens = users.reduce((tokens, user) => {
+      return tokens.concat(user.fcmTokens);
+    }, []);
+
+    if (allTokens.length === 0) {
+      return next(new ApiError('No FCM tokens found for users', 400));
+    }
+
+    result = await sendPushNotificationToMultiple(allTokens, notification);
+  } else if (userIds && userIds.length > 0) {
+    // Send to specific users
+    const users = await User.find({ 
+      _id: { $in: userIds },
+      pushNotificationsEnabled: { $ne: false },
+      fcmTokens: { $exists: true, $ne: [] }
+    }).select('fcmTokens');
+    
+    const allTokens = users.reduce((tokens, user) => {
+      return tokens.concat(user.fcmTokens);
+    }, []);
+
+    if (allTokens.length === 0) {
+      return next(new ApiError('No FCM tokens found for specified users', 400));
+    }
+
+    result = await sendPushNotificationToMultiple(allTokens, notification);
+  } else {
+    return next(new ApiError('Please specify userIds, sendToAll, or topic', 400));
+  }
+
+  res.status(200).json({
+    status: result.success ? 'success' : 'failed',
+    message: result.success ? 'Push notification sent' : 'Failed to send push notification',
+    data: result,
   });
 });

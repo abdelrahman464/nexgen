@@ -38,6 +38,8 @@ const {
   moveOneUserToAnother,
   getInstructorBelongings,
   getAllInstructorsWithBelongings,
+  registerFcmToken,
+  togglePushNotifications,
 } = require("../services/userService");
 
 const router = express.Router();
@@ -179,6 +181,17 @@ router.get(
   authServices.protect,
   authServices.allowedTo("admin"),
   getAllInstructorsWithBelongings
+);
+
+// FCM Token Management for Push Notifications
+router
+  .route("/fcm-token")
+  .patch(authServices.protect, registerFcmToken)
+
+router.put(
+  "/push-notifications",
+  authServices.protect,
+  togglePushNotifications
 );
 
 module.exports = router;

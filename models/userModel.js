@@ -153,6 +153,17 @@ const userSchema = new mongoose.Schema(
     isAffiliateMarketer: {
       type: Boolean,
     },
+    // FCM tokens for push notifications (supports multiple devices per user)
+    fcmTokens: [
+      {
+        type: String,
+      },
+    ],
+    // Push notification preferences
+    pushNotificationsEnabled: {
+      type: Boolean,
+      default: true,
+    },
   },
   { timestamps: true }
 );

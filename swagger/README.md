@@ -15,10 +15,13 @@ The following YAML files contain OpenAPI specifications for different route grou
 
 - `auth.yaml` - Authentication endpoints (signup, login, password reset, email verification)
 - `users.yaml` - User management endpoints (CRUD operations, follow/unfollow, profile management)
-- `courses.yaml` - Course management endpoints (create, update, enroll, certificates)
+- `courses.yaml` - Course management endpoints (create, update, enroll, certificates, reviews)
+- `sections.yaml` - Course section management (organize lessons into logical groups, bulk reordering)
+- `lessons.yaml` - Lesson management (video content, quizzes, attachments, progress tracking)
 - `orders.yaml` - Order management endpoints (purchases, checkout, payment callbacks)
 - `marketing.yaml` - Marketing and affiliate endpoints (market logs, profits, invitations)
 - `instructorProfits.yaml` - Instructor profits and analytics endpoints
+- `notifications.yaml` - Notification and push notification endpoints
 
 Additional YAML files can be added here for other route groups
 

@@ -218,7 +218,7 @@ const updateHeadCommission = async (data) => {
   }
 
   const profit = headMarketerProfits;
-
+  const totalProfits = headMarketLog.profits + profit;
   let hasBeenUpdated = false;
   headMarketLog.commissions.map((commission) => {
     if (commission.member.toString() === marketerId.toString()) {
@@ -228,8 +228,12 @@ const updateHeadCommission = async (data) => {
       hasBeenUpdated = true;
     }
   });
-  if (hasBeenUpdated) await headMarketLog.save();
-  else {
+  headMarketLog.profits += parseFloat(profit.toFixed(2));
+  if (hasBeenUpdated) {
+    headMarketLog.commissionsProfits += profit;
+    headMarketLog.totalProfits = totalProfits;
+    await headMarketLog.save();
+  } else {
     await MarketingLog.findOneAndUpdate(
       {
         marketer: invitorId,
@@ -240,6 +244,11 @@ const updateHeadCommission = async (data) => {
             member: marketerId,
             profit: profit.toFixed(2),
           },
+        },
+        $inc: {
+          profits: parseFloat(profit.toFixed(2)),
+          commissionsProfits: parseFloat(profit.toFixed(2)),
+          totalProfits: totalProfits,
         },
       }
     );

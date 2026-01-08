@@ -6,50 +6,51 @@ paths:
       tags:
         - Courses
       summary: Get all active courses
-      description: Get list of all active courses (public endpoint)
+      description: |
+        Retrieves a paginated list of all publicly available courses that have an **active** status.
+        This is a public endpoint that does not require authentication.
+        
+        **Features:**
+        - Returns only courses with `status: active`
+        - Supports keyword search across course titles and descriptions (both Arabic and English)
+        - Includes basic instructor information (name, email, profile image)
+        - Supports pagination for large datasets
+        
+        **Use cases:**
+        - Public course catalog browsing
+        - Course search functionality
+        - Homepage course listings
       operationId: getAllActiveCourses
-      responses:
-        "200":
-          description: Courses retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  results:
-                    type: integer
-                    example: 50
-                  data:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Course"
-
-  /courses/getAll:
-    get:
-      tags:
-        - Courses
-      summary: Get all courses (Admin/Instructor)
-      description: Get all courses with filtering (admin sees all, instructor sees their own)
-      operationId: getAllCourses
-      security:
-        - bearerAuth: []
       parameters:
+        - name: keyword
+          in: query
+          description: Search term to filter courses by title or description (searches both Arabic and English content using case-insensitive regex matching)
+          schema:
+            type: string
+            example: "javascript"
         - name: page
           in: query
+          description: Page number for pagination (starts at 1)
           schema:
             type: integer
+            default: 1
             example: 1
         - name: limit
           in: query
+          description: Number of courses to return per page
           schema:
             type: integer
+            default: 10
             example: 10
+        - name: sort
+          in: query
+          description: Field to sort by (prefix with - for descending order)
+          schema:
+            type: string
+            example: "-createdAt"
       responses:
         "200":
-          description: Courses retrieved successfully
+          description: List of active courses retrieved successfully
           content:
             application/json:
               schema:
@@ -60,166 +61,33 @@ paths:
                     example: "success"
                   results:
                     type: integer
+                    description: Total number of courses matching the query
                     example: 50
+                  paginationResult:
+                    $ref: "#/components/schemas/PaginationResult"
                   data:
                     type: array
                     items:
                       $ref: "#/components/schemas/Course"
-
-  /courses/MyCourses/{id}:
-    get:
-      tags:
-        - Courses
-      summary: Get my courses
-      description: Get courses enrolled by a user
-      operationId: getMyCourses
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: false
-          description: User ID (optional, defaults to authenticated user)
-          schema:
-            type: string
-            example: "507f1f77bcf86cd799439011"
-      responses:
-        "200":
-          description: Courses retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  data:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Course"
-
-  /courses/instructorCourses/{id}:
-    get:
-      tags:
-        - Courses
-      summary: Get instructor courses
-      description: Get all courses created by an instructor
-      operationId: getInstructorCourses
-      parameters:
-        - name: id
-          in: path
-          required: false
-          description: Instructor ID (optional)
-          schema:
-            type: string
-            example: "507f1f77bcf86cd799439011"
-      responses:
-        "200":
-          description: Courses retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  data:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Course"
-
-  /courses/{id}:
-    get:
-      tags:
-        - Courses
-      summary: Get course by ID
-      description: Get detailed information about a specific course
-      operationId: getCourseById
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "507f1f77bcf86cd799439011"
-      responses:
-        "200":
-          description: Course retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  data:
-                    $ref: "#/components/schemas/Course"
-        "404":
-          description: Course not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    put:
-      tags:
-        - Courses
-      summary: Update course
-      description: Update course information (instructor or admin only)
-      operationId: updateCourse
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            example: "507f1f77bcf86cd799439011"
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                title:
-                  type: string
-                  example: "Advanced JavaScript"
-                description:
-                  type: string
-                  example: "Learn advanced JavaScript concepts"
-                price:
-                  type: number
-                  example: 99.99
-                category:
-                  type: string
-                  example: "507f1f77bcf86cd799439012"
-                imageCover:
-                  type: string
-                  format: binary
-      responses:
-        "200":
-          description: Course updated successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  data:
-                    $ref: "#/components/schemas/Course"
-
-  /courses:
     post:
       tags:
         - Courses
-      summary: Create course
-      description: Create a new course (instructor or admin only)
+      summary: Create a new course
+      description: |
+        Creates a new course in the system. Only users with **instructor** or **admin** roles can create courses.
+        
+        **Process:**
+        1. Validates user has instructor/admin privileges
+        2. Processes and optimizes the uploaded cover image (converts to WebP format with 95% quality)
+        3. Validates required fields (title, price, category)
+        4. If `instructorPercentage` is provided, verifies the instructor has an existing profit configuration
+        5. Creates the course with `status: draft` by default
+        
+        **Notes:**
+        - The course creator is automatically set as the instructor unless explicitly specified
+        - Cover images are stored in `/uploads/courses/` directory
+        - Courses need to be activated (status changed to 'active') before appearing in public listings
+        - Upon activation, a group chat is automatically created for course participants
       operationId: createCourse
       security:
         - bearerAuth: []
@@ -235,23 +103,355 @@ paths:
                 - category
               properties:
                 title:
-                  type: string
-                  example: "Introduction to JavaScript"
+                  type: object
+                  description: Course title in multiple languages
+                  properties:
+                    ar:
+                      type: string
+                      example: "مقدمة في جافاسكريبت"
+                    en:
+                      type: string
+                      example: "Introduction to JavaScript"
                 description:
-                  type: string
-                  example: "Learn the basics of JavaScript"
+                  type: object
+                  description: Course description in multiple languages
+                  properties:
+                    ar:
+                      type: string
+                      example: "تعلم أساسيات البرمجة بجافاسكريبت"
+                    en:
+                      type: string
+                      example: "Learn JavaScript programming from scratch"
                 price:
                   type: number
+                  description: Course price in the system's default currency
                   example: 99.99
                 category:
                   type: string
-                  example: "507f1f77bcf86cd799439012"
-                imageCover:
+                  description: MongoDB ObjectId reference to the course category
+                  example: "507f1f77bcf86cd799439011"
+                image:
                   type: string
                   format: binary
+                  description: Course cover image (supported formats - JPEG, PNG, WebP)
+                highlights:
+                  type: array
+                  description: Key learning points or features of the course
+                  items:
+                    type: string
+                accessibleCourses:
+                  type: array
+                  description: List of related course IDs that grant access to this course
+                  items:
+                    type: string
+                instructorPercentage:
+                  type: number
+                  description: Percentage of revenue shared with the instructor (0-100). Requires existing instructor profit configuration.
+                  minimum: 0
+                  maximum: 100
+                  example: 70
       responses:
         "201":
           description: Course created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Course"
+        "400":
+          description: Bad request - validation error or unsupported file type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized - user not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden - user is not an instructor or admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Instructor has no profit configuration (when instructorPercentage is provided)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /courses/getAll:
+    get:
+      tags:
+        - Courses
+      summary: Get all courses (Admin/Instructor dashboard)
+      description: |
+        Retrieves all courses with role-based filtering for administrative purposes.
+        
+        **Access Control:**
+        - **Admin users:** Can view ALL courses in the system regardless of status
+        - **Instructor users:** Can only view their own courses (filtered by `instructor: user._id`)
+        
+        **Features:**
+        - Supports pagination for large datasets
+        - Includes instructor details (name, email, profile image)
+        - Returns courses of all statuses (draft, active, archived)
+        - Can filter by status query parameter (for admins/instructors)
+        
+        **Use cases:**
+        - Admin course management dashboard
+        - Instructor's "My Courses" panel
+        - Course moderation and review
+      operationId: getAllCourses
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number for pagination (starts at 1)
+          schema:
+            type: integer
+            default: 1
+            example: 1
+        - name: limit
+          in: query
+          description: Number of courses to return per page
+          schema:
+            type: integer
+            default: 10
+            example: 10
+        - name: status
+          in: query
+          description: Filter courses by status (available for admin/instructor)
+          schema:
+            type: string
+            enum: [draft, active, archived]
+            example: active
+        - name: sort
+          in: query
+          description: Field to sort by (prefix with - for descending order)
+          schema:
+            type: string
+            example: "-createdAt"
+      responses:
+        "200":
+          description: Courses retrieved successfully based on user role
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  results:
+                    type: integer
+                    description: Total number of courses matching the filter
+                    example: 50
+                  paginationResult:
+                    $ref: "#/components/schemas/PaginationResult"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Course"
+        "401":
+          description: Unauthorized - user not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden - user is not an admin or instructor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /courses/MyCourses/{id}:
+    get:
+      tags:
+        - Courses
+      summary: Get enrolled courses with progress
+      description: |
+        Retrieves all courses that a user is enrolled in, along with their learning progress for each course.
+        
+        **Features:**
+        - Returns comprehensive progress information including:
+          - Total completion percentage (weighted: 80% lesson exams + 20% final exam)
+          - Last accessed lesson details
+          - Course details with localized content
+        
+        **Progress Calculation:**
+        - Tracks completed lessons and their exam scores
+        - Calculates weighted average: `(lessonExamsProgress × 0.8) + (finalExamProgress × 0.2)`
+        - Includes the most recently accessed lesson for "continue learning" functionality
+        
+        **Use cases:**
+        - User's learning dashboard
+        - "Continue Learning" feature
+        - Progress tracking and gamification
+      operationId: getMyCourses
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: false
+          description: |
+            User ID to fetch courses for. If omitted, returns courses for the authenticated user.
+            Admins can use this to view any user's enrolled courses.
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      responses:
+        "200":
+          description: User's enrolled courses with progress data retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: "#/components/schemas/Course"
+                        - type: object
+                          properties:
+                            totalProgress:
+                              type: number
+                              description: Overall course completion percentage (0-100)
+                              example: 65.5
+                            lastLesson:
+                              type: object
+                              description: The most recently accessed lesson
+                              properties:
+                                _id:
+                                  type: string
+                                title:
+                                  type: string
+                                lessonDuration:
+                                  type: number
+                                section:
+                                  type: object
+                                  properties:
+                                    _id:
+                                      type: string
+                                    title:
+                                      type: string
+        "401":
+          description: Unauthorized - user not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /courses/instructorCourses/{id}:
+    get:
+      tags:
+        - Courses
+      summary: Get courses by instructor
+      description: |
+        Retrieves all courses created by a specific instructor.
+        
+        **Access Control:**
+        - Public users can only see courses with `status: active`
+        - Admins and instructors can filter by status query parameter to see draft/archived courses
+        
+        **Features:**
+        - Supports pagination
+        - Includes instructor details
+        - Useful for instructor profile pages and portfolios
+        
+        **Use cases:**
+        - Instructor public profile page
+        - "Courses by this instructor" section
+        - Instructor portfolio showcase
+      operationId: getInstructorCourses
+      parameters:
+        - name: id
+          in: path
+          required: false
+          description: |
+            Instructor's User ID. If omitted and user is authenticated, defaults to the authenticated user's ID.
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+        - name: status
+          in: query
+          description: Filter by course status (only works for authenticated admin/instructor)
+          schema:
+            type: string
+            enum: [draft, active, archived]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            example: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            example: 10
+      responses:
+        "200":
+          description: Instructor's courses retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  results:
+                    type: integer
+                    example: 15
+                  paginationResult:
+                    $ref: "#/components/schemas/PaginationResult"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Course"
+
+  /courses/{id}:
+    get:
+      tags:
+        - Courses
+      summary: Get course by ID
+      description: |
+        Retrieves detailed information about a specific course by its unique identifier.
+        
+        **Features:**
+        - Returns full course details with localized content (based on Accept-Language header)
+        - Includes populated instructor information (name, email, profile image)
+        - Includes all course reviews
+        - Supports translation fields for multilingual content
+        
+        **Use cases:**
+        - Course detail page
+        - Course preview before enrollment
+        - SEO-friendly course landing pages
+      operationId: getCourseById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: MongoDB ObjectId of the course
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      responses:
+        "200":
+          description: Course details retrieved successfully
           content:
             application/json:
               schema:
@@ -262,13 +462,168 @@ paths:
                     example: "success"
                   data:
                     $ref: "#/components/schemas/Course"
+        "404":
+          description: Course not found for the provided ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      tags:
+        - Courses
+      summary: Update course
+      description: |
+        Updates an existing course's information. Only the course instructor or an admin can perform this operation.
+        
+        **Authorization:**
+        - Admins can update any course
+        - Instructors can only update their own courses
+        
+        **Activation Process:**
+        When updating `status` to `active`, the system:
+        1. Validates all required fields are present (returns error with missing fields list if incomplete)
+        2. Creates a group chat for course participants with the instructor as admin
+        3. Makes the course visible in public course listings
+        
+        **Image Processing:**
+        - Uploaded images are automatically converted to WebP format
+        - Images are optimized with 95% quality
+        - Stored in `/uploads/courses/` directory
+        
+        **Notes:**
+        - Partial updates are supported (only send fields you want to change)
+        - Category changes require valid category ObjectId
+      operationId: updateCourse
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: MongoDB ObjectId of the course to update
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: object
+                  description: Course title in multiple languages
+                  properties:
+                    ar:
+                      type: string
+                      example: "جافاسكريبت متقدم"
+                    en:
+                      type: string
+                      example: "Advanced JavaScript"
+                description:
+                  type: object
+                  properties:
+                    ar:
+                      type: string
+                    en:
+                      type: string
+                price:
+                  type: number
+                  example: 99.99
+                category:
+                  type: string
+                  description: MongoDB ObjectId of the new category
+                  example: "507f1f77bcf86cd799439012"
+                image:
+                  type: string
+                  format: binary
+                  description: New course cover image
+                status:
+                  type: string
+                  description: Course visibility status
+                  enum: [draft, active, archived]
+                highlights:
+                  type: array
+                  items:
+                    type: string
+                accessibleCourses:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: Course updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "updated successfully"
+                  data:
+                    $ref: "#/components/schemas/Course"
+        "400":
+          description: |
+            Bad request - possible causes:
+            - Validation error
+            - Cannot activate course with missing required fields (returns list of missing fields)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized - user not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Course not found or user is not the course instructor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /courses/courseDetails/{id}:
     get:
       tags:
         - Courses
-      summary: Get course details
-      description: Get detailed course information including sections and lessons
+      summary: Get comprehensive course analytics
+      description: |
+        Retrieves detailed course information including enrolled users, their progress, and course statistics.
+        This is primarily used for instructor/admin dashboards to monitor course performance.
+        
+        **Response includes:**
+        
+        1. **Course Details:** Full course information with localized content and category
+        
+        2. **User Progress Data:** For each enrolled user:
+           - Average lesson exam scores (percentage)
+           - Final exam score (percentage)
+           - Overall course average (combined lessons + final exam)
+           - Completion status (Completed, failed, notTaken)
+           - Certificate information if issued
+           - Attempt date for final exam
+        
+        3. **Course Statistics:**
+           - Total enrolled users
+           - Users who completed the course
+           - Users who failed
+           - Users who haven't taken the final exam
+           - Total certificates issued
+        
+        **Progress Calculation:**
+        - Lesson exam percentage: `(totalLessonScore / totalPossibleLessonGrade) × 100`
+        - Final exam percentage: `(finalExamScore / totalPossibleFinalGrade) × 100`
+        - Overall average: Combined weighted average of all exams
+        
+        **Use cases:**
+        - Instructor dashboard for monitoring student progress
+        - Admin analytics and reporting
+        - Certificate management
+        - Student performance tracking
       operationId: getCourseDetails
       security:
         - bearerAuth: []
@@ -276,12 +631,13 @@ paths:
         - name: id
           in: path
           required: true
+          description: MongoDB ObjectId of the course
           schema:
             type: string
             example: "507f1f77bcf86cd799439011"
       responses:
         "200":
-          description: Course details retrieved
+          description: Course analytics retrieved successfully
           content:
             application/json:
               schema:
@@ -291,14 +647,127 @@ paths:
                     type: string
                     example: "success"
                   data:
-                    $ref: "#/components/schemas/CourseDetails"
+                    type: object
+                    properties:
+                      courseDetails:
+                        $ref: "#/components/schemas/Course"
+                      users:
+                        type: array
+                        description: List of enrolled users sorted by overall performance (descending)
+                        items:
+                          type: object
+                          properties:
+                            _id:
+                              type: string
+                              description: User ID
+                            name:
+                              type: string
+                              description: User's display name
+                            email:
+                              type: string
+                              description: User's email address
+                            profileImg:
+                              type: string
+                              description: Full URL to user's profile image
+                              example: "https://example.com/users/profile.jpg"
+                            avgLessonsExamsPercentage:
+                              type: number
+                              description: Average score across all lesson exams (0-100)
+                              example: 85.5
+                            finalExamPercentage:
+                              type: number
+                              description: Final exam score percentage (0-100)
+                              example: 92.0
+                            avgCourseExamsPercentage:
+                              type: number
+                              nullable: true
+                              description: Overall course score combining lessons and final exam (null if final exam not taken)
+                              example: 88.75
+                            status:
+                              type: string
+                              enum: [Completed, failed, notTaken]
+                              description: User's course completion status
+                            score:
+                              type: number
+                              description: Raw final exam score
+                            attemptDate:
+                              type: string
+                              format: date-time
+                              nullable: true
+                              description: Date when final exam was attempted
+                            certificate:
+                              type: string
+                              nullable: true
+                              description: Full URL to certificate PDF if issued
+                      stats:
+                        type: object
+                        description: Aggregated course statistics
+                        properties:
+                          totalUsers:
+                            type: integer
+                            description: Total number of enrolled users
+                            example: 150
+                          usersCompletedCourse:
+                            type: integer
+                            description: Number of users who successfully completed the course
+                            example: 95
+                          usersFailedCourse:
+                            type: integer
+                            description: Number of users who failed the final exam
+                            example: 20
+                          usersNotTakenCourse:
+                            type: integer
+                            description: Number of users who haven't taken the final exam yet
+                            example: 35
+                          totalCertificates:
+                            type: integer
+                            description: Number of certificates issued for this course
+                            example: 85
+        "400":
+          description: Invalid course ID format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized - user not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Course not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /courses/addUserToCourse/{id}:
     post:
       tags:
         - Courses
-      summary: Add user to course
-      description: Manually add a user to a course (admin only)
+      summary: Manually enroll user in course
+      description: |
+        Allows administrators to manually add a user to a course without requiring payment.
+        This creates a free enrollment with full course access.
+        
+        **Process:**
+        1. Looks up user by email address
+        2. Checks if user is already enrolled in the course
+        3. Creates a new order record with `paymentMethodType: free` and `isPaid: true`
+        4. Initializes course progress tracking for the user
+        
+        **Use cases:**
+        - Granting complimentary course access
+        - Corporate/bulk enrollments
+        - Support tickets for enrollment issues
+        - Instructor gifting course access
+        - Promotional giveaways
+        
+        **Notes:**
+        - User must already exist in the system
+        - Cannot add a user who is already enrolled
+        - Order is marked as paid with zero amount
       operationId: addUserToCourse
       security:
         - bearerAuth: []
@@ -306,7 +775,7 @@ paths:
         - name: id
           in: path
           required: true
-          description: Course ID
+          description: MongoDB ObjectId of the course to enroll user in
           schema:
             type: string
             example: "507f1f77bcf86cd799439011"
@@ -317,25 +786,78 @@ paths:
             schema:
               type: object
               required:
-                - userId
+                - email
               properties:
-                userId:
+                email:
                   type: string
-                  example: "507f1f77bcf86cd799439012"
+                  format: email
+                  description: Email address of the user to enroll
+                  example: "student@example.com"
       responses:
         "200":
-          description: User added to course
+          description: User successfully enrolled in the course
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SuccessResponse"
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "User added to the course"
+        "401":
+          description: Unauthorized - user not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden - only admins can add users to courses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: |
+            Not found - possible causes:
+            - No user found with the provided email
+            - User is already subscribed to this course
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /courses/assignInstructorPercentage/{id}:
     put:
       tags:
         - Courses
-      summary: Assign instructor percentage
-      description: Set instructor profit percentage for a course (admin only)
+      summary: Set instructor revenue share percentage
+      description: |
+        Assigns a profit-sharing percentage to the course instructor. This percentage determines
+        how much of each sale goes to the instructor versus the platform.
+        
+        **Requirements:**
+        - Course must exist
+        - Course must have an assigned instructor
+        - Course must NOT already have an instructor percentage assigned
+        - If no existing instructor profit record exists, one will be created automatically
+        
+        **Business Logic:**
+        1. Validates the course exists and has an instructor
+        2. Checks if instructor percentage is not already set (prevents overwriting)
+        3. Creates an instructor profit tracking record if needed
+        4. Saves the percentage to the course
+        
+        **Use cases:**
+        - Setting up revenue sharing for new courses
+        - Instructor partnership agreements
+        - Platform monetization configuration
+        
+        **Notes:**
+        - Once set, use `removeInstructorPercentage` before assigning a new value
+        - Percentage should be between 0-100 (e.g., 70 means instructor gets 70%)
       operationId: assignInstructorPercentage
       security:
         - bearerAuth: []
@@ -343,7 +865,7 @@ paths:
         - name: id
           in: path
           required: true
-          description: Course ID
+          description: MongoDB ObjectId of the course
           schema:
             type: string
             example: "507f1f77bcf86cd799439011"
@@ -354,27 +876,81 @@ paths:
             schema:
               type: object
               required:
-                - percentage
+                - instructorPercentage
               properties:
-                percentage:
+                instructorPercentage:
                   type: number
                   minimum: 0
                   maximum: 100
+                  description: Percentage of revenue to be shared with the instructor
                   example: 70
       responses:
         "200":
-          description: Instructor percentage assigned
+          description: Instructor percentage assigned successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SuccessResponse"
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  msg:
+                    type: string
+                    example: "Instructor percentage assigned successfully"
+        "401":
+          description: Unauthorized - user not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden - only admins can assign instructor percentages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: |
+            Not found - possible causes:
+            - Course not found
+            - Instructor percentage already assigned for this course
+            - No instructor found for this course
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Error while creating instructor profit object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /courses/removeInstructorPercentage/{id}:
     delete:
       tags:
         - Courses
-      summary: Remove instructor percentage
-      description: Remove instructor profit percentage from a course (admin only)
+      summary: Remove instructor revenue share percentage
+      description: |
+        Removes the profit-sharing percentage from a course instructor.
+        This also deletes the associated instructor profit tracking record.
+        
+        **Process:**
+        1. Validates the course exists
+        2. Checks if instructor percentage is currently set
+        3. Sets `instructorPercentage` to null
+        4. Deletes the instructor profit tracking record
+        5. Saves the updated course
+        
+        **Use cases:**
+        - Ending instructor partnership
+        - Resetting percentage before assigning a new value
+        - Course ownership transfer preparation
+        
+        **Notes:**
+        - This is a destructive operation that removes profit tracking
+        - Must be called before `assignInstructorPercentage` to change the percentage
       operationId: removeInstructorPercentage
       security:
         - bearerAuth: []
@@ -382,24 +958,74 @@ paths:
         - name: id
           in: path
           required: true
-          description: Course ID
+          description: MongoDB ObjectId of the course
           schema:
             type: string
             example: "507f1f77bcf86cd799439011"
       responses:
         "200":
-          description: Instructor percentage removed
+          description: Instructor percentage removed successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SuccessResponse"
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  msg:
+                    type: string
+                    example: "Instructor percentage removed successfully"
+        "401":
+          description: Unauthorized - user not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden - only admins can remove instructor percentages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: |
+            Not found - possible causes:
+            - Course not found
+            - No instructor percentage found for this course
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /courses/giveCertificate/{courseId}/{userId}:
     put:
       tags:
         - Courses
-      summary: Give certificate to user
-      description: Issue a certificate to a user for completing a course (admin only)
+      summary: Issue certificate to user
+      description: |
+        Issues a completion certificate to a user who has completed a course.
+        The certificate is uploaded as a PDF file and stored in the system.
+        
+        **Process:**
+        1. Validates and stores the uploaded PDF file (generates unique filename)
+        2. Updates the user's course progress record with certificate information
+        3. Sends a notification to the user about their new certificate (in both English and Arabic)
+        
+        **File Handling:**
+        - Only PDF files are accepted
+        - Files are stored in `/uploads/certificate/` directory
+        - Filename format: `certificate-{uuid}.pdf`
+        
+        **Use cases:**
+        - Awarding completion certificates
+        - Manual certificate issuance by admins
+        - Re-issuing certificates with corrections
+        
+        **Notes:**
+        - User must have course progress record (must be enrolled)
+        - Overwrites existing certificate if one exists
+        - Triggers push notification to the user
       operationId: giveCertificate
       security:
         - bearerAuth: []
@@ -407,12 +1033,14 @@ paths:
         - name: courseId
           in: path
           required: true
+          description: MongoDB ObjectId of the course
           schema:
             type: string
             example: "507f1f77bcf86cd799439011"
         - name: userId
           in: path
           required: true
+          description: MongoDB ObjectId of the user to receive the certificate
           schema:
             type: string
             example: "507f1f77bcf86cd799439012"
@@ -422,44 +1050,107 @@ paths:
           multipart/form-data:
             schema:
               type: object
+              required:
+                - file
               properties:
-                certificateFile:
+                file:
                   type: string
                   format: binary
-                  description: Certificate PDF file
+                  description: Certificate PDF file (only PDF format is accepted)
       responses:
         "200":
-          description: Certificate issued successfully
+          description: Certificate issued and notification sent to user
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SuccessResponse"
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  msg:
+                    type: string
+                    example: "Certificate given successfully"
+        "400":
+          description: Unsupported file type (only PDFs are allowed)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized - user not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden - only admins can issue certificates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: No course progress found for this user/course combination
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /courses/getCertificate/{id}:
     get:
       tags:
         - Courses
-      summary: Get certificate
-      description: Download certificate by certificate ID
+      summary: Get certificate by certificate ID
+      description: |
+        Retrieves certificate information using the certificate's unique identifier.
+        This is a public endpoint that can be used to verify and download certificates.
+        
+        **Response includes:**
+        - Certificate file path (for constructing download URL)
+        - Associated course ID
+        
+        **Use cases:**
+        - Certificate verification links
+        - Public certificate viewing pages
+        - Certificate download functionality
+        - LinkedIn/social media certificate sharing
+        
+        **Notes:**
+        - Certificate ID is embedded in the course progress document
+        - Returns the file path, not the actual file (construct full URL with base URL)
       operationId: getCertificate
       parameters:
         - name: id
           in: path
           required: true
-          description: Certificate ID
+          description: Unique certificate identifier (MongoDB ObjectId from certificate subdocument)
           schema:
             type: string
             example: "507f1f77bcf86cd799439011"
       responses:
         "200":
-          description: Certificate file
+          description: Certificate information retrieved successfully
           content:
-            application/pdf:
+            application/json:
               schema:
-                type: string
-                format: binary
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: object
+                    properties:
+                      file:
+                        type: string
+                        description: Certificate filename (append to base URL + /certificate/ for full path)
+                        example: "certificate-abc123-def456.pdf"
+                      course:
+                        type: string
+                        description: MongoDB ObjectId of the associated course
+                        example: "507f1f77bcf86cd799439011"
         "404":
-          description: Certificate not found
+          description: Certificate not found for the provided ID
           content:
             application/json:
               schema:
@@ -469,8 +1160,31 @@ paths:
     get:
       tags:
         - Courses
-      summary: Get certificate link
-      description: Get certificate download link for a course
+      summary: Get certificate link for authenticated user
+      description: |
+        Retrieves the certificate download link for the authenticated user for a specific course.
+        This endpoint checks if the user has earned a certificate for the given course.
+        
+        **Process:**
+        1. Validates the course ID format
+        2. Looks up the user's course progress record
+        3. Checks if a certificate has been issued
+        4. Returns certificate information if available
+        
+        **Response includes:**
+        - Certificate availability status
+        - Certificate file path for download
+        - Certificate unique identifier for sharing/verification
+        
+        **Use cases:**
+        - User profile certificate section
+        - "Download my certificate" button
+        - Certificate sharing to social media
+        - User dashboard certificate display
+        
+        **Notes:**
+        - Only returns certificate for the authenticated user
+        - Returns 404 if user has no certificate for the course
       operationId: getCertificateLink
       security:
         - bearerAuth: []
@@ -478,12 +1192,13 @@ paths:
         - name: courseId
           in: path
           required: true
+          description: MongoDB ObjectId of the course
           schema:
             type: string
             example: "507f1f77bcf86cd799439011"
       responses:
         "200":
-          description: Certificate link retrieved
+          description: Certificate link retrieved successfully
           content:
             application/json:
               schema:
@@ -492,68 +1207,1054 @@ paths:
                   status:
                     type: string
                     example: "success"
-                  certificateLink:
+                  message:
                     type: string
-                    example: "https://example.com/certificates/abc123"
+                    example: "Certificate found"
+                  data:
+                    type: object
+                    properties:
+                      hasCertificate:
+                        type: boolean
+                        description: Indicates if user has earned a certificate
+                        example: true
+                      certificateLink:
+                        type: string
+                        description: Certificate file path for download
+                        example: "certificate-abc123.pdf"
+                      certificateId:
+                        type: string
+                        description: Unique certificate ID for verification/sharing
+                        example: "507f1f77bcf86cd799439011"
+        "400":
+          description: Invalid course ID format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized - user not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
-          description: Certificate not found
+          description: No certificate found for this user and course
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "No certificate found for this user and course"
+
+  # =====================================================
+  # NESTED ROUTES: Course Reviews
+  # =====================================================
+
+  /courses/{courseId}/reviews:
+    get:
+      tags:
+        - Course Reviews
+      summary: Get all reviews for a course
+      description: |
+        Retrieves all reviews submitted for a specific course.
+        This is a public endpoint that can be used to display course ratings and feedback.
+        
+        **Features:**
+        - Paginated results
+        - Includes reviewer information
+        - Sorted by most recent by default
+        
+        **Use cases:**
+        - Course detail page reviews section
+        - Course rating display
+        - Social proof for course quality
+      operationId: getCourseReviews
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          description: MongoDB ObjectId of the course
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+        - name: page
+          in: query
+          schema:
+            type: integer
+            example: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            example: 10
+      responses:
+        "200":
+          description: Reviews retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  results:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Review"
+    post:
+      tags:
+        - Course Reviews
+      summary: Create a review for a course
+      description: |
+        Submits a new review for a course. Only authenticated users (with 'user' or 'admin' role) can create reviews.
+        
+        **Process:**
+        1. Validates user is authenticated
+        2. Automatically sets course ID from URL parameter
+        3. Automatically sets user ID from authenticated user
+        4. Creates the review
+        
+        **Notes:**
+        - Users can typically only leave one review per course
+        - Review includes rating and optional text feedback
+      operationId: createCourseReview
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          description: MongoDB ObjectId of the course
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - rating
+              properties:
+                rating:
+                  type: number
+                  minimum: 1
+                  maximum: 5
+                  description: Rating from 1-5 stars
+                  example: 5
+                review:
+                  type: string
+                  description: Optional text feedback
+                  example: "Excellent course! Highly recommended."
+      responses:
+        "201":
+          description: Review created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    $ref: "#/components/schemas/Review"
+        "401":
+          description: Unauthorized
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /courses/{courseId}/reviews/myReview:
+    get:
+      tags:
+        - Course Reviews
+      summary: Get my review for a course
+      description: |
+        Retrieves the authenticated user's review for a specific course.
+        This allows users to see and potentially edit their own review.
+        
+        **Use cases:**
+        - "Edit my review" functionality
+        - Displaying user's own review prominently
+        - Check if user has already reviewed the course
+      operationId: getMyReview
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          description: MongoDB ObjectId of the course
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      responses:
+        "200":
+          description: User's review retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Review"
+
+  /courses/{courseId}/reviews/{id}:
+    get:
+      tags:
+        - Course Reviews
+      summary: Get a specific review
+      description: Retrieves a single review by its ID.
+      operationId: getCourseReviewById
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Review ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Review retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    $ref: "#/components/schemas/Review"
+        "404":
+          description: Review not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      tags:
+        - Course Reviews
+      summary: Update a review
+      description: |
+        Updates an existing review. Only the review author can update their own review.
+        
+        **Notes:**
+        - Only users with 'user' role can update reviews
+        - Can update rating and/or review text
+      operationId: updateCourseReview
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Review ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rating:
+                  type: number
+                  minimum: 1
+                  maximum: 5
+                review:
+                  type: string
+      responses:
+        "200":
+          description: Review updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    $ref: "#/components/schemas/Review"
+    delete:
+      tags:
+        - Course Reviews
+      summary: Delete a review
+      description: |
+        Deletes a review. Can be performed by the review author or an admin.
+        
+        **Authorization:**
+        - Users can delete their own reviews
+        - Admins can delete any review
+      operationId: deleteCourseReview
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Review ID
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Review deleted successfully
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Review not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /courses/{courseId}/reviews/{id}/reply:
+    put:
+      tags:
+        - Course Reviews
+      summary: Reply to a review
+      description: |
+        Allows an admin to reply to a course review. This is typically used for
+        instructor or platform responses to user feedback.
+        
+        **Authorization:** Admin only
+        
+        **Use cases:**
+        - Addressing user concerns
+        - Thanking users for positive feedback
+        - Providing clarification on course content
+      operationId: replyToReview
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Review ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reply
+              properties:
+                reply:
+                  type: string
+                  description: Admin/instructor reply text
+                  example: "Thank you for your feedback! We're glad you enjoyed the course."
+      responses:
+        "200":
+          description: Reply added successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden - only admins can reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # =====================================================
+  # NESTED ROUTES: Course Lessons
+  # =====================================================
+
+  /courses/{courseId}/lessons:
+    get:
+      tags:
+        - Course Lessons
+      summary: Get all lessons (Admin only)
+      description: |
+        Retrieves all lessons in the system. This is an admin-only endpoint
+        for lesson management and oversight.
+        
+        **Authorization:** Admin only
+      operationId: getAllLessons
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Lessons retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Lesson"
+    post:
+      tags:
+        - Course Lessons
+      summary: Create a new lesson
+      description: |
+        Creates a new lesson within a course. Only the course instructor or admin can create lessons.
+        
+        **Features:**
+        - Supports file uploads (video, documents, etc.)
+        - Automatic image processing and resizing
+        - Course ID automatically set from URL parameter
+        
+        **Authorization:** Course instructor or admin
+      operationId: createLesson
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          description: MongoDB ObjectId of the course
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - title
+                - section
+              properties:
+                title:
+                  type: object
+                  properties:
+                    ar:
+                      type: string
+                    en:
+                      type: string
+                description:
+                  type: object
+                  properties:
+                    ar:
+                      type: string
+                    en:
+                      type: string
+                section:
+                  type: string
+                  description: Section ID this lesson belongs to
+                order:
+                  type: integer
+                  description: Display order within the section
+                lessonDuration:
+                  type: number
+                  description: Duration in minutes
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        "201":
+          description: Lesson created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    $ref: "#/components/schemas/Lesson"
+
+  /courses/{courseId}/lessons/{id}:
+    get:
+      tags:
+        - Course Lessons
+      summary: Get lesson by ID
+      description: |
+        Retrieves detailed information about a specific lesson.
+        Access is controlled based on course enrollment.
+        
+        **Authorization:**
+        - Users must be enrolled in the course or have admin privileges
+        - Validates user has access to the course content
+      operationId: getLessonById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Lesson ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Lesson retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    $ref: "#/components/schemas/Lesson"
+        "403":
+          description: User doesn't have access to this course
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Lesson not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      tags:
+        - Course Lessons
+      summary: Update a lesson
+      description: |
+        Updates an existing lesson. Only the course instructor or admin can update lessons.
+        
+        **Authorization:** Course instructor or admin
+      operationId: updateLesson
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Lesson ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: object
+                  properties:
+                    ar:
+                      type: string
+                    en:
+                      type: string
+                description:
+                  type: object
+                  properties:
+                    ar:
+                      type: string
+                    en:
+                      type: string
+                section:
+                  type: string
+                order:
+                  type: integer
+                lessonDuration:
+                  type: number
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        "200":
+          description: Lesson updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    $ref: "#/components/schemas/Lesson"
+    delete:
+      tags:
+        - Course Lessons
+      summary: Delete a lesson
+      description: |
+        Deletes a lesson from a course. Only the course instructor or admin can delete lessons.
+        
+        **Authorization:** Course instructor or admin
+        
+        **Note:** This may affect user progress tracking if the lesson was already completed by students.
+      operationId: deleteLesson
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Lesson ID
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Lesson deleted successfully
+        "403":
+          description: User is not the course instructor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Lesson not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /courses/{courseId}/lessons/courseLessons/{id}:
+    get:
+      tags:
+        - Course Lessons
+      summary: Get all lessons for a course
+      description: |
+        Retrieves all lessons belonging to a specific course, organized by sections.
+        User must be enrolled in the course or be an admin to access.
+        
+        **Authorization:** Enrolled user or admin
+        
+        **Use cases:**
+        - Course curriculum display
+        - Lesson navigation sidebar
+        - Course content overview
+      operationId: getCourseLessons
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Course ID (for additional validation)
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Course lessons retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Lesson"
+
+  /courses/{courseId}/lessons/sectionLessons/{id}:
+    get:
+      tags:
+        - Course Lessons
+      summary: Get lessons for a section
+      description: |
+        Retrieves all lessons within a specific section. User must be enrolled
+        in the course or be an admin to access.
+        
+        **Authorization:** Enrolled user or admin
+      operationId: getSectionLessons
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Section ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Section lessons retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Lesson"
+
+  /courses/{courseId}/lessons/sectionLessons/{id}/public:
+    get:
+      tags:
+        - Course Lessons
+      summary: Get section lessons (Public preview)
+      description: |
+        Retrieves a public preview of lessons within a section.
+        This endpoint is used for course previews before enrollment.
+        
+        **Notes:**
+        - May return limited information compared to authenticated endpoint
+        - Used for "preview this course" functionality
+      operationId: getSectionLessonsPublic
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Section ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Public section lessons retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Lesson"
+
 components:
   schemas:
     Course:
       type: object
+      description: Course entity representing an educational course in the system
       properties:
         _id:
           type: string
+          description: Unique MongoDB ObjectId identifier
           example: "507f1f77bcf86cd799439011"
         title:
-          type: string
-          example: "Introduction to JavaScript"
+          type: object
+          description: Course title with multilingual support
+          properties:
+            ar:
+              type: string
+              example: "مقدمة في جافاسكريبت"
+            en:
+              type: string
+              example: "Introduction to JavaScript"
         description:
-          type: string
-          example: "Learn the basics of JavaScript programming"
+          type: object
+          description: Detailed course description with multilingual support
+          properties:
+            ar:
+              type: string
+              example: "تعلم أساسيات البرمجة بجافاسكريبت من الصفر"
+            en:
+              type: string
+              example: "Learn the basics of JavaScript programming from scratch"
         price:
           type: number
+          description: Course price in the system's default currency
           example: 99.99
         instructor:
-          type: string
+          oneOf:
+            - type: string
+              description: Instructor User ID (when not populated)
+            - type: object
+              description: Populated instructor object
+              properties:
+                _id:
+                  type: string
+                name:
+                  type: string
+                email:
+                  type: string
+                profileImg:
+                  type: string
           example: "507f1f77bcf86cd799439012"
         category:
-          type: string
+          oneOf:
+            - type: string
+              description: Category ID (when not populated)
+            - type: object
+              description: Populated category object
+              properties:
+                _id:
+                  type: string
+                title:
+                  type: object
           example: "507f1f77bcf86cd799439013"
-        imageCover:
+        image:
           type: string
-          example: "https://example.com/course-cover.jpg"
-        active:
-          type: boolean
-          example: true
+          description: Course cover image filename (stored in /uploads/courses/)
+          example: "course-abc123-1234567890.webp"
+        status:
+          type: string
+          description: Course visibility and availability status
+          enum: [draft, active, archived]
+          default: draft
+          example: "active"
         instructorPercentage:
           type: number
+          nullable: true
+          description: Revenue sharing percentage for the instructor (0-100)
           example: 70
+        highlights:
+          type: array
+          description: Key learning points or features of the course
+          items:
+            type: string
+          example: ["Learn fundamentals", "Build real projects", "Get certified"]
+        accessibleCourses:
+          type: array
+          description: List of course IDs that grant access to this course
+          items:
+            type: string
+        reviews:
+          type: array
+          description: Course reviews (populated on detail requests)
+          items:
+            $ref: "#/components/schemas/Review"
         createdAt:
           type: string
           format: date-time
+          description: Timestamp when the course was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the course was last updated
 
     CourseDetails:
       allOf:
         - $ref: "#/components/schemas/Course"
         - type: object
+          description: Extended course information including sections and lessons
           properties:
             sections:
               type: array
+              description: Course curriculum organized by sections
               items:
                 type: object
                 properties:
                   _id:
                     type: string
                   title:
-                    type: string
+                    type: object
+                    properties:
+                      ar:
+                        type: string
+                      en:
+                        type: string
+                  order:
+                    type: integer
                   lessons:
                     type: array
                     items:
-                      type: object
+                      $ref: "#/components/schemas/Lesson"
 
+    Lesson:
+      type: object
+      description: Individual lesson within a course section
+      properties:
+        _id:
+          type: string
+        title:
+          type: object
+          properties:
+            ar:
+              type: string
+            en:
+              type: string
+        description:
+          type: object
+          properties:
+            ar:
+              type: string
+            en:
+              type: string
+        course:
+          type: string
+          description: Parent course ID
+        section:
+          type: string
+          description: Parent section ID
+        order:
+          type: integer
+          description: Display order within the section
+        lessonDuration:
+          type: number
+          description: Duration in minutes
+        files:
+          type: array
+          description: Attached files (videos, documents, etc.)
+          items:
+            type: string
+
+    Review:
+      type: object
+      description: User review for a course
+      properties:
+        _id:
+          type: string
+        user:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+            profileImg:
+              type: string
+        course:
+          type: string
+        rating:
+          type: number
+          minimum: 1
+          maximum: 5
+          description: Star rating (1-5)
+        review:
+          type: string
+          description: Text feedback
+        reply:
+          type: string
+          description: Admin/instructor response to the review
+        createdAt:
+          type: string
+          format: date-time
+
+    PaginationResult:
+      type: object
+      description: Pagination metadata for list responses
+      properties:
+        currentPage:
+          type: integer
+          example: 1
+        numberOfPages:
+          type: integer
+          example: 5
+        limit:
+          type: integer
+          example: 10
+        next:
+          type: integer
+          nullable: true
+          description: Next page number (null if on last page)
+        prev:
+          type: integer
+          nullable: true
+          description: Previous page number (null if on first page)
+
+    SuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Operation completed successfully"
+
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "error"
+        message:
+          type: string
+          example: "Error message describing what went wrong"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from login endpoint

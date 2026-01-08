@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const { sendNotification } = require('../socket/index'); // Adjust the path as per your file structure
 const User = require('./userModel');
+const { sendPushNotificationToMultiple } = require('../utils/pushNotification');
 
 const NotificationSchema = new mongoose.Schema(
   {
@@ -88,7 +89,7 @@ NotificationSchema.post('save', (doc) => {
 
 NotificationSchema.post('save', async (doc) => {
   try {
-    const user = await User.findById(doc.user).select('lang'); // Fetch user language
+    const user = await User.findById(doc.user).select('lang fcmTokens pushNotificationsEnabled'); // Fetch user language and FCM tokens
     if (!user) {
       console.error('User not found for notification:', doc.user);
       return;
@@ -97,11 +98,32 @@ NotificationSchema.post('save', async (doc) => {
       user.lang === 'ar'
         ? doc.toObject().message.ar
         : doc.toObject().message.en;
-    // Send localized notification
+
+    // Send localized notification via Socket.io (real-time in-app)
     sendNotification(doc.user.toString(), {
       ...doc.toObject(),
       message: notificationTitle,
     });
+
+    // Send push notification to mobile device if user has FCM tokens and push is enabled
+    if (user.fcmTokens && user.fcmTokens.length > 0 && user.pushNotificationsEnabled !== false) {
+      const pushNotification = {
+        title: 'Nexgen Academy',
+        body: notificationTitle,
+      };
+
+      const pushData = {
+        notificationId: doc._id.toString(),
+        type: doc.type,
+        ...(doc.post && { postId: doc.post.toString() }),
+        ...(doc.chat && { chatId: doc.chat.toString() }),
+        ...(doc.course && { courseId: doc.course.toString() }),
+        ...(doc.followedUser && { followedUserId: doc.followedUser.toString() }),
+      };
+
+      sendPushNotificationToMultiple(user.fcmTokens, pushNotification, pushData)
+        .catch((err) => console.error('Push notification error:', err));
+    }
   } catch (error) {
     console.error('Error emitting notification:', error);
   }
