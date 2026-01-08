@@ -6,6 +6,20 @@ const {
 const MarketingLog = require("../models/MarketingModel");
 const Course = require("../models/courseModel");
 
+
+
+
+
+const getProfitableItem =  (marketer, itemId, itemType) => {
+  if(!marketer) return null;
+  const profitableItem =  marketer.profitableItems.find(
+    (i) => i.itemId.toString() === itemId.toString() && i.itemType === itemType
+  );
+  return profitableItem;
+};
+
+
+
 //---------------------------------------------------
 //Buisness Logic
 
@@ -26,43 +40,42 @@ const Course = require("../models/courseModel");
 exports.handleOrderCommissions = async (item, data) => {
   //if item.instructorPercentage
   //call `appendNewSale` from instructorProfitsService that push new commission and update totalSales
-  let marketerPercentage = 0;
-  let marketerProfits = 0;
+  let sellerPercentage = 0;
+  let totalMarketingProfits = 0;
+  let headMarketerPercentage = 0;
   if (data.invitor) {
     const marketer = await MarketingLog.findOne({ marketer: data.invitor });
-    if (marketer) {
-      const profitableItem = marketer.profitableItems.find(
-        (i) =>
-          i.itemId.toString() === item._id.toString() &&
-          i.itemType === data.itemType
-      );
-      if (profitableItem) {
-        marketerPercentage = profitableItem.percentage;
-        data.marketerPercentage = marketerPercentage;
+    const profitableItem = getProfitableItem(marketer, item._id, data.itemType);
+    if (profitableItem) {
+      sellerPercentage = profitableItem.percentage;
+      data.marketerPercentage = sellerPercentage;
+      const head = await MarketingLog.findOne({ marketer: marketer.invitor });
+      const headProfitableItem = getProfitableItem(head, item._id, data.itemType);
+      if (headProfitableItem) {
+        headMarketerPercentage = headProfitableItem.percentage;
+        data.headMarketerPercentage = headMarketerPercentage;
       }
     }
-  }
-
+   }
   if (item.instructorPercentage) {
     data.instructorPercentage = item.instructorPercentage;
     data.instructorId = item.instructor;
-    let instructorProfit = (data.amount * data.instructorPercentage) / 100;
+    const instructorProfit = (data.amount * data.instructorPercentage) / 100;
     data.totalProfits = instructorProfit;
-    if (marketerPercentage > 0) {
-      marketerProfits = (instructorProfit * marketerPercentage) / 100;
-      instructorProfit -= marketerProfits;
-      data.marketerProfits = marketerProfits;
+    if (headMarketerPercentage > 0 || sellerPercentage > 0) {
+      totalMarketingProfits = (instructorProfit * (headMarketerPercentage || sellerPercentage)) / 100;
+      data.netInstructorProfit = instructorProfit - totalMarketingProfits;
+      data.totalMarketingProfits = totalMarketingProfits;
     }
-    data.instructorProfits = instructorProfit;
-    await giveInstructorHisCommission(data, instructorProfit);
+    data.instructorProfits = data.netInstructorProfit;
+    await giveInstructorHisCommission(data);
   }
   //call `calculateProfits` and send data to it
-  if (marketerPercentage > 0) {
-    data.marketerProfits =
-      marketerProfits !== 0
-        ? marketerProfits // that's mean his profit already calculated from instructor profit
-        : (data.amount * marketerPercentage) / 100;
-
+  if (sellerPercentage > 0) {
+    data.sellerProfits = (data.totalProfits * sellerPercentage) / 100;
+    const netHeadMarketerPercentage = headMarketerPercentage - sellerPercentage;
+    data.headMarketerPercentage = netHeadMarketerPercentage;
+    data.headMarketerProfits = (data.totalProfits * netHeadMarketerPercentage) / 100;
     await calculateProfits(data);
   }
 };

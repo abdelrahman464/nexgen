@@ -1,0 +1,559 @@
+# Courses endpoints documentation
+
+paths:
+  /courses:
+    get:
+      tags:
+        - Courses
+      summary: Get all active courses
+      description: Get list of all active courses (public endpoint)
+      operationId: getAllActiveCourses
+      responses:
+        "200":
+          description: Courses retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  results:
+                    type: integer
+                    example: 50
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Course"
+
+  /courses/getAll:
+    get:
+      tags:
+        - Courses
+      summary: Get all courses (Admin/Instructor)
+      description: Get all courses with filtering (admin sees all, instructor sees their own)
+      operationId: getAllCourses
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            example: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            example: 10
+      responses:
+        "200":
+          description: Courses retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  results:
+                    type: integer
+                    example: 50
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Course"
+
+  /courses/MyCourses/{id}:
+    get:
+      tags:
+        - Courses
+      summary: Get my courses
+      description: Get courses enrolled by a user
+      operationId: getMyCourses
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: false
+          description: User ID (optional, defaults to authenticated user)
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      responses:
+        "200":
+          description: Courses retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Course"
+
+  /courses/instructorCourses/{id}:
+    get:
+      tags:
+        - Courses
+      summary: Get instructor courses
+      description: Get all courses created by an instructor
+      operationId: getInstructorCourses
+      parameters:
+        - name: id
+          in: path
+          required: false
+          description: Instructor ID (optional)
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      responses:
+        "200":
+          description: Courses retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Course"
+
+  /courses/{id}:
+    get:
+      tags:
+        - Courses
+      summary: Get course by ID
+      description: Get detailed information about a specific course
+      operationId: getCourseById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      responses:
+        "200":
+          description: Course retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    $ref: "#/components/schemas/Course"
+        "404":
+          description: Course not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      tags:
+        - Courses
+      summary: Update course
+      description: Update course information (instructor or admin only)
+      operationId: updateCourse
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: "Advanced JavaScript"
+                description:
+                  type: string
+                  example: "Learn advanced JavaScript concepts"
+                price:
+                  type: number
+                  example: 99.99
+                category:
+                  type: string
+                  example: "507f1f77bcf86cd799439012"
+                imageCover:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Course updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    $ref: "#/components/schemas/Course"
+
+  /courses:
+    post:
+      tags:
+        - Courses
+      summary: Create course
+      description: Create a new course (instructor or admin only)
+      operationId: createCourse
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - title
+                - price
+                - category
+              properties:
+                title:
+                  type: string
+                  example: "Introduction to JavaScript"
+                description:
+                  type: string
+                  example: "Learn the basics of JavaScript"
+                price:
+                  type: number
+                  example: 99.99
+                category:
+                  type: string
+                  example: "507f1f77bcf86cd799439012"
+                imageCover:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: Course created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    $ref: "#/components/schemas/Course"
+
+  /courses/courseDetails/{id}:
+    get:
+      tags:
+        - Courses
+      summary: Get course details
+      description: Get detailed course information including sections and lessons
+      operationId: getCourseDetails
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      responses:
+        "200":
+          description: Course details retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    $ref: "#/components/schemas/CourseDetails"
+
+  /courses/addUserToCourse/{id}:
+    post:
+      tags:
+        - Courses
+      summary: Add user to course
+      description: Manually add a user to a course (admin only)
+      operationId: addUserToCourse
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Course ID
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+                  example: "507f1f77bcf86cd799439012"
+      responses:
+        "200":
+          description: User added to course
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /courses/assignInstructorPercentage/{id}:
+    put:
+      tags:
+        - Courses
+      summary: Assign instructor percentage
+      description: Set instructor profit percentage for a course (admin only)
+      operationId: assignInstructorPercentage
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Course ID
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - percentage
+              properties:
+                percentage:
+                  type: number
+                  minimum: 0
+                  maximum: 100
+                  example: 70
+      responses:
+        "200":
+          description: Instructor percentage assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /courses/removeInstructorPercentage/{id}:
+    delete:
+      tags:
+        - Courses
+      summary: Remove instructor percentage
+      description: Remove instructor profit percentage from a course (admin only)
+      operationId: removeInstructorPercentage
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Course ID
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      responses:
+        "200":
+          description: Instructor percentage removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /courses/giveCertificate/{courseId}/{userId}:
+    put:
+      tags:
+        - Courses
+      summary: Give certificate to user
+      description: Issue a certificate to a user for completing a course (admin only)
+      operationId: giveCertificate
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439012"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                certificateFile:
+                  type: string
+                  format: binary
+                  description: Certificate PDF file
+      responses:
+        "200":
+          description: Certificate issued successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /courses/getCertificate/{id}:
+    get:
+      tags:
+        - Courses
+      summary: Get certificate
+      description: Download certificate by certificate ID
+      operationId: getCertificate
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Certificate ID
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      responses:
+        "200":
+          description: Certificate file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Certificate not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /courses/getCertificateLink/{courseId}:
+    get:
+      tags:
+        - Courses
+      summary: Get certificate link
+      description: Get certificate download link for a course
+      operationId: getCertificateLink
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      responses:
+        "200":
+          description: Certificate link retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  certificateLink:
+                    type: string
+                    example: "https://example.com/certificates/abc123"
+        "404":
+          description: Certificate not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    Course:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        title:
+          type: string
+          example: "Introduction to JavaScript"
+        description:
+          type: string
+          example: "Learn the basics of JavaScript programming"
+        price:
+          type: number
+          example: 99.99
+        instructor:
+          type: string
+          example: "507f1f77bcf86cd799439012"
+        category:
+          type: string
+          example: "507f1f77bcf86cd799439013"
+        imageCover:
+          type: string
+          example: "https://example.com/course-cover.jpg"
+        active:
+          type: boolean
+          example: true
+        instructorPercentage:
+          type: number
+          example: 70
+        createdAt:
+          type: string
+          format: date-time
+
+    CourseDetails:
+      allOf:
+        - $ref: "#/components/schemas/Course"
+        - type: object
+          properties:
+            sections:
+              type: array
+              items:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                  title:
+                    type: string
+                  lessons:
+                    type: array
+                    items:
+                      type: object
+
