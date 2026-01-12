@@ -10,6 +10,7 @@ const factory = require('./handllerFactory');
 const ApiError = require('../utils/apiError');
 // const sendEmail = require("../utils/sendEmail");
 const { uploadMixOfFiles } = require('../middlewares/uploadImageMiddleware');
+const { filterOffensiveWords } = require('../utils/filterOffensiveWords');
 // const sendEmail = require('../utils/sendEmail');
 
 exports.uploadMedia = uploadMixOfFiles([
@@ -111,11 +112,9 @@ exports.addMessage = asyncHandler(async (req, res, next) => {
     !lastMessage
   ) {
     // Find the receiver(s) in the chat (excluding the sender)
-
     // const receivers = chat.participants
     //   .filter((participant) => String(participant.user) !== String(sender))
     //   .map((participant) => participant.user);
-
     // Send email to each receiver
     // receivers.forEach(async (receiver) => {
     //   await sendEmail({
@@ -126,11 +125,14 @@ exports.addMessage = asyncHandler(async (req, res, next) => {
     // });
   }
 
+  // Filter offensive words from the message text
+  const filteredText = text ? filterOffensiveWords(text) : text;
+
   // Create a new message
   const messageData = {
     chat,
     sender,
-    text,
+    text: filteredText,
   };
 
   if (media) {
@@ -192,7 +194,8 @@ exports.updateMessage = asyncHandler(async (req, res, next) => {
   // Create an update object based on provided data
   const updateData = {};
   if (text !== undefined && text !== null) {
-    updateData.text = text;
+    // Filter offensive words from the message text
+    updateData.text = filterOffensiveWords(text);
   }
   if (media !== undefined && media !== null) {
     updateData.media = media;
@@ -322,11 +325,14 @@ exports.replyToMessage = asyncHandler(async (req, res, next) => {
     return next(new ApiError('Message not found', 404));
   }
 
+  // Filter offensive words from the reply text
+  const filteredText = text ? filterOffensiveWords(text) : text;
+
   // Prepare reply message data
   const replyData = {
     chat: repliedMessage.chat,
     sender,
-    text,
+    text: filteredText,
     repliedTo: repliedMessage._id,
   };
 
@@ -340,13 +346,12 @@ exports.replyToMessage = asyncHandler(async (req, res, next) => {
 
   // Check if the sender of the replied message is not the same as the sender of the reply
   if (repliedMessage.sender._id.toString() !== sender.toString()) {
-    
     const englishNotificationMessage = `
     \n You have a new reply to your message.
-    \n\n Message: ${text}`;
+    \n\n Message: ${filteredText}`;
     const arabicNotificationMessage = `
     \n لديك رد جديد على رسالتك.
-    \n\n الرسالة: ${text}`;
+    \n\n الرسالة: ${filteredText}`;
 
     await Notification.create({
       user: repliedMessage.sender._id,

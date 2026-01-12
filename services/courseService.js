@@ -843,16 +843,37 @@ exports.getCertificate = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
   const courseProgress = await CourseProgress.findOne({
     'certificate._id': id,
-  });
+  }).populate({path: 'user', select: 'name email profileImg'})
   if (!courseProgress) {
     return next(new ApiError('No Certificate found', 404));
   }
+  const course = courseProgress.course;
+  const courseDetails = await Course.findById(course);
+  const localizedCourseDetails = Course.schema.methods.toJSONLocalizedOnly(
+    courseDetails,
+    req.locale,
+  );
   return res.status(200).json({
     status: 'success',
-    data: {
-      file: courseProgress.certificate.file,
-      course: courseProgress.course,
+    // return title and image
+    courseDetails: {
+      title: localizedCourseDetails.title,
+      image: localizedCourseDetails.image,
+      _id: course._id,
     },
+    certificate: {
+      file: courseProgress.certificate.file,
+      _id: courseProgress.certificate._id,
+    },
+    user: {
+      name: courseProgress.user.name,
+      email: courseProgress.user.email,
+      profileImg: courseProgress.user.profileImg,
+    },
+    attemptDate: courseProgress.attemptDate,
+    score: courseProgress.score,
+    status: courseProgress.status,
+    modelExam: courseProgress.modelExam,
   });
 });
 

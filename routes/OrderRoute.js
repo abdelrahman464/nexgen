@@ -32,6 +32,13 @@ const {
   LahzaPaymentCallback,
   lahzaWebhook,
 } = require('../services/orders/lahza');
+// ---------------------  Stripe  ---------------------
+const {
+  courseCheckoutSessionStripe,
+  coursePackageCheckoutSessionStripe,
+  packageCheckoutSessionStripe,
+  stripeWebhook,
+} = require('../services/orders/stripe');
 // ---------------------  purchase For User  ---------------------
 const {
   purchaseForUser,
@@ -151,5 +158,31 @@ router.post(
   express.raw({ type: 'application/json' }),
   lahzaWebhook,
 );
-
+//-----------------STRIPE-----------------
+router.put(
+  '/stripe/courseCheckout/:courseId',
+  authServices.protect,
+  authServices.allowedTo('user', 'admin'),
+  checkExistingPaidOrder,
+  courseCheckoutSessionStripe,
+);
+router.put(
+  '/stripe/coursePackageCheckout/:coursePackageId',
+  authServices.protect,
+  authServices.allowedTo('user', 'admin'),
+  checkExistingPaidOrder,
+  coursePackageCheckoutSessionStripe,
+);
+router.put(
+  '/stripe/packageCheckout/:packageId',
+  authServices.protect,
+  authServices.allowedTo('user', 'admin'),
+  checkExistingPaidOrder,
+  packageCheckoutSessionStripe,
+);
+router.post(
+  '/webhook/stripe',
+  express.raw({ type: "application/json" }),
+  stripeWebhook,
+);
 module.exports = router;

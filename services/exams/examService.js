@@ -677,7 +677,10 @@ exports.submitCourseAnswers = async (req, res, next) => {
       return next(new ApiError('Exam not found', 404));
     }
 
-    const course = await Course.findById(exam.course);
+    const course = await Course.findById(exam.course).populate(
+      'instructor',
+      'name email signatureImage',
+    );
     if (!course) {
       return next(new ApiError('Course not found', 404));
     }
@@ -755,15 +758,35 @@ exports.submitCourseAnswers = async (req, res, next) => {
     // Check if the user deserves a certificate
     if (avgCourseExamsPercentage >= 90 && passed) {
       const certificateId = new mongoose.Types.ObjectId();
+      // Get language with fallback: user.lang -> req.locale -> 'en'
+      const lang = (req.user && req.user.lang) || req.locale || 'en';
+
+      // Get course title with fallback
+      const courseName =
+        (course.title && course.title[lang]) ||
+        (course.title && course.title.ar) ||
+        (course.title && course.title.en) ||
+        'Course';
+
+      // Get certificate description with fallback
+      const courseDescription =
+        (course.certificateDescription &&
+          course.certificateDescription[lang]) ||
+        (course.certificateDescription && course.certificateDescription.ar) ||
+        (course.certificateDescription && course.certificateDescription.en) ||
+        '';
+
       const certificateDetails = {
         studentName: req.user.name,
-        courseName: course.title[req.user.lang],
-        courseDescription: course.certificateDescription[req.user.lang],
+        courseName,
+        courseDescription,
         rating: Number(course.rating) || 3,
         certificateId: certificateId.toString(),
-        signatureImageUrl: course.instructor.signatureImage,
-        language: req.user.lang,
+        signatureImageUrl:
+          (course.instructor && course.instructor.signatureImage) || '',
+        language: lang,
       };
+      console.log('certificateDetails', certificateDetails);
       const certificate = await generateCertificate(certificateDetails);
       await CourseProgress.findOneAndUpdate(
         { user: req.user._id, course: exam.course },
@@ -941,7 +964,7 @@ exports.userScores = async (req, res, next) => {
       '_id title order hasQuiz',
     );
     //localize the lessons
-     allLessons = Lesson.schema.methods.toJSONLocalizedOnly(
+    allLessons = Lesson.schema.methods.toJSONLocalizedOnly(
       allLessons,
       req.locale,
     );
