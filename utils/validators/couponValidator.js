@@ -91,7 +91,7 @@ exports.updateCouponValidator = [
 ];
 
 exports.canPerformCouponAction = async (req, res, next) => {
-  if (req.user.role !== "admin" && !req.user.isMarketer) {
+  if (req.user.role !== "admin" && !req.user.isMarketer && !req.user.isInstructor) {
     return next(
       new ApiError("You are not allowed to perform this action", 403)
     );

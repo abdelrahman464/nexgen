@@ -92,9 +92,20 @@ exports.resizeFiles = asyncHandler(async (req, res, next) => {
       return next(error); // Properly pass error to error handler middleware
     }
   }
+  const allowedTypes = [
+    "image/jpeg", 
+    "image/png", 
+    "image/webp", 
+    "application/pdf",
+    "application/msword",  // .doc
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  // .docx
+    "application/vnd.ms-excel",  // .xls
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"  // .xlsx
+  ];
+
   if (req.files && req.files.image) {
-    if (!req.files.image[0].mimetype.startsWith("image/")) {
-      return next(new ApiError("lesson image is not an image file", 400));
+    if (!allowedTypes.includes(req.files.image[0].mimetype)) {
+      return next(new ApiError("lesson image is not a valid file", 400));
     }
 
     const imageFileName = `lesson-${uuidv4()}-${Date.now()}-image.webp`;
@@ -105,9 +116,9 @@ exports.resizeFiles = asyncHandler(async (req, res, next) => {
     req.body.image = imageFileName;
   }
   if (req.files && req.files.assignmentFile) {
-    if (!req.files.assignmentFile[0].mimetype.startsWith("image/")) {
+    if (!allowedTypes.includes(req.files.assignmentFile[0].mimetype)) {
       return next(
-        new ApiError("lesson assignment file is not a image file", 400)
+        new ApiError("lesson assignment file is not a valid file", 400)
       );
     }
     const assignmentFileName = `lesson-${uuidv4()}-${Date.now()}-assignment.webp`;

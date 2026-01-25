@@ -320,9 +320,8 @@ exports.filterActiveCourses = (req, res, next) => {
   return next();
 };
 // Get all courses
-exports.getAllCourses = factory.getALl(Course, 'Course', [
-  { path: 'instructor', select: 'name email profileImg' },
-]);
+// Note: instructor, category, accessibleCourses are populated via Course model's pre-find hook
+exports.getAllCourses = factory.getALl(Course, 'Course');
 
 // Get a specific course by ID
 // exports.getCourseById = factory.getOne(Course, "reviews", "instructor");

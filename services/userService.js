@@ -423,7 +423,7 @@ exports.getUser = async (req, res, next) => {
       user = await User.findById(req.params.id);
     } else {
       user = await User.findById(req.params.id).select(
-        "name email profileImg authToReview coverImg role timeSpent isMarketer isInstructor isCustomerService startMarketing idNumber phone country idVerification note signatureImage"
+        "name email profileImg authToReview bio coverImg role timeSpent isMarketer isInstructor isCustomerService startMarketing idNumber phone country idVerification note signatureImage"
       );
     }
     if (!user) {

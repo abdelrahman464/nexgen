@@ -128,6 +128,10 @@ const courseSchema = new mongoose.Schema(
     examTitle: {
       type: String,
     },
+    showOnBanner: {
+      type: Boolean,
+      default: false,
+    },
     status: {
       type: String,
       enum: ["active", "inActive" , "pending"],
@@ -144,6 +148,7 @@ const courseSchema = new mongoose.Schema(
 );
 
 courseSchema.index({ status: 1 });
+courseSchema.index({ instructor: 1, status: 1 }); // Compound index for instructor queries with status filter
 
 // virtual field =>reviews
 courseSchema.virtual('reviews', {
@@ -153,19 +158,16 @@ courseSchema.virtual('reviews', {
 });
 
 courseSchema.pre(/^find/, function (next) {
-  // allow callers to opt-out
-  if (this?.getOptions?.().skipPopulate) return next();
+  // allow callers to opt-out via query options
+  if (this.getOptions && this.getOptions().skipPopulate) return next();
+  
   this.populate({ path: 'category', select: 'title' })
-    .populate({ path: 'accessibleCourses' })
-    .populate({ path: 'instructor', select: 'name email profileImg' });
-
-  this.populate({ path: 'category', select: 'title' }).populate({
-    path: 'accessibleCourses',
-  });
-  this.populate({
-    path: 'instructor',
-    select: 'name email profileImg signatureImage',
-  });
+  .populate({ path: 'instructor', select: 'name email profileImg' })
+  .populate({ 
+      path: 'accessibleCourses',
+      select: 'title image price priceAfterDiscount status slug',
+      options: { skipPopulate: true }  // Prevent recursive population
+    })
   next();
 });
 
