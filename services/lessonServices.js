@@ -361,8 +361,15 @@ exports.getSectionLessons = async (req, res, next) => {
 
       if (!userCourseProgress || userCourseProgress.progress.length === 0) {
         // If no progress, user should only access the first lesson
+        let reachedFirstLockedLesson = false;
         accessibleLessons = localizedLessons.map((lesson, index) => {
-          if (index > 0) lesson.videoUrl = undefined;
+          if (index > 0){
+            if(!reachedFirstLockedLesson && !lesson.hasQuiz ){
+              reachedFirstLockedLesson = true;
+            }else{
+              lesson.videoUrl = undefined;
+            }
+          };
           return lesson;
         });
       } else {
