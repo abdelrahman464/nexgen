@@ -237,7 +237,19 @@ exports.getMyCourses = asyncHandler(async (req, res, next) => {
         .map((item) => item.lesson);
 
       let lastLesson = null;
-      if (lessonsWithProgress.length > 0) {
+      if (lessonsWithProgress.length == 0) {
+        const lessonDoc = await Lesson.findById(allLessons[0]._id)
+          .populate({ path: 'section', select: 'title' })
+          .select('lessonDuration title description order -course');
+
+        if (lessonDoc) {
+          // Localize the lesson
+          lastLesson = Lesson.schema.methods.toJSONLocalizedOnly(
+            lessonDoc,
+            req.locale,
+          );
+        }
+      } else if (lessonsWithProgress.length > 0) {
         // Find the lesson with the highest order
         const lastLessonFromProgress = lessonsWithProgress.reduce(
           (prev, current) => {
@@ -249,7 +261,7 @@ exports.getMyCourses = asyncHandler(async (req, res, next) => {
         if (lastLessonFromProgress && lastLessonFromProgress._id) {
           const lessonDoc = await Lesson.findById(lastLessonFromProgress._id)
             .populate({ path: 'section', select: 'title' })
-            .select('lessonDuration title description -course');
+            .select('lessonDuration title description order -course');
 
           if (lessonDoc) {
             // Localize the lesson
@@ -257,20 +269,6 @@ exports.getMyCourses = asyncHandler(async (req, res, next) => {
               lessonDoc,
               req.locale,
             );
-
-            // Localize the section if it exists
-            // if (lessonDoc.section) {
-            //   if (typeof lessonDoc.section.toJSONLocalizedOnly === 'function') {
-            //     lastLesson.section = lessonDoc.section.toJSONLocalizedOnly(
-            //       req.locale,
-            //     );
-            //   } else if (Section.schema.methods.toJSONLocalizedOnly) {
-            //     lastLesson.section = Section.schema.methods.toJSONLocalizedOnly(
-            //       lessonDoc.section,
-            //       req.locale,
-            //     );
-            //   }
-            // }
           }
         }
       }
@@ -281,6 +279,7 @@ exports.getMyCourses = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({
     status: 'success',
+    total: coursesWithProgress.length,
     data: coursesWithProgress,
   });
 });
@@ -399,7 +398,10 @@ exports.updateCourse = async (req, res, next) => {
 
       // Create the new group chat
       await Chat.create({
-        participants: [{ user: result.instructor._id, isAdmin: true },{ user: groupCreatorId, isAdmin: true }],
+        participants: [
+          { user: result.instructor._id, isAdmin: true },
+          { user: groupCreatorId, isAdmin: true },
+        ],
         isGroupChat: true,
         course: course._id,
         type: 'course',
@@ -861,16 +863,37 @@ exports.getCertificate = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
   const courseProgress = await CourseProgress.findOne({
     'certificate._id': id,
-  });
+  }).populate({path: 'user', select: 'name email profileImg'})
   if (!courseProgress) {
     return next(new ApiError('No Certificate found', 404));
   }
+  const course = courseProgress.course;
+  const courseDetails = await Course.findById(course);
+  const localizedCourseDetails = Course.schema.methods.toJSONLocalizedOnly(
+    courseDetails,
+    req.locale,
+  );
   return res.status(200).json({
     status: 'success',
-    data: {
-      file: courseProgress.certificate.file,
-      course: courseProgress.course,
+    // return title and image
+    courseDetails: {
+      title: localizedCourseDetails.title,
+      image: localizedCourseDetails.image,
+      _id: course._id,
     },
+    certificate: {
+      file: courseProgress.certificate.file,
+      _id: courseProgress.certificate._id,
+    },
+    user: {
+      name: courseProgress.user.name,
+      email: courseProgress.user.email,
+      profileImg: courseProgress.user.profileImg,
+    },
+    attemptDate: courseProgress.attemptDate,
+    score: courseProgress.score,
+    status: courseProgress.status,
+    modelExam: courseProgress.modelExam,
   });
 });
 

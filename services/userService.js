@@ -24,6 +24,34 @@ const Package = require("../models/packageModel");
 const CoursePackage = require("../models/coursePackageModel");
 const Live = require("../models/liveModel");
 
+const jwt = require('jsonwebtoken');
+const sharp = require('sharp');
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+const { v4: uuidv4 } = require('uuid');
+const ApiError = require('../utils/apiError');
+const factory = require('./handllerFactory');
+const User = require('../models/userModel');
+const Order = require('../models/orderModel');
+const generateToken = require('../utils/generateToken');
+const { uploadMixOfFiles } = require('../middlewares/uploadImageMiddleware');
+const CourseProgress = require('../models/courseProgressModel');
+const Message = require('../models/MessageModel');
+const Chat = require('../models/ChatModel');
+const Notification = require('../models/notificationModel');
+const React = require('../models/reactionModel');
+const Comment = require('../models/commentModel');
+const Course = require('../models/courseModel');
+const MarketLog = require('../models/MarketingModel');
+const UserSubscription = require('../models/userSubscriptionModel');
+const { moveOrdersFromOneToOne } = require('./marketing/marketingService');
+const Article = require('../models/articalModel');
+const Package = require('../models/packageModel');
+const CoursePackage = require('../models/coursePackageModel');
+const Live = require('../models/liveModel');
+const { verifyIdentityWithOpenAI } = require('./identityVerificationService');
+>>>>>>> abdo-branch
+
 //upload user images
 exports.uploadImages = uploadMixOfFiles([
   {
@@ -910,6 +938,281 @@ exports.actionOnIdDocument = async (req, res, next) => {
     next(new ApiError(err.message, 400));
   }
 };
+/**
+ * Verify user identity using OpenAI and return update data
+ * @param {string} userId - User ID
+ * @param {string[]} idDocuments - Array of ID document file paths
+ * @param {Object} userData - User data (name, idNumber)
+ * @returns {Object} Update data and verification result
+ */
+const verifyUserIdentity = async (userId, idDocuments, userData) => {
+  try {
+    // Check if OpenAI is configured
+    if (
+      !process.env.OPENAI_API_KEY ||
+      process.env.OPENAI_API_KEY === 'your-openai-api-key-here'
+    ) {
+      return {
+        updateData: null,
+        verificationResult: null,
+        shouldVerify: false,
+      };
+    }
+
+    // Verify identity using OpenAI
+    const verificationResult = await verifyIdentityWithOpenAI(
+      idDocuments,
+      userData,
+    );
+
+    // Prepare update data based on verification result
+    const updateData = {
+      note: null,
+    };
+
+    let aiVerificationResult = null;
+
+    // Check if extracted ID number already exists for another user
+    let idNumberExists = false;
+    if (verificationResult.verification.extractedIdNumber) {
+      // Normalize the extracted ID number (remove spaces, dashes)
+      const normalizedExtractedId =
+        verificationResult.verification.extractedIdNumber
+          .toString()
+          .replace(/[\s-]/g, '');
+
+      // Find all users with ID numbers and check if any match (normalized)
+      const usersWithIdNumbers = await User.find({
+        _id: { $ne: userId }, // Exclude current user
+        idNumber: { $exists: true, $ne: null, $nin: ['', null] }, // Make sure idNumber exists and is not empty
+      }).select('idNumber');
+
+      // Check if any normalized ID number matches using array methods
+      idNumberExists = usersWithIdNumbers.some((user) => {
+        if (user.idNumber) {
+          const normalizedExistingId = user.idNumber
+            .toString()
+            .replace(/[\s-]/g, '');
+          return normalizedExistingId === normalizedExtractedId;
+        }
+        return false;
+      });
+
+      if (idNumberExists) {
+        // Add this issue to the verification result
+        if (!verificationResult.verification.issues) {
+          verificationResult.verification.issues = [];
+        }
+        verificationResult.verification.issues.push(
+          'ID number already exists for another user',
+        );
+        verificationResult.verification.verificationStatus = 'rejected';
+        verificationResult.verification.isAuthentic = false;
+      }
+    }
+
+    if (verificationResult.verification.verificationStatus === 'verified') {
+      // Double-check ID number uniqueness even if AI verified
+      if (idNumberExists) {
+        updateData.idVerification = 'rejected';
+        updateData.note = 'Rejected: ID number already exists for another user';
+        aiVerificationResult = {
+          status: 'rejected',
+          message: 'ID number already exists for another user',
+          issues: ['ID number already exists for another user'],
+        };
+      } else {
+        updateData.idVerification = 'verified';
+        updateData.note = 'Identity verified automatically using AI';
+
+        // Update extracted data if available
+        if (verificationResult.verification.extractedIdNumber) {
+          updateData.idNumber =
+            verificationResult.verification.extractedIdNumber;
+        }
+        if (verificationResult.verification.extractedName) {
+          updateData.name = verificationResult.verification.extractedName;
+        }
+
+        aiVerificationResult = {
+          status: 'verified',
+          message: 'Identity verified automatically using AI',
+          confidence: verificationResult.verification.confidence,
+        };
+      }
+    } else if (
+      verificationResult.verification.verificationStatus === 'rejected' ||
+      idNumberExists
+    ) {
+      updateData.idVerification = 'rejected';
+      updateData.note = `Rejected: ${verificationResult.verification.issues.join(', ')}`;
+
+      aiVerificationResult = {
+        status: 'rejected',
+        message: updateData.note,
+        issues: verificationResult.verification.issues,
+      };
+    } else {
+      // Keep as pending for manual review
+      updateData.idVerification = 'pending';
+      updateData.note =
+        verificationResult.verification.issues &&
+        verificationResult.verification.issues.length > 0
+          ? `Needs review: ${verificationResult.verification.issues.join(', ')}`
+          : 'Needs manual review';
+
+      // Don't update ID number if status is pending (wait for manual review)
+      // Only update if we're confident
+      if (
+        verificationResult.verification.extractedIdNumber &&
+        verificationResult.verification.confidence >= 80 &&
+        !idNumberExists
+      ) {
+        // Normalize the extracted ID number
+        const normalizedExtractedId =
+          verificationResult.verification.extractedIdNumber
+            .toString()
+            .replace(/[\s-]/g, '');
+
+        // Check again before updating even in pending status (with normalization)
+        const usersWithIdNumbers = await User.find({
+          _id: { $ne: userId },
+          idNumber: { $exists: true, $ne: null, $nin: ['', null] }, // Make sure idNumber exists and is not empty
+        }).select('idNumber');
+
+        // Check if ID exists using array methods
+        const idExistsInPending = usersWithIdNumbers.some((user) => {
+          if (user.idNumber) {
+            const normalizedExistingId = user.idNumber
+              .toString()
+              .replace(/[\s-]/g, '');
+            return normalizedExistingId === normalizedExtractedId;
+          }
+          return false;
+        });
+
+        if (!idExistsInPending) {
+          updateData.idNumber =
+            verificationResult.verification.extractedIdNumber;
+        } else {
+          updateData.note += ' - ID number already exists';
+          if (!verificationResult.verification.issues) {
+            verificationResult.verification.issues = [];
+          }
+          verificationResult.verification.issues.push(
+            'ID number already exists for another user',
+          );
+        }
+      }
+
+      aiVerificationResult = {
+        status: 'pending',
+        message: 'Needs manual review',
+        confidence: verificationResult.verification.confidence,
+      };
+    }
+
+    return {
+      updateData,
+      verificationResult: aiVerificationResult,
+      shouldVerify: true,
+      rawVerification: verificationResult,
+    };
+  } catch (error) {
+    // Log error but don't fail - return pending status
+    console.error('AI Verification Error:', error);
+    return {
+      updateData: {
+        idVerification: 'pending',
+        note: 'AI verification failed, will be reviewed manually',
+      },
+      verificationResult: {
+        status: 'error',
+        message: 'AI verification failed, will be reviewed manually',
+        error: error.message,
+      },
+      shouldVerify: false,
+    };
+  }
+};
+
+//@desc verify identity using OpenAI
+//@route POST /api/v1/users/idDocument/verify
+//@access private
+exports.verifyIdentityWithAI = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return next(new ApiError('User not found', 404));
+    }
+
+    if (!user.idDocuments || user.idDocuments.length === 0) {
+      return next(new ApiError('No ID documents found for this user', 400));
+    }
+
+    // Verify identity using the separated function
+    const verificationData = await verifyUserIdentity(
+      userId,
+      user.idDocuments,
+      {
+        name: user.name,
+        idNumber: user.idNumber,
+      },
+    );
+
+    if (!verificationData.shouldVerify) {
+      const errorMessage =
+        verificationData.verificationResult &&
+        verificationData.verificationResult.message
+          ? verificationData.verificationResult.message
+          : 'OpenAI API key is not configured';
+      return next(new ApiError(errorMessage, 400));
+    }
+
+    // Update user based on verification result
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      verificationData.updateData,
+      { new: true },
+    );
+
+    // Send notification if verified
+    if (updatedUser.idVerification === 'verified') {
+      await Notification.create({
+        user: userId,
+        message: {
+          ar: 'تهانينا! تم التحقق من هويتك تلقائياً',
+          en: 'Congratulations! Your identity has been verified automatically',
+        },
+        type: 'system',
+      });
+    } else if (updatedUser.idVerification === 'rejected') {
+      await Notification.create({
+        user: userId,
+        message: {
+          ar: 'تم رفض الوثائق الخاصة بك يرجى تحميل وثيقة صالحة',
+          en: 'Your ID documents have been rejected please upload a valid one',
+        },
+        type: 'system',
+      });
+    }
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Identity verification completed',
+      data: {
+        user: updatedUser,
+        verification: verificationData.rawVerification,
+        verificationStatus: verificationData.updateData.idVerification,
+      },
+    });
+  } catch (err) {
+    next(new ApiError(err.message, err.statusCode || 500));
+  }
+};
+
 //@desc upload idDocument
 //@route POST /api/v1/users/idDocument/upload
 //@access public
@@ -969,23 +1272,78 @@ exports.uploadIdDocument = async (req, res, next) => {
       throw new ApiError("Please provide at least one ID document", 400);
     }
 
-    // 5) Update user documents and set status to pending
+    // 5) Update user documents and set status to pending initially
+    const updateData = {
+      idDocuments: req.body.idDocuments,
+      idVerification: 'pending',
+      note: null, // Reset any previous notes
+    };
+
+    // 6) Auto-verify using OpenAI if API key is configured
+    const verificationData = await verifyUserIdentity(
+      currentUser._id,
+      req.body.idDocuments,
+      {
+        name: currentUser.name,
+        idNumber: currentUser.idNumber,
+      },
+    );
+
+    // Merge verification results into updateData if verification was performed
+    if (verificationData.shouldVerify && verificationData.updateData) {
+      Object.assign(updateData, verificationData.updateData);
+    }
+
+    // 7) Update user with final data (including AI verification results if available)
     const updatedUser = await User.findByIdAndUpdate(
       currentUser._id,
+<<<<<<< HEAD
       {
         idDocuments: req.body.idDocuments,
         idVerification: "pending",
         note: null, // Reset any previous notes
       },
       { new: true }
+=======
+      updateData,
+      { new: true },
+>>>>>>> abdo-branch
     );
 
+    // 8) Send notification if verified
+    if (updatedUser.idVerification === 'verified') {
+      await Notification.create({
+        user: currentUser._id,
+        message: {
+          ar: 'تهانينا! تم التحقق من هويتك تلقائياً',
+          en: 'Congratulations! Your identity has been verified automatically',
+        },
+        type: 'system',
+      });
+    } else if (updatedUser.idVerification === 'rejected') {
+      await Notification.create({
+        user: currentUser._id,
+        message: {
+          ar: 'تم رفض الوثائق الخاصة بك يرجى تحميل وثيقة صالحة',
+          en: 'Your ID documents have been rejected please upload a valid one',
+        },
+        type: 'system',
+      });
+    }
+
     res.status(200).json({
+<<<<<<< HEAD
       status: "success",
       message: "ID documents uploaded successfully and pending verification",
+=======
+      status: 'success',
+      message: 'ID documents uploaded successfully',
+>>>>>>> abdo-branch
       data: {
         idVerification: updatedUser.idVerification,
         idDocuments: updatedUser.idDocuments,
+        note: updatedUser.note,
+        aiVerification: verificationData.verificationResult,
       },
     });
   } catch (err) {

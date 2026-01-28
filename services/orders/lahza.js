@@ -284,7 +284,6 @@ exports.lahzaWebhook = async (req, res, next) => {
   // Confirm the event type
   if (event.event === "charge.success") {
     // Access transaction details, including metadata
-    const transactionReference = event.data.reference;
     const metadata = event.data.metadata;
     const price = event.data.amount / 100;
 

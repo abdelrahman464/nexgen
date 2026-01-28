@@ -11,6 +11,7 @@ const cors = require("cors");
 const compression = require("compression");
 const dotenv = require("dotenv");
 
+const swaggerUi = require("swagger-ui-express");
 const { logErrorToDatabase } = require("./utils/errorLogs");
 // const rateLimit = require("express-rate-limit");
 
@@ -68,18 +69,29 @@ app.use(
   })
 );
 
-app.use(
+// Middleware to capture raw body for all requests
+app.use((req, res, next) => {
+  // Skip JSON parsing for webhook routes but still capture raw body
+  if (
+    req.path === '/api/v1/orders/webhook/stripe' ||
+    req.path === '/api/v1/orders/webhook/plisio' ||
+    req.path === '/api/v1/orders/webhook/lahza'
+  ) {
+    // For webhook routes, express.raw() will handle the body
+    // We'll capture it when express.raw() processes it
+    return next();
+  }
+  // Apply JSON parsing for other routes and capture raw body
   express.json({
     verify: (req, res, buf) => {
-      req.rawBody = buf.toString();
+      req.rawBody = buf;
     },
-  })
-);
+  })(req, res, next);
+});
 //serve static files inside 'uploads'
 app.use(express.static(path.join(__dirname, "uploads")));
 
 // Swagger UI setup
-const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./config/swagger");
 
 app.use(

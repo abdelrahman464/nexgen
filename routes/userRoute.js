@@ -1,4 +1,4 @@
-const express = require("express");
+const express = require('express');
 const {
   getUserValidator,
   createUserValidator,
@@ -8,8 +8,8 @@ const {
   updateLoggedUserValidator,
   changeLoggedUserPasswordValidator,
   actionOnIdDocumentValidator,
-} = require("../utils/validators/userValidator");
-const authServices = require("../services/authServices");
+} = require('../utils/validators/userValidator');
+const authServices = require('../services/authServices');
 const {
   getUsers,
   createUser,
@@ -35,6 +35,7 @@ const {
   activeNotificationBell,
   actionOnIdDocument,
   uploadIdDocument,
+  verifyIdentityWithAI,
   moveOneUserToAnother,
   getInstructorBelongings,
   getAllInstructorsWithBelongings,
@@ -42,145 +43,152 @@ const {
   togglePushNotifications,
 } = require("../services/userService");
 
+
 const router = express.Router();
 //get all instructors for un authenticated users
 router.get(
-  "/Instructors",
+  '/Instructors',
   (req, res, next) => {
     req.filterObj = { isInstructor: true };
     next();
   },
-  getUsers
+  getUsers,
 );
 
-
 router.get(
-  "/adminAndInstructor",
+  '/adminAndInstructor',
   authServices.protect,
   createFilterObjToGetInstructors,
-  getUsers
+  getUsers,
 );
 
 router.put(
-  "/moveOneUserToAnother",
+  '/moveOneUserToAnother',
   authServices.protect,
-  authServices.allowedTo("admin"),
-  moveOneUserToAnother
+  authServices.allowedTo('admin'),
+  moveOneUserToAnother,
 );
 
 router
-  .route("/active/:id")
+  .route('/active/:id')
   .put(authServices.protect, activeUser)
   .delete(authServices.protect, unActiveUser);
 
 router.put(
-  "/changeMyPassword",
+  '/changeMyPassword',
   authServices.protect,
   changeLoggedUserPasswordValidator,
-  updateLoggedUserPassword
+  updateLoggedUserPassword,
 );
 router.put(
-  "/changeMyData",
+  '/changeMyData',
   authServices.protect,
   uploadImages,
   resizeImage,
   updateLoggedUserValidator,
-  updateLoggedUserData
+  updateLoggedUserData,
 );
 router.put(
-  "/changePassword/:id",
+  '/changePassword/:id',
   authServices.protect,
-  authServices.allowedTo("admin"),
+  authServices.allowedTo('admin'),
   changeUserPasswordValidator,
-  changeUserPassword
+  changeUserPassword,
 );
 
 router
-  .route("/")
-  .get(authServices.protect, authServices.allowedTo("admin"), getUsers)
+  .route('/')
+  .get(authServices.protect, authServices.allowedTo('admin'), getUsers)
   .post(
     authServices.protect,
-    authServices.allowedTo("admin"),
+    authServices.allowedTo('admin'),
     uploadImages,
     resizeImage,
     createUserValidator,
-    createUser
+    createUser,
   );
 router
-  .route("/:id")
+  .route('/:id')
   .get(authServices.protect, getUserValidator, getUser)
   .put(
     authServices.protect,
-    authServices.allowedTo("admin"),
+    authServices.allowedTo('admin'),
     uploadImages,
     resizeImage,
     updateUserValidator,
-    updateUser
+    updateUser,
   )
   .delete(
     authServices.protect,
-    authServices.allowedTo("admin"),
+    authServices.allowedTo('admin'),
     deleteUserValidator,
-    deleteUser
+    deleteUser,
   );
 
 router.get(
-  "/:id/userData",
+  '/:id/userData',
   authServices.protect,
-  authServices.allowedTo("admin"),
-  getUserData
+  authServices.allowedTo('admin'),
+  getUserData,
 );
 
 router.get(
-  "/course/usersWithOutCourse/:courseId",
+  '/course/usersWithOutCourse/:courseId',
   authServices.protect,
-  authServices.allowedTo("admin"),
-  getUsersWithoutCourse
+  authServices.allowedTo('admin'),
+  getUsersWithoutCourse,
 );
 router.get(
-  "/course/usersCourse/:courseId",
+  '/course/usersCourse/:courseId',
   authServices.protect,
-  authServices.allowedTo("admin"),
-  getUsersCourse
+  authServices.allowedTo('admin'),
+  getUsersCourse,
 );
 router.get(
-  "/order/purchasersAndNon",
+  '/order/purchasersAndNon',
   authServices.protect,
-  authServices.allowedTo("admin"),
-  getPurchasersUsersAndNon
+  authServices.allowedTo('admin'),
+  getPurchasersUsersAndNon,
 );
 
 router
-  .route("/follow/:id")
+  .route('/follow/:id')
   .post(authServices.protect, followUser)
   .delete(authServices.protect, unFollowUser);
 
 router
-  .route("/notificationBell/:id")
+  .route('/notificationBell/:id')
   .post(authServices.protect, activeNotificationBell)
   .delete(authServices.protect, deActiveNotificationBell);
 
 router.get(
-  "/follow/followersAndFollowing",
+  '/follow/followersAndFollowing',
   authServices.protect,
-  getMyFollowersAndFollowing
+  getMyFollowersAndFollowing,
 );
 
 router.put(
-  "/idDocument/:id/action",
+  '/idDocument/:id/action',
   authServices.protect,
-  authServices.allowedTo("admin"),
+  authServices.allowedTo('admin'),
   actionOnIdDocumentValidator,
-  actionOnIdDocument
+  actionOnIdDocument,
 );
 
-router.post("/idDocument/upload", uploadImages, resizeImage, uploadIdDocument);
+router.post('/idDocument/upload', uploadImages, resizeImage, uploadIdDocument);
+
+router.post(
+  '/idDocument/verify/:userId',
+  authServices.protect,
+  authServices.allowedTo('user'),
+  verifyIdentityWithAI,
+);
 
 router.get(
-  "/instructors/withBelongings",
+  '/instructors/withBelongings',
   authServices.protect,
-  authServices.allowedTo("admin"),
-  getAllInstructorsWithBelongings
+  authServices.allowedTo('admin'),
+  getAllInstructorsWithBelongings,
 );
 
 // FCM Token Management for Push Notifications
