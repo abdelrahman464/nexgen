@@ -2,6 +2,11 @@ const ApiError = require('../utils/apiError');
 const ApiFeatures = require('../utils/apiFeatures');
 const { addTranslationFields } = require('../helpers/courseHelper');
 
+// True only for a standard MongoDB ObjectId string (24 hex chars)
+function IsMongoId(id) {
+  return typeof id === 'string' && /^[a-f0-9]{24}$/i.test(id);
+}
+
 exports.updateOne = (Model) => async (req, res, next) => {
   try {
     const document = await Model.findByIdAndUpdate(req.params.id, req.body, {
@@ -45,66 +50,81 @@ exports.createOne = (Model) => async (req, res) => {
 exports.getOne = (Model, populationOpt) => async (req, res, next) => {
   try {
     const { id } = req.params;
-    //1-build query
-    let query = Model.findById(id);
+
+    // 1 - Build query
+    let query;
+
+    // More strict ObjectId validation (must be exactly 24 hex characters)
+    if (IsMongoId(id)) {
+      query = Model.findById(id);
+    } else {
+      query = Model.findOne({ slug: id });
+    }
+
     if (populationOpt) {
       query = query.populate(populationOpt);
     }
-    //2- excute query
+
+    // 2 - Execute query
     const document = await query;
 
     if (!document) {
-      return next(new ApiError(`No document For this id ${id}`, 404));
+      return next(new ApiError(`No document found for: ${id}`, 404));
     }
 
     const localizedResult = Model.schema.methods.toJSONLocalized(
       document,
       req.locale,
     );
-    // localizedResult = addTranslationFields(document, localizedResult);
-    // const { title } = document;
-    // localizedResult.translationTitle = title;
-    // if (document.description) {
-    //   localizedResult.translationDescription = document.description;
-    // }
-    // if (document.highlights) {
-    //   localizedResult.translationHighlights = document.highlights;
-    // }
-    // if (document.content) {
-    //   localizedResult.translationContent = document.content;
-    // }
-    // if (document.assignmentTitle) {
-    //   localizedResult.translationAssignmentTitle = document.assignmentTitle;
-    // }
-    // if (document.assignmentDescription) {
-    //   localizedResult.translationAssignmentDescription =
-    //     document.assignmentDescription;
-    // }
-    // if (document.metaTitle) {
-    //   localizedResult.translationMetaTitle = document.metaTitle;
-    // }
-    // if (document.metaDescription) {
-    //   localizedResult.translationMetaDescription = document.metaDescription;
-    // }
-    // if (document.keywords) {
-    //   localizedResult.translationKeywords = document.keywords;
-    // }
-    // if (document.whatWillLearn) {
-    //   localizedResult.translationWhatWillLearn = document.whatWillLearn;
-    // }
-    // if (document.coursePrerequisites) {
-    //   localizedResult.translationCoursePrerequisites =
-    //     document.coursePrerequisites;
-    // }
-    // if (document.whoThisCourseFor) {
-    //   localizedResult.translationWhoThisCourseFor = document.whoThisCourseFor;
-    // }
+
     return res.status(200).json({ data: localizedResult });
   } catch (error) {
     console.error('Error fetching document:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+/**
+ * Get one document by slug.
+ * @param {Model} Model - Mongoose model (must have a `slug` field)
+ * @param {string|string[]|object|object[]} populationOpt - Optional populate path(s). Single path string, or array of paths/options for multiple populates
+ */
+exports.getOneBySlug = (Model, populationOpt) => async (req, res, next) => {
+  try {
+    const { slug } = req.params;
+    let query = Model.findOne({ slug });
+    if (populationOpt) {
+      if (Array.isArray(populationOpt)) {
+        populationOpt.forEach((opt) => {
+          query = query.populate(opt);
+        });
+      } else {
+        query = query.populate(populationOpt);
+      }
+    }
+    const document = await query;
+
+    if (!document) {
+      return next(
+        new ApiError(
+          res.__?.('errors.Not-Found', { document: 'document' }) ||
+            `No document found for this slug ${slug}`,
+          404,
+        ),
+      );
+    }
+
+    const localizedResult = Model.schema.methods.toJSONLocalized(
+      document,
+      req.locale,
+    );
+    return res.status(200).json({ status: 'success', data: localizedResult });
+  } catch (error) {
+    console.error('Error fetching document by slug:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 exports.getALl =
   (Model, modelName = '', populationOpt) =>
   async (req, res) => {

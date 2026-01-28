@@ -1,33 +1,33 @@
-const mongoose = require("mongoose");
-const sharp = require("sharp");
-const { v4: uuidv4 } = require("uuid");
-const ApiError = require("../utils/apiError");
-const factory = require("./handllerFactory");
-const Package = require("../models/packageModel");
-const Post = require("../models/postModel");
-const UserSubscription = require("../models/userSubscriptionModel");
-const { uploadSingleFile } = require("../middlewares/uploadImageMiddleware");
-const Course = require("../models/courseModel");
-const { checkIfPackageHasAllFields } = require("../helpers/packageHelper");
+const mongoose = require('mongoose');
+const sharp = require('sharp');
+const { v4: uuidv4 } = require('uuid');
+const ApiError = require('../utils/apiError');
+const factory = require('./handllerFactory');
+const Package = require('../models/packageModel');
+const Post = require('../models/postModel');
+const UserSubscription = require('../models/userSubscriptionModel');
+const { uploadSingleFile } = require('../middlewares/uploadImageMiddleware');
+const Course = require('../models/courseModel');
+const { checkIfPackageHasAllFields } = require('../helpers/packageHelper');
 
 //upload course image
-exports.uploadPackageImage = uploadSingleFile("image");
+exports.uploadPackageImage = uploadSingleFile('image');
 //image processing
 exports.resizeImage = async (req, res, next) => {
   const { file } = req; // Access the uploaded file
   if (file) {
     const fileExtension = file.originalname.substring(
-      file.originalname.lastIndexOf(".")
+      file.originalname.lastIndexOf('.'),
     ); // Extract file extension
     const newFileName = `package-${uuidv4()}-${Date.now()}${fileExtension}`; // Generate new file name
 
     // Check if the file is an image for the profile picture
-    if (file.mimetype.startsWith("image/")) {
+    if (file.mimetype.startsWith('image/')) {
       // Process and save the image file using sharp for resizing, conversion, etc.
       const filePath = `uploads/packages/${newFileName}`;
 
       await sharp(file.buffer)
-        .toFormat("webp") // Convert to WebP
+        .toFormat('webp') // Convert to WebP
         .webp({ quality: 95 })
         .toFile(filePath);
 
@@ -36,9 +36,9 @@ exports.resizeImage = async (req, res, next) => {
     } else {
       return next(
         new ApiError(
-          "Unsupported file type. Only images are allowed for package.",
-          400
-        )
+          'Unsupported file type. Only images are allowed for package.',
+          400,
+        ),
       );
     }
   }
@@ -67,7 +67,7 @@ exports.convertToArray = (req, res, next) => {
 };
 
 exports.filterInstructorPackages = async (req, res, next) => {
-  if (req.user.role !== "admin") {
+  if (req.user.role !== 'admin') {
     req.filterObj = { instructor: req.user._id };
   }
   next();
@@ -76,18 +76,18 @@ exports.filterInstructorPackages = async (req, res, next) => {
 //@route GET /api/v1/collections
 //@access public
 exports.filterPackages = async (req, res, next) => {
-  const isAdmin = req.user && req.user.role === "admin";
-  req.filterObj = { status: "active" };
+  const isAdmin = req.user && req.user.role === 'admin';
+  req.filterObj = { status: 'active' };
   if (req.query.all || isAdmin) {
     req.filterObj = {};
   }
   if (req.query.keyword) {
-    const textPattern = new RegExp(req.query.keyword, "i");
+    const textPattern = new RegExp(req.query.keyword, 'i');
     req.filterObj.$or = [
-      { "title.ar": { $regex: textPattern } },
-      { "title.en": { $regex: textPattern } },
-      { "description.ar": { $regex: textPattern } },
-      { "description.en": { $regex: textPattern } },
+      { 'title.ar': { $regex: textPattern } },
+      { 'title.en': { $regex: textPattern } },
+      { 'description.ar': { $regex: textPattern } },
+      { 'description.en': { $regex: textPattern } },
     ];
   }
   return next();
@@ -106,29 +106,25 @@ exports.applyObjectFilters = (req, res, next) => {
     );
   }
   if (title) {
-    orFilters.push(
-      { 'title.ar': title },
-      { 'title.en': title },
-    );
+    orFilters.push({ 'title.ar': title }, { 'title.en': title });
   }
   if (description) {
     orFilters.push(
-      { 'description.ar':  description },
-      { 'description.en':  description },
+      { 'description.ar': description },
+      { 'description.en': description },
     );
   }
-  if(orFilters.length > 0){
-    req.filterObj.$or = [ ...(req.filterObj.$or || []), ...orFilters];
+  if (orFilters.length > 0) {
+    req.filterObj.$or = [...(req.filterObj.$or || []), ...orFilters];
   }
   return next();
 };
 
-exports.getAll = factory.getALl(Package, "Package");
+exports.getAll = factory.getALl(Package, 'Package');
 //@desc get specific collection by id
 //@route GET /api/v1/collections/:id
 //@access public
 exports.getOne = factory.getOne(Package);
-
 //@desc create collection
 //@route POST /api/v1/collections
 //@access private
@@ -136,14 +132,14 @@ exports.createOne = async (req, res, next) => {
   const { course } = req.body;
   const courseDoc = await Course.findById(course);
   const isAllowed =
-    req.user.role === "admin" ||
+    req.user.role === 'admin' ||
     courseDoc.instructor._id.toString() === req.user._id.toString();
   if (!isAllowed) {
     return next(
       new ApiError(
-        "You are not allowed to create a package for this course",
-        403
-      )
+        'You are not allowed to create a package for this course',
+        403,
+      ),
     );
   }
   req.body.instructor = courseDoc.instructor._id;
@@ -158,18 +154,18 @@ exports.updateOne = async (req, res, next) => {
     const package = await Package.findById(req.params.id).lean();
     if (!package) {
       return next(
-        new ApiError(res.__("errors.Not-Found", { document: "document" }), 404)
+        new ApiError(res.__('errors.Not-Found', { document: 'document' }), 404),
       );
     }
-    if (req.body.status && req.body.status === "active") {
+    if (req.body.status && req.body.status === 'active') {
       //check if this package has all fields
       const missedFields = await checkIfPackageHasAllFields(package, req.body);
       if (missedFields.length > 0) {
         return next(
           new ApiError(
-            `you cannot activate this Package, Package has missing required fields: ${missedFields.join(", ")}`,
-            400
-          )
+            `you cannot activate this Package, Package has missing required fields: ${missedFields.join(', ')}`,
+            400,
+          ),
         );
       }
     }
@@ -177,18 +173,18 @@ exports.updateOne = async (req, res, next) => {
       new: true,
     });
     if (!result) {
-      return next(new ApiError("Failed to update package", 400));
+      return next(new ApiError('Failed to update package', 400));
     }
     const localizedPackage = Package.schema.methods.toJSONLocalizedOnly(
       result,
-      req.locale
+      req.locale,
     );
     res
       .status(200)
-      .json({ status: "updated successfully", data: localizedPackage });
+      .json({ status: 'updated successfully', data: localizedPackage });
   } catch (error) {
-    console.error("Error updating document:", error.message);
-    res.status(500).json({ error: "Internal server error" });
+    console.error('Error updating document:', error.message);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
@@ -200,13 +196,13 @@ exports.deleteOne = async (req, res, next) => {
     await mongoose.connection.transaction(async (session) => {
       // Find and delete the course
       const package = await Package.findByIdAndDelete(req.params.id).session(
-        session
+        session,
       );
 
       // Check if course exists
       if (!package) {
         return next(
-          new ApiError(`package not found for this id ${req.params.id}`, 404)
+          new ApiError(`package not found for this id ${req.params.id}`, 404),
         );
       }
 
@@ -229,6 +225,6 @@ exports.deleteOne = async (req, res, next) => {
       return next(error);
     }
     // Handle other errors with a generic message
-    return next(new ApiError("Error during course deletion", 500));
+    return next(new ApiError('Error during course deletion', 500));
   }
 };

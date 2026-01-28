@@ -1,31 +1,33 @@
-const sharp = require("sharp");
-const { v4: uuidv4 } = require("uuid");
-const asyncHandler = require("express-async-handler");
-const CoursePackage = require("../models/coursePackageModel");
-const Order = require("../models/orderModel");
-const factory = require("./handllerFactory");
-const Course = require("../models/courseModel");
-const { uploadSingleFile } = require("../middlewares/uploadImageMiddleware");
-const ApiError = require("../utils/apiError");
-const { checkIfCoursePackageHasAllFields } = require("../helpers/coursePackageHelper");
+const sharp = require('sharp');
+const { v4: uuidv4 } = require('uuid');
+const asyncHandler = require('express-async-handler');
+const CoursePackage = require('../models/coursePackageModel');
+const Order = require('../models/orderModel');
+const factory = require('./handllerFactory');
+const Course = require('../models/courseModel');
+const { uploadSingleFile } = require('../middlewares/uploadImageMiddleware');
+const ApiError = require('../utils/apiError');
+const {
+  checkIfCoursePackageHasAllFields,
+} = require('../helpers/coursePackageHelper');
 //upload course image
-exports.uploadCoursePackageImage = uploadSingleFile("image");
+exports.uploadCoursePackageImage = uploadSingleFile('image');
 //image processing
 exports.resizeImage = asyncHandler(async (req, res, next) => {
   const { file } = req; // Access the uploaded file
   if (file) {
     const fileExtension = file.originalname.substring(
-      file.originalname.lastIndexOf(".")
+      file.originalname.lastIndexOf('.'),
     ); // Extract file extension
     const newFileName = `coursePackage-${uuidv4()}-${Date.now()}${fileExtension}`; // Generate new file name
 
     // Check if the file is an image for the profile picture
-    if (file.mimetype.startsWith("image/")) {
+    if (file.mimetype.startsWith('image/')) {
       // Process and save the image file using sharp for resizing, conversion, etc.
       const filePath = `uploads/coursePackages/${newFileName}`;
 
       await sharp(file.buffer)
-        .toFormat("webp") // Convert to WebP
+        .toFormat('webp') // Convert to WebP
         .webp({ quality: 95 })
         .toFile(filePath);
 
@@ -34,9 +36,9 @@ exports.resizeImage = asyncHandler(async (req, res, next) => {
     } else {
       return next(
         new ApiError(
-          "Unsupported file type. Only images are allowed for courses package.",
-          400
-        )
+          'Unsupported file type. Only images are allowed for courses package.',
+          400,
+        ),
       );
     }
   }
@@ -46,7 +48,6 @@ exports.resizeImage = asyncHandler(async (req, res, next) => {
 //@route GET /api/v1/categories
 //@access public
 exports.filterCoursePackages = async (req, res, next) => {
-
   const filterObj = {};
   if (req.user.isInstructor) {
     const courses = await Course.find({ instructor: req.user._id });
@@ -54,29 +55,37 @@ exports.filterCoursePackages = async (req, res, next) => {
     if (courses.length === 0) {
       return res.status(200).json({ results: 0, data: [] });
     }
-    filterObj.$or = [ { instructor: req.user._id }, { courses: { $in: courses.map((course) => course._id) } } ];
+    filterObj.$or = [
+      { instructor: req.user._id },
+      { courses: { $in: courses.map((course) => course._id) } },
+    ];
   }
   req.filterObj = filterObj;
   return next();
 };
 
 exports.filterActiveCoursePackages = async (req, res, next) => {
-  req.filterObj = { status: "active" };
+  req.filterObj = { status: 'active' };
 
   return next();
 };
-exports.getCoursePackages = factory.getALl(CoursePackage, "CoursePackage");
+exports.getCoursePackages = factory.getALl(CoursePackage, 'CoursePackage');
 
 //@desc get specific CoursePackage by id
 //@route GET /api/v1/coursePackages/:id
 //@access public
 exports.getCoursePackage = factory.getOne(CoursePackage);
 
+//@desc get specific CoursePackage by slug
+//@route GET /api/v1/coursePackages/slug/:slug
+//@access public
+exports.getCoursePackageBySlug = factory.getOneBySlug(CoursePackage);
+
 //@desc create CoursePackage
 //@route POST /api/v1/coursePackages
 //@access private
 exports.createCoursePackage = (req, res, next) => {
-  req.body.instructor = req.user._id;  
+  req.body.instructor = req.user._id;
   return factory.createOne(CoursePackage)(req, res, next);
 };
 
@@ -88,37 +97,42 @@ exports.updateCoursePackage = async (req, res, next) => {
     const coursePackage = await CoursePackage.findById(req.params.id).lean();
     if (!coursePackage) {
       return next(
-        new ApiError(res.__("errors.Not-Found", { document: "document" }), 404)
+        new ApiError(res.__('errors.Not-Found', { document: 'document' }), 404),
       );
     }
-    if (req.body.status && req.body.status === "active") {
+    if (req.body.status && req.body.status === 'active') {
       //check if this coursePackage has all fields
-      const missedFields = await checkIfCoursePackageHasAllFields(coursePackage, req.body);
+      const missedFields = await checkIfCoursePackageHasAllFields(
+        coursePackage,
+        req.body,
+      );
       if (missedFields.length > 0) {
         return next(
           new ApiError(
-            `you cannot activate this CoursePackage, CoursePackage has missing required fields: ${missedFields.join(", ")}`,
-            400
-          )
+            `you cannot activate this CoursePackage, CoursePackage has missing required fields: ${missedFields.join(', ')}`,
+            400,
+          ),
         );
       }
     }
-    const result = await CoursePackage.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    });
-    if (!result) {
-      return next(new ApiError("Failed to update coursePackage", 400));
-    }
-    const localizedCoursePackage = CoursePackage.schema.methods.toJSONLocalizedOnly(
-      result,
-      req.locale
+    const result = await CoursePackage.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      {
+        new: true,
+      },
     );
+    if (!result) {
+      return next(new ApiError('Failed to update coursePackage', 400));
+    }
+    const localizedCoursePackage =
+      CoursePackage.schema.methods.toJSONLocalizedOnly(result, req.locale);
     res
       .status(200)
-      .json({ status: "updated successfully", data: localizedCoursePackage });
+      .json({ status: 'updated successfully', data: localizedCoursePackage });
   } catch (error) {
-    console.error("Error updating document:", error.message);
-    res.status(500).json({ error: "Internal server error" });
+    console.error('Error updating document:', error.message);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
@@ -135,24 +149,24 @@ exports.findUniqueUsersByPackageId = asyncHandler(async (req, res, next) => {
     { $match: { coursePackage: packageId } },
     {
       $group: {
-        _id: "$user",
+        _id: '$user',
       },
     },
     {
       $lookup: {
-        from: "users",
-        localField: "_id",
-        foreignField: "_id",
-        as: "userDetails",
+        from: 'users',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'userDetails',
       },
     },
     {
-      $unwind: "$userDetails",
+      $unwind: '$userDetails',
     },
     {
       $project: {
         _id: 0,
-        user: "$userDetails",
+        user: '$userDetails',
       },
     },
   ]);

@@ -1,25 +1,24 @@
-const express = require("express");
+const express = require('express');
 
-const coursePackageValidator = require("../utils/validators/coursePackageValidator");
-const coursePackage = require("../services/coursePackageServices");
+const coursePackageValidator = require('../utils/validators/coursePackageValidator');
+const coursePackage = require('../services/coursePackageServices');
 
-const authServices = require("../services/authServices");
+const authServices = require('../services/authServices');
 
 const router = express.Router();
 
 router.get(
-  "/getAll",
+  '/getAll',
   authServices.protect,
   authServices.checkIfUserIsAdminOrInstructor,
   coursePackage.filterCoursePackages,
-  coursePackage.getCoursePackages
+  coursePackage.getCoursePackages,
 );
-
 router
-  .route("/")
+  .route('/')
   .get(
     coursePackage.filterActiveCoursePackages,
-    coursePackage.getCoursePackages
+    coursePackage.getCoursePackages,
   )
   .post(
     authServices.protect,
@@ -27,10 +26,10 @@ router
     coursePackage.uploadCoursePackageImage,
     coursePackage.resizeImage,
     coursePackageValidator.createCoursePackageValidator,
-    coursePackage.createCoursePackage
+    coursePackage.createCoursePackage,
   );
 router
-  .route("/:id")
+  .route('/:id')
   .get(coursePackage.getCoursePackage)
   .put(
     authServices.protect,
@@ -38,17 +37,17 @@ router
     coursePackage.uploadCoursePackageImage,
     coursePackage.resizeImage,
     coursePackageValidator.updateCoursePackageValidator,
-    coursePackage.updateCoursePackage
+    coursePackage.updateCoursePackage,
   )
   .delete(
     authServices.protect,
     authServices.checkIfUserIsAdminOrInstructor,
-    coursePackage.deleteCoursePackage
+    coursePackage.deleteCoursePackage,
   );
 router
-  .route("/:packageId")
+  .route('/:packageId')
   .get(
-    authServices.allowedTo("admin"),
-    coursePackage.findUniqueUsersByPackageId
+    authServices.allowedTo('admin'),
+    coursePackage.findUniqueUsersByPackageId,
   );
 module.exports = router;

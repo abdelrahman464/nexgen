@@ -297,19 +297,16 @@ exports.applyFilter = (req, res, next) => {
     );
   }
   if (title) {
-    orFilters.push(
-      { 'title.ar': title },
-      { 'title.en': title },
-    );
+    orFilters.push({ 'title.ar': title }, { 'title.en': title });
   }
   if (description) {
     orFilters.push(
-      { 'description.ar':  description },
-      { 'description.en':  description },
+      { 'description.ar': description },
+      { 'description.en': description },
     );
   }
-  if(orFilters.length > 0){
-    req.filterObj.$or = [ ...(req.filterObj.$or || []), ...orFilters];
+  if (orFilters.length > 0) {
+    req.filterObj.$or = [...(req.filterObj.$or || []), ...orFilters];
   }
   return next();
 };
@@ -325,26 +322,7 @@ exports.getAllCourses = factory.getALl(Course, 'Course');
 // Get a specific course by ID
 // exports.getCourseById = factory.getOne(Course, "reviews", "instructor");
 // Get a specific course by ID
-exports.getCourseById = asyncHandler(async (req, res, next) => {
-  const course = await Course.findById(req.params.id)
-    .populate('reviews')
-    .populate('instructor', 'name email profileImg');
-  if (!course) {
-    return next(
-      new ApiError(`No course found for this id ${req.params.id}`, 404),
-    );
-  }
-  const localizedResult = Course.schema.methods.toJSONLocalized(
-    course,
-    req.locale,
-  );
-  // localizedResult = addTranslationFields(course, localizedResult);
-
-  return res.status(200).json({
-    status: 'success',
-    data: localizedResult,
-  });
-});
+exports.getCourseById = factory.getOne(Course, "reviews", "instructor");
 
 // Update a course by ID
 exports.isTheCourseInstructor = async (req, res, next) => {
@@ -863,7 +841,7 @@ exports.getCertificate = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
   const courseProgress = await CourseProgress.findOne({
     'certificate._id': id,
-  }).populate({path: 'user', select: 'name email profileImg'})
+  }).populate({ path: 'user', select: 'name email profileImg' });
   if (!courseProgress) {
     return next(new ApiError('No Certificate found', 404));
   }
