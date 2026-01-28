@@ -24,33 +24,8 @@ const Package = require("../models/packageModel");
 const CoursePackage = require("../models/coursePackageModel");
 const Live = require("../models/liveModel");
 
-const jwt = require('jsonwebtoken');
-const sharp = require('sharp');
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
-const { v4: uuidv4 } = require('uuid');
-const ApiError = require('../utils/apiError');
-const factory = require('./handllerFactory');
-const User = require('../models/userModel');
-const Order = require('../models/orderModel');
-const generateToken = require('../utils/generateToken');
-const { uploadMixOfFiles } = require('../middlewares/uploadImageMiddleware');
-const CourseProgress = require('../models/courseProgressModel');
-const Message = require('../models/MessageModel');
-const Chat = require('../models/ChatModel');
-const Notification = require('../models/notificationModel');
-const React = require('../models/reactionModel');
-const Comment = require('../models/commentModel');
-const Course = require('../models/courseModel');
-const MarketLog = require('../models/MarketingModel');
-const UserSubscription = require('../models/userSubscriptionModel');
-const { moveOrdersFromOneToOne } = require('./marketing/marketingService');
-const Article = require('../models/articalModel');
-const Package = require('../models/packageModel');
-const CoursePackage = require('../models/coursePackageModel');
-const Live = require('../models/liveModel');
 const { verifyIdentityWithOpenAI } = require('./identityVerificationService');
->>>>>>> abdo-branch
+
 
 //upload user images
 exports.uploadImages = uploadMixOfFiles([
@@ -1297,17 +1272,14 @@ exports.uploadIdDocument = async (req, res, next) => {
     // 7) Update user with final data (including AI verification results if available)
     const updatedUser = await User.findByIdAndUpdate(
       currentUser._id,
-<<<<<<< HEAD
+
       {
         idDocuments: req.body.idDocuments,
         idVerification: "pending",
         note: null, // Reset any previous notes
       },
       { new: true }
-=======
-      updateData,
-      { new: true },
->>>>>>> abdo-branch
+
     );
 
     // 8) Send notification if verified
@@ -1332,13 +1304,8 @@ exports.uploadIdDocument = async (req, res, next) => {
     }
 
     res.status(200).json({
-<<<<<<< HEAD
-      status: "success",
-      message: "ID documents uploaded successfully and pending verification",
-=======
       status: 'success',
       message: 'ID documents uploaded successfully',
->>>>>>> abdo-branch
       data: {
         idVerification: updatedUser.idVerification,
         idDocuments: updatedUser.idDocuments,
