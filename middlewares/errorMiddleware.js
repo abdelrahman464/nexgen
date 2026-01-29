@@ -1,4 +1,5 @@
 const ApiError = require("../utils/apiError");
+const { logErrorToDatabase } = require("../utils/errorLogs");
 
 const sendErrorForDev = (err, res) => {
   res.status(err.statusCode).json({
@@ -23,9 +24,17 @@ const handleJwtInvalidSignature = () =>
 const handleJwtExpired = () =>
   new ApiError("Expired token, please login again...", 401);
 
-const globalError = (err, req, res, next) => {
+const globalError = async (err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
   err.status = err.status || "error";
+
+  // Log error to database with URL
+  try {
+    const url = req ? `${req.method} ${req.originalUrl || req.url}` : null;
+    await logErrorToDatabase(err, url);
+  } catch (logError) {
+    console.error("Failed to log error to database:", logError);
+  }
 
   if (process.env.NODE_ENV === "development") {
     sendErrorForDev(err, res);

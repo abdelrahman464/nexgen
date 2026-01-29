@@ -93,14 +93,14 @@ exports.resizeFiles = asyncHandler(async (req, res, next) => {
     }
   }
   const allowedTypes = [
-    "image/jpeg", 
-    "image/png", 
-    "image/webp", 
+    "image/jpeg",
+    "image/png",
+    "image/webp",
     "application/pdf",
-    "application/msword",  // .doc
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  // .docx
-    "application/vnd.ms-excel",  // .xls
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"  // .xlsx
+    "application/msword", // .doc
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
+    "application/vnd.ms-excel", // .xls
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
   ];
 
   if (req.files && req.files.image) {
@@ -154,7 +154,14 @@ exports.isTheLessonInstructor = async (req, res, next) => {
       );
     }
   } else {
-    const course = await Course.findById(req.body.course);
+    // Handle both ObjectId and slug for course lookup
+    let course;
+    const courseId = req.body.course || req.params.courseId;
+    if (mongoose.Types.ObjectId.isValid(courseId) && /^[a-f0-9]{24}$/i.test(courseId)) {
+      course = await Course.findById(courseId);
+    } else {
+      course = await Course.findOne({ slug: courseId });
+    }
     if (!course) {
       return next(new ApiError("Course not found", 404));
     }
@@ -167,11 +174,25 @@ exports.isTheLessonInstructor = async (req, res, next) => {
   next();
 };
 
-exports.setCourseIdToBody = (req, res, next) => {
-  // Nested route
-  if (!req.body.course) req.body.course = req.params.courseId;
+exports.setCourseIdToBody = asyncHandler(async (req, res, next) => {
+  // Handle courseId from params (nested route) or body
+  const courseId = req.body.course || req.params.courseId;
+  
+  if (courseId) {
+    // Check if it's a valid ObjectId
+    if (mongoose.Types.ObjectId.isValid(courseId) && /^[a-f0-9]{24}$/i.test(courseId)) {
+      req.body.course = courseId;
+    } else {
+      // It's likely a slug, find the course by slug
+      const course = await Course.findOne({ slug: courseId });
+      if (!course) {
+        return next(new ApiError(`Course not found with slug: ${courseId}`, 404));
+      }
+      req.body.course = course._id;
+    }
+  }
   next();
-};
+});
 // Create a new lesson
 exports.createLesson = factory.createOne(Lesson);
 //get lessons in dashboard
@@ -179,10 +200,21 @@ exports.createLesson = factory.createOne(Lesson);
 exports.getLessons = factory.getALl(Lesson);
 // Get all lessons of course for each user & hide the link of the lessons that the user didn't reach yet
 exports.getCourseLessons = async (req, res, next) => {
-  const query = Lesson.find({ course: req.params.id }).sort({
+  // Handle both ObjectId and slug for course lookup
+  let courseId = req.params.id;
+  if (!mongoose.Types.ObjectId.isValid(courseId) || !/^[a-f0-9]{24}$/i.test(courseId)) {
+    // It's likely a slug, find the course by slug
+    const course = await Course.findOne({ slug: courseId });
+    if (!course) {
+      return next(new ApiError(`Course not found with slug: ${courseId}`, 404));
+    }
+    courseId = course._id;
+  }
+  
+  const query = Lesson.find({ course: courseId }).sort({
     order: 1,
   });
-  const documentsCount = await Lesson.countDocuments({ course: req.params.id });
+  const documentsCount = await Lesson.countDocuments({ course: courseId });
 
   const apiFeatures = new ApiFeatures(query, req.query)
     .filter()
@@ -223,7 +255,7 @@ exports.getCourseLessons = async (req, res, next) => {
   if (req.user.role !== "admin") {
     const userCourseProgress = await CourseProgress.findOne({
       user: req.user._id,
-      course: req.params.id,
+      course: courseId,
     }).populate("progress.lesson");
 
     if (!userCourseProgress || userCourseProgress.progress.length === 0) {
@@ -311,11 +343,22 @@ exports.getCourseLessons = async (req, res, next) => {
 //@access Private
 exports.getSectionLessons = async (req, res, next) => {
   try {
-    const lessons = await Lesson.find({ course: req.params.id }).sort({
+    // Handle both ObjectId and slug for course lookup
+    let courseId = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(courseId) || !/^[a-f0-9]{24}$/i.test(courseId)) {
+      // It's likely a slug, find the course by slug
+      const course = await Course.findOne({ slug: courseId });
+      if (!course) {
+        return next(new ApiError(`Course not found with slug: ${courseId}`, 404));
+      }
+      courseId = course._id;
+    }
+    
+    const lessons = await Lesson.find({ course: courseId }).sort({
       order: 1,
     });
     //get all sections in that course
-    const sections = await Section.find({ course: req.params.id }).sort({
+    const sections = await Section.find({ course: courseId }).sort({
       order: 1,
     });
 
@@ -334,15 +377,14 @@ exports.getSectionLessons = async (req, res, next) => {
       });
     }
 
-    let firstLockedLesson = 0;
+    let firstLockedLessonOrder = 0;
     for (const lesson of lessons) {
-      if (lesson.hasQuiz && lesson.hasQuiz === false) {
-        firstLockedLesson += 1;
+      if (!lesson.hasQuiz) {
+        firstLockedLessonOrder = lesson.order;
       } else {
         break;
       }
     }
-
     const localizedLessons = Lesson.schema.methods.toJSONLocalizedOnly(
       lessons,
       req.locale
@@ -356,23 +398,19 @@ exports.getSectionLessons = async (req, res, next) => {
     if (req.user.role !== "admin") {
       const userCourseProgress = await CourseProgress.findOne({
         user: req.user._id,
-        course: req.params.id,
+        course: courseId,
       }).populate("progress.lesson");
 
       if (!userCourseProgress || userCourseProgress.progress.length === 0) {
         // If no progress, user should only access the first lesson
-        let reachedFirstLockedLesson = false;
         accessibleLessons = localizedLessons.map((lesson, index) => {
-          if (index > 0){
-            if(!reachedFirstLockedLesson && !lesson.hasQuiz ){
-              reachedFirstLockedLesson = true;
-            }else{
-              lesson.videoUrl = undefined;
-            }
-          };
+          if (lesson.order > firstLockedLessonOrder + 1) {
+            lesson.videoUrl = undefined;
+          }
           return lesson;
         });
       } else {
+        console.log("userCourseProgress", userCourseProgress);
         // Find the last lesson in progress
         passedFinalExam = userCourseProgress.status === "Completed";
         let lastLessonProgress = this.getLastLessonExamOrder(
@@ -400,7 +438,7 @@ exports.getSectionLessons = async (req, res, next) => {
         // Update accessibleLessons based on currentLessonOrder
         accessibleLessons = localizedLessons.map((lesson) => {
           if (
-            lesson.order > firstLockedLesson &&
+            lesson.order > firstLockedLessonOrder + 1 ||
             lesson.order > currentLessonOrder
           ) {
             lesson.videoUrl = undefined;
@@ -444,7 +482,7 @@ exports.getSectionLessons = async (req, res, next) => {
         lessons: sectionLessons,
       });
     });
-   
+
     let lastSectionUserStoppedAt;
     if (currentLessonOrder) {
       // that's mean user completed the course
@@ -471,7 +509,18 @@ exports.getSectionLessons = async (req, res, next) => {
 //@route GET /api/v1/lessons/sectionLessons/:id/public
 //@access Private
 exports.getSectionLessonsInPublic = async (req, res, next) => {
-  const lessons = await Lesson.find({ course: req.params.id }).sort({
+  // Handle both ObjectId and slug for course lookup
+  let courseId = req.params.id;
+  if (!mongoose.Types.ObjectId.isValid(courseId) || !/^[a-f0-9]{24}$/i.test(courseId)) {
+    // It's likely a slug, find the course by slug
+    const course = await Course.findOne({ slug: courseId });
+    if (!course) {
+      return next(new ApiError(`Course not found with slug: ${courseId}`, 404));
+    }
+    courseId = course._id;
+  }
+  
+  const lessons = await Lesson.find({ course: courseId }).sort({
     order: 1,
   });
   const localizedLessons = Lesson.schema.methods.toJSONLocalizedOnly(
@@ -480,7 +529,7 @@ exports.getSectionLessonsInPublic = async (req, res, next) => {
   );
 
   //get all section in that course
-  const sections = await Section.find({ course: req.params.id }).sort({
+  const sections = await Section.find({ course: courseId }).sort({
     order: 1,
   });
   const localizedSections = Section.schema.methods.toJSONLocalizedOnly(

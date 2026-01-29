@@ -26,11 +26,11 @@ const {
 
 const router = express.Router({ mergeParams: true });
 // Get Course Lessons
+// Note: Removed checkMongoId to allow course slugs (checkCourseAccess handles validation)
 router.get(
   "/courseLessons/:id",
   authServices.protect,
   authServices.allowedTo("user", "admin"),
-  checkMongoId("id"),
   checkCourseAccess,
   getCourseLessons
 );
@@ -38,7 +38,6 @@ router.get(
   "/sectionLessons/:id",
   authServices.protect,
   authServices.allowedTo("user", "admin"),
-  checkMongoId("id"),
   checkCourseAccess,
   getSectionLessons
 );

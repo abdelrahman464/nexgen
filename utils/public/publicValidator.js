@@ -7,7 +7,7 @@ const ApiError = require("../apiError");
 //   validatorMiddleware,
 // ];
 exports.checkMongoId = (variableName) => [
-  check(variableName).isMongoId().withMessage("Invalid ID format"),
+  check(variableName).isMongoId().withMessage(`Invalid ${variableName} format`),
   validatorMiddleware,
 ];
 //------------------------------------------------

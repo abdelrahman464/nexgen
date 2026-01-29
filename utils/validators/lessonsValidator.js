@@ -1,5 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const { body, check } = require("express-validator");
+const mongoose = require("mongoose");
 const validatorMiddleware = require("../../middlewares/validatorMiddleware");
 const ApiError = require("../apiError");
 const Course = require("../../models/courseModel");
@@ -145,7 +146,13 @@ exports.checkCourseAccess = asyncHandler(async (req, res, next) => {
   if (req.user.role === "admin") {
     return next();
   }
-  const course = await Course.findById(courseId);
+  // Handle both ObjectId and slug for course lookup
+  let course;
+  if (mongoose.Types.ObjectId.isValid(courseId) && /^[a-f0-9]{24}$/i.test(courseId)) {
+    course = await Course.findById(courseId);
+  } else {
+    course = await Course.findOne({ slug: courseId });
+  }
 
   if (!course) {
     return next(new ApiError(res.__("errors.Not-Found"), 403));
