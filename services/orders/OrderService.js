@@ -135,23 +135,68 @@ const checkExistingPaidOrder = async (userId) => {
 };
 
 async function createOrder(orderDetails) {
-  const { userId, marketer, itemId, price, method, itemType, couponName } =
-    orderDetails;
+  const {
+    userId,
+    marketer,
+    itemId,
+    price,
+    method,
+    itemType,
+    couponName,
+    appleTransactionId,
+    appleOriginalTransactionId,
+    appleProductId,
+  } = orderDetails;
   //to avoid duplication of orders
   let order;
   let flag = false;
-  order = await Order.findOne({
+
+  // Build query conditions
+  const baseQuery = {
     user: userId,
     [itemType]: itemId,
     paymentMethodType: method,
-    //check if the order created from 1h
+    // Check if the order created within the last hour
     createdAt: { $gte: new Date(Date.now() - 1 * 60 * 60 * 1000) },
-  });
+  };
+
+  // For Apple IAP, also check transaction IDs to prevent duplicates
+  if (
+    method === 'apple' &&
+    (appleTransactionId || appleOriginalTransactionId)
+  ) {
+    // Check if an order with this transaction ID already exists (regardless of time)
+    const existingAppleOrder = await Order.findOne({
+      $or: [
+        { appleTransactionId: appleTransactionId },
+        { appleTransactionId: appleOriginalTransactionId },
+        { appleOriginalTransactionId: appleTransactionId },
+        { appleOriginalTransactionId: appleOriginalTransactionId },
+      ].filter((condition) => {
+        // Filter out conditions with undefined values
+        const key = Object.keys(condition)[0];
+        return condition[key] !== undefined;
+      }),
+    });
+
+    if (existingAppleOrder) {
+      console.log('Duplicate Apple transaction detected:', {
+        transactionId: appleTransactionId,
+        originalTransactionId: appleOriginalTransactionId,
+        existingOrderId: existingAppleOrder._id,
+      });
+      return null; // Prevent duplicate order
+    }
+  }
+
+  // Check for recent order with same item and payment method
+  order = await Order.findOne(baseQuery);
 
   const isResale = await checkExistingPaidOrder(userId);
 
   if (!order) {
-    order = await Order.create({
+    // Prepare order data
+    const orderData = {
       user: userId,
       marketer,
       [itemType]: itemId,
@@ -161,9 +206,24 @@ async function createOrder(orderDetails) {
       paidAt: Date.now(),
       isResale: isResale,
       coupon: couponName,
-    });
-    flag = true;
+    };
+   // Add Apple IAP specific fields if payment method is Apple
+   if (method === 'apple') {
+    if (appleTransactionId) {
+      orderData.appleTransactionId = appleTransactionId;
+    }
+    if (appleOriginalTransactionId) {
+      orderData.appleOriginalTransactionId = appleOriginalTransactionId;
+    }
+    if (appleProductId) {
+      orderData.appleProductId = appleProductId;
+    }
   }
+  
+  order = await Order.create(orderData);
+  flag = true;
+}
+  
   if (flag) return order;
   return null;
 }
@@ -252,7 +312,16 @@ async function createOrUpdateSubscription(userId, packageId, durationDays) {
 
 // Handler for creating a course order
 const createCourseOrderHandler = async (paymentDetails) => {
-  const { id, email, price, method, couponName } = paymentDetails;
+  const {
+    id,
+    email,
+    price,
+    method,
+    couponName,
+    transactionId, // Apple
+    originalTransactionId, // Apple
+    productId, // Apple
+  } = paymentDetails;
 
   const [course, user, package] = await Promise.all([
     Course.findById(id),
@@ -268,6 +337,11 @@ const createCourseOrderHandler = async (paymentDetails) => {
     method,
     itemType: 'course',
     couponName,
+    // Apple IAP specific fields
+    appleTransactionId: method === 'apple' ? transactionId : undefined,
+    appleOriginalTransactionId:
+      method === 'apple' ? originalTransactionId : undefined,
+    appleProductId: method === 'apple' ? productId : undefined,
   };
   let order = await createOrder(orderDetails);
 
@@ -350,7 +424,16 @@ const createCourseOrderHandler = async (paymentDetails) => {
  */
 // Handler for creating a package order
 const createPackageOrderHandler = async (paymentDetails) => {
-  const { id, email, price, method, couponName } = paymentDetails;
+  const {
+    id,
+    email,
+    price,
+    method,
+    couponName,
+    transactionId, // Apple
+    originalTransactionId, // Apple
+    productId, // Apple
+  } = paymentDetails;
   const [package, user] = await Promise.all([
     Package.findById(id),
     User.findOne({ email }),
@@ -365,6 +448,11 @@ const createPackageOrderHandler = async (paymentDetails) => {
     method,
     itemType: 'package',
     couponName,
+    // Apple IAP specific fields
+    appleTransactionId: method === 'apple' ? transactionId : undefined,
+    appleOriginalTransactionId:
+      method === 'apple' ? originalTransactionId : undefined,
+    appleProductId: method === 'apple' ? productId : undefined,
   };
 
   let order = await createOrder(orderDetails);
@@ -426,7 +514,16 @@ const createPackageOrderHandler = async (paymentDetails) => {
 
 // Handler for creating a course package order
 const createCoursePackageOrderHandler = async (paymentDetails) => {
-  const { id, email, price, method, couponName } = paymentDetails;
+  const {
+    id,
+    email,
+    price,
+    method,
+    couponName,
+    transactionId, // Apple
+    originalTransactionId, // Apple
+    productId, // Apple
+  } = paymentDetails;
   const [coursePackage, user] = await Promise.all([
     CoursePackage.findById(id),
     User.findOne({ email }),
@@ -442,6 +539,11 @@ const createCoursePackageOrderHandler = async (paymentDetails) => {
     method,
     itemType: 'coursePackage',
     couponName,
+    // Apple IAP specific fields
+    appleTransactionId: method === 'apple' ? transactionId : undefined,
+    appleOriginalTransactionId:
+      method === 'apple' ? originalTransactionId : undefined,
+    appleProductId: method === 'apple' ? productId : undefined,
   };
 
   let order = await createOrder(orderDetails);

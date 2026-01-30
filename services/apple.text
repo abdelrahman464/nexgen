@@ -1,0 +1,66 @@
+API Endpoints
+1. Purchase Course
+httpPOST /api/v1/payments/course/:courseId/apple
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "receiptData": "base64_receipt_string",
+  "productId": "com.yourapp.course.basic",
+  "couponName": "SUMMER2024"  // Optional
+}
+Response:
+json{
+  "status": "success",
+  "message": "Course purchased successfully",
+  "data": {
+    "transactionId": "1000000123456789",
+    "productId": "com.yourapp.course.basic"
+  }
+}
+2. Purchase Package
+httpPOST /api/v1/payments/package/:packageId/apple
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "receiptData": "base64_receipt_string",
+  "productId": "com.yourapp.package.premium",
+  "couponName": "DISCOUNT10"  // Optional
+}
+3. Purchase Course Package
+httpPOST /api/v1/payments/course-package/:coursePackageId/apple
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "receiptData": "base64_receipt_string",
+  "productId": "com.yourapp.coursepackage.bundle"
+}
+4. Verify Purchase (Restore)
+httpPOST /api/v1/payments/verify-purchase
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "receiptData": "base64_receipt_string",
+  "productId": "com.yourapp.course.basic"
+}
+Response:
+json{
+  "status": "success",
+  "message": "Purchase verified",
+  "data": {
+    "hasAccess": true,
+    "productId": "com.yourapp.course.basic",
+    "transactionId": "1000000123456789"
+  }
+}
+5. Apple Webhook (Server-to-Server Notifications)
+httpPOST /api/v1/payments/webhook/apple
+Content-Type: application/json
+
+{
+  "notification_type": "DID_RENEW",
+  "unified_receipt": { ... }
+}

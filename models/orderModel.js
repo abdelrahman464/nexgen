@@ -1,28 +1,28 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const OrderSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.ObjectId,
-      ref: "User",
-      required: [true, "order must be belong to user"],
+      ref: 'User',
+      required: [true, 'order must be belong to user'],
     },
     marketer: {
       type: mongoose.Schema.ObjectId,
-      ref: "User",
+      ref: 'User',
     },
     description: String,
     course: {
       type: mongoose.Schema.ObjectId,
-      ref: "Course",
+      ref: 'Course',
     },
     package: {
       type: mongoose.Schema.ObjectId,
-      ref: "Package",
+      ref: 'Package',
     },
     coursePackage: {
       type: mongoose.Schema.ObjectId,
-      ref: "CoursePackage",
+      ref: 'CoursePackage',
     },
     totalOrderPrice: {
       type: Number,
@@ -53,29 +53,49 @@ const OrderSchema = new mongoose.Schema(
     coupon: String,
     paidAt: Date,
     paypalOrderId: String,
+    // Apple IAP specific fields
+    appleTransactionId: {
+      type: String,
+      sparse: true, // Allows multiple null values
+    },
+    appleOriginalTransactionId: {
+      type: String,
+      sparse: true,
+    },
+    appleProductId: {
+      type: String,
+    },
+    appleReceiptData: {
+      type: String, // Store for future verification if needed
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
+OrderSchema.index({ appleTransactionId: 1 });
+OrderSchema.index({ appleOriginalTransactionId: 1 });
 
 OrderSchema.pre(/^find/, function (next) {
-  this.populate({ path: "user", select: "_id name phone email profileImg createdAt" })
+  this.populate({
+    path: 'user',
+    select: '_id name phone email profileImg createdAt',
+  })
     .populate({
-      path: "marketer",
-      select: "name email",
+      path: 'marketer',
+      select: 'name email',
     })
     .populate({
-      path: "course",
-      select: "title -category price",
+      path: 'course',
+      select: 'title -category price',
     })
     .populate({
-      path: "coursePackage",
-      select: "title price",
+      path: 'coursePackage',
+      select: 'title price',
     })
     .populate({
-      path: "package",
-      select: "title price",
+      path: 'package',
+      select: 'title price',
     });
   next();
 });
 
-module.exports = mongoose.model("Order", OrderSchema);
+module.exports = mongoose.model('Order', OrderSchema);
