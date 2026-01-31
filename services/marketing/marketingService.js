@@ -325,7 +325,8 @@ exports.getMarketLog = async (req, res, next) => {
     marketLog.sales?.map((sale) => {
       sale.item = sale.item[req.locale];
     });
-
+    
+    marketLog.profitableItemsDetails= await getProfitableItemsDetails(marketLog.profitableItems)
     //8- return response
     return res
       .status(200)
@@ -337,6 +338,31 @@ exports.getMarketLog = async (req, res, next) => {
       .json({ status: "failed", msg: error.message });
   }
 };
+const getProfitableItemsDetails = async (profitableItem)=>{
+  const coursesIds = [];
+  const packagesIds =[];
+  const coursePackagesIds = []
+  profitableItem.map(item=>{
+    if(item.itemType==="course"){
+      coursesIds.push(item.itemId)
+    }else if (item.itemType==="package"){
+      packagesIds.push(item.itemId)
+    }else{
+      coursePackagesIds.push(item.itemId)
+    }
+  })
+  const profitableItemsInDetails = {}
+  if(coursesIds.length > 0){
+    profitableItemsInDetails.courses = await Course.find({_id:{$in:coursesIds}}).select('title')
+  }
+  if(packagesIds.length > 0){
+    profitableItemsInDetails.packages = await Package.find({_id:{$in:packagesIds}}).select('title')
+  }
+  if(coursePackagesIds.length > 0){
+    profitableItemsInDetails.coursePackages = await CoursePackage.find({_id:{$in:coursePackagesIds}}).select('title')
+  }
+  return profitableItemsInDetails;
+}
 //--------------------------------------------INVOICES Creation----------------------------------------------------------------//
 //@desc i will use this function when i pay to user
 //embedded function

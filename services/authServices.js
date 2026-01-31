@@ -112,7 +112,11 @@ exports.signup = asyncHandler(async (req, res, next) => {
     } else {
       coachId = marketLog.marketer;
     }
+  }else{
+    invitorId = process.env.ADMIN_ID;
+    coachId = process.env.ADMIN_ID;
   }
+
 
   //create user
   const user = await User.create({
@@ -247,8 +251,6 @@ exports.signup = asyncHandler(async (req, res, next) => {
 //@route POST /api/v1/auth/login
 //@access public
 exports.login = asyncHandler(async (req, res, next) => {
-  //  check if password and email in the body
-  //  check if user exist & check if password is correct
   const user = await User.findOne({ email: req.body.email });
   if (!user || !(await bcrypt.compare(req.body.password, user.password))) {
     return next(new ApiError("incorrect password or email", 401));

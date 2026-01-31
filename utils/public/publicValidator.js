@@ -19,7 +19,7 @@ exports.isUserSubscribed = async (req, res, next) => {
 };
 //------------------------------------------------
 exports.isIdParamForSender = async (req, res, next) => {
-  if (req.user.role === "admin" || req.user.isInstructor || req.user._id.toString() === req.params.id) {
+  if (req.user.role === "admin" || req.user.isMarketer || req.user._id.toString() === req.params.id) {
     return next();
   }
   return next(new ApiError(res.__("errors.Not-Authorized"), 401));

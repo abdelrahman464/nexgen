@@ -410,7 +410,6 @@ exports.getSectionLessons = async (req, res, next) => {
           return lesson;
         });
       } else {
-        console.log("userCourseProgress", userCourseProgress);
         // Find the last lesson in progress
         passedFinalExam = userCourseProgress.status === "Completed";
         let lastLessonProgress = this.getLastLessonExamOrder(
@@ -426,7 +425,6 @@ exports.getSectionLessons = async (req, res, next) => {
             ? lastLessonProgress.passAnalytics
             : undefined,
         };
-
         const canProgressToNextLesson =
           conditions.isCompleted &&
           (conditions.hasPassedAnalytics === undefined ||
@@ -435,11 +433,11 @@ exports.getSectionLessons = async (req, res, next) => {
         if (canProgressToNextLesson) {
           currentLessonOrder += 1;
         }
+        
         // Update accessibleLessons based on currentLessonOrder
         accessibleLessons = localizedLessons.map((lesson) => {
           if (
-            lesson.order > firstLockedLessonOrder + 1 ||
-            lesson.order > currentLessonOrder
+            lesson.order > _.max([firstLockedLessonOrder + 1,currentLessonOrder]) 
           ) {
             lesson.videoUrl = undefined;
           }
