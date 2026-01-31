@@ -138,6 +138,9 @@ const courseSchema = new mongoose.Schema(
       default: "pending",
     },
     promotionVideo: String,
+    appleProductId: {
+      type: String,
+    },
   },
   {
     timestamps: true,

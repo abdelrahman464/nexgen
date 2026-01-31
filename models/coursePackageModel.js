@@ -82,6 +82,9 @@ const coursePackageSchema = new mongoose.Schema(
       type: String,
       i18n: true,
     },
+    appleProductId: {
+      type: String,
+    },
   },
   {
     timestamps: true,

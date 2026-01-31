@@ -80,6 +80,9 @@ const packageSchema = new mongoose.Schema(
       enum: ["service", "course"],
       default: "service",
     },
+    appleProductId: {
+      type: String,
+    },
   },
   { timestamps: true }
 );
