@@ -1,6 +1,6 @@
-const router = require("express").Router();
+const router = require('express').Router();
 
-const authService = require("../services/authServices");
+const authService = require('../services/authServices');
 const {
   uploadImages,
   resizeImages,
@@ -11,55 +11,55 @@ const {
   deleteArtical,
   filterInstructorArticals,
   filterActiveArticles,
-} = require("../services/articalServices");
+} = require('../services/articalServices');
 
 const {
   createArticalValidator,
   getOneArticalValidator,
   updateArticalValidator,
   deleteArticalValidator,
-} = require("../utils/validators/articalValidator");
+} = require('../utils/validators/articalValidator');
 const {
   checkIfInstructorHasOneActiveCourse,
-} = require("../utils/validators/courseValidator");
+} = require('../utils/validators/courseValidator');
 
 router.post(
-  "/",
+  '/',
   authService.protect,
   checkIfInstructorHasOneActiveCourse,
   uploadImages,
   resizeImages,
   createArticalValidator,
-  createArtical
+  createArtical,
 );
 router.get(
-  "/getAll",
+  '/getAll',
   authService.protect,
   authService.checkIfUserIsAdminOrInstructor,
   filterInstructorArticals,
-  getAllArticals
+  getAllArticals,
 );
 
-router.get("/", filterActiveArticles, getAllArticals);
+router.get('/', filterActiveArticles, getAllArticals);
 
-router.get("/:id", getOneArticalValidator, getOneArtical);
+router.get('/:id', getOneArtical);
 
 router.put(
-  "/:id",
+  '/:id',
   authService.protect,
-  authService.allowedTo("admin", "moderator"),
+  authService.allowedTo('admin', 'moderator'),
   uploadImages,
   resizeImages,
   updateArticalValidator,
-  updateArtical
+  updateArtical,
 );
 
 router.delete(
-  "/:id",
+  '/:id',
   authService.protect,
-  authService.allowedTo("admin", "moderator"),
+  authService.allowedTo('admin', 'moderator'),
   deleteArticalValidator,
-  deleteArtical
+  deleteArtical,
 );
 
 module.exports = router;
