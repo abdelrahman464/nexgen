@@ -8,6 +8,7 @@ async function logErrorToDatabase(err, url = null) {
     message: err.message ? err.message : "An error occurred",
     stack: err.stack ? err.stack : "",
     url: url || null,
+    method: err.method || null,
     timestamp: new Date(),
   };
 

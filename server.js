@@ -131,7 +131,7 @@ mountRoutes(app);
 // catch the wrong routes that i never Mount
 app.all("*", (req, res, next) => {
   //create error and send it to error handling middleware
-  next(new ApiError(`Cant Find This Route ${req.originalUrl}`, 400));
+  next(new ApiError(`Cant Find This Route ${req.originalUrl}`, 404));
 });
 
 app.use(globalError);
@@ -161,22 +161,30 @@ process.on("unhandledRejection", async (err) => {
   console.error(
     `UnhandledRejection Errors :${err.name} | ${err.message} | ${err.stack}`
   );
+  console.error(err.stack);
 
   try {
-    // Log the error to the database
-    await logErrorToDatabase(err);
-
-    // Close the server and exit the process after logging
-    server.close(() => {
-      console.log("Shutting Down.....");
-      process.exit(1);
-    });
+    // Note: For unhandled rejections, there's no request context, so URL is null
+    err.method = "unhandledRejection";
+    await logErrorToDatabase(err, null);
   } catch (dbError) {
     console.error("Failed to log error to database:", dbError);
-    // If logging to the database fails, still shut down the server
-    server.close(() => {
-      console.log("Shutting Down.....");
-      process.exit(1);
-    });
   }
+
+  // Close the server gracefully with timeout to prevent hanging
+  // PM2 will auto-restart the app after process.exit(1)
+  // Exit code 1 signals PM2 that the process crashed and needs restart
+  const shutdownTimeout = setTimeout(() => {
+    console.error("Forced shutdown after timeout - PM2 will auto-restart");
+    // Force exit with error code - PM2 will detect and restart
+    process.exit(1);
+  }, 10000); // 10 second timeout
+
+  server.close(() => {
+    clearTimeout(shutdownTimeout);
+    console.log("Server closed gracefully - PM2 will auto-restart");
+    // Exit with error code (1) so PM2 detects crash and auto-restarts
+    // PM2 monitors exit codes: 0 = success (no restart), non-zero = crash (restart)
+    process.exit(1);
+  });
 });

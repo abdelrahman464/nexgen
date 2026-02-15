@@ -177,7 +177,7 @@ exports.isTheLessonInstructor = async (req, res, next) => {
 exports.setCourseIdToBody = asyncHandler(async (req, res, next) => {
   // Handle courseId from params (nested route) or body
   const courseId = req.body.course || req.params.courseId;
-  
+
   if (courseId) {
     // Check if it's a valid ObjectId
     if (mongoose.Types.ObjectId.isValid(courseId) && /^[a-f0-9]{24}$/i.test(courseId)) {
@@ -210,7 +210,7 @@ exports.getCourseLessons = async (req, res, next) => {
     }
     courseId = course._id;
   }
-  
+
   const query = Lesson.find({ course: courseId }).sort({
     order: 1,
   });
@@ -240,10 +240,10 @@ exports.getCourseLessons = async (req, res, next) => {
   if (lessons.length === 0)
     return next(new ApiError("No lessons found for this course", 404));
 
-  let firstLockedLesson = 0;
+  let firstLockedLessonOrder = 0;
   for (const lesson of lessons) {
-    if (lesson.hasQuiz && lesson.hasQuiz === false) {
-      firstLockedLesson += 1;
+    if (!lesson.hasQuiz) {
+      firstLockedLessonOrder = lesson.order;
     } else {
       break;
     }
@@ -260,8 +260,11 @@ exports.getCourseLessons = async (req, res, next) => {
 
     if (!userCourseProgress || userCourseProgress.progress.length === 0) {
       // If no progress, user should only access the first lesson
+
       accessibleLessons = lessons.map((lesson, index) => {
-        if (index > 0) lesson.videoUrl = undefined;
+        if (lesson.order > firstLockedLessonOrder + 1) {
+          lesson.videoUrl = undefined;
+        }
         return lesson;
       });
     } else {
@@ -288,14 +291,19 @@ exports.getCourseLessons = async (req, res, next) => {
 
       if (canProgressToNextLesson) {
         currentLessonOrder += 1;
+          //check that current lesson has quiz or not
+        lessons.map((lesson) => {
+          if (lesson.order === currentLessonOrder && !lesson.hasQuiz) {
+            currentLessonOrder += 1;
+          }
+        })
       }
       //---------------
       // Update accessibleLessons based on currentLessonOrder
 
       accessibleLessons = lessons.map((lesson) => {
         if (
-          lesson.order > firstLockedLesson &&
-          lesson.order > currentLessonOrder
+          lesson.order > _.max([firstLockedLessonOrder + 1, currentLessonOrder])
         ) {
           lesson.videoUrl = undefined;
         }
@@ -353,7 +361,7 @@ exports.getSectionLessons = async (req, res, next) => {
       }
       courseId = course._id;
     }
-    
+
     const lessons = await Lesson.find({ course: courseId }).sort({
       order: 1,
     });
@@ -385,6 +393,7 @@ exports.getSectionLessons = async (req, res, next) => {
         break;
       }
     }
+    console.log(firstLockedLessonOrder);
     const localizedLessons = Lesson.schema.methods.toJSONLocalizedOnly(
       lessons,
       req.locale
@@ -429,15 +438,19 @@ exports.getSectionLessons = async (req, res, next) => {
           conditions.isCompleted &&
           (conditions.hasPassedAnalytics === undefined ||
             conditions.hasPassedAnalytics);
-
         if (canProgressToNextLesson) {
           currentLessonOrder += 1;
+          //check that current lesson has quiz or not
+          localizedLessons.map((lesson) => {
+            if (lesson.order === currentLessonOrder && !lesson.hasQuiz) {
+              currentLessonOrder += 1;
+            }
+          })
         }
-        
         // Update accessibleLessons based on currentLessonOrder
         accessibleLessons = localizedLessons.map((lesson) => {
           if (
-            lesson.order > _.max([firstLockedLessonOrder + 1,currentLessonOrder]) 
+            lesson.order > _.max([firstLockedLessonOrder + 1, currentLessonOrder])
           ) {
             lesson.videoUrl = undefined;
           }
@@ -517,7 +530,7 @@ exports.getSectionLessonsInPublic = async (req, res, next) => {
     }
     courseId = course._id;
   }
-  
+
   const lessons = await Lesson.find({ course: courseId }).sort({
     order: 1,
   });

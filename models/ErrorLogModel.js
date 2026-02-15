@@ -18,6 +18,10 @@ const errorLogSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  method: {
+    type: String,
+    default: null,
+  },
   timestamp: {
     type: Date,
     default: Date.now,

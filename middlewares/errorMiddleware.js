@@ -29,12 +29,12 @@ const globalError = async (err, req, res, next) => {
   err.status = err.status || "error";
 
   // Log error to database with URL
-  try {
-    const url = req ? `${req.method} ${req.originalUrl || req.url}` : null;
-    await logErrorToDatabase(err, url);
-  } catch (logError) {
-    console.error("Failed to log error to database:", logError);
-  }
+  // try {
+  //   const url = req ? `${req.method} ${req.originalUrl || req.url}` : null;
+  //   await logErrorToDatabase(err, url);
+  // } catch (logError) {
+  //   console.error("Failed to log error to database:", logError);
+  // }
 
   if (process.env.NODE_ENV === "development") {
     sendErrorForDev(err, res);
