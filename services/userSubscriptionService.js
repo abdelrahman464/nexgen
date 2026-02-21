@@ -1,9 +1,9 @@
-const asyncHandler = require('express-async-handler');
-const Package = require('../models/packageModel');
-const UserSubscription = require('../models/userSubscriptionModel');
-const ApiError = require('../utils/apiError');
-const factory = require('./handllerFactory');
-const { addUserToGroupChatAndNotify } = require('./orders/OrderService');
+const asyncHandler = require("express-async-handler");
+const Package = require("../models/packageModel");
+const UserSubscription = require("../models/userSubscriptionModel");
+const ApiError = require("../utils/apiError");
+const factory = require("./handllerFactory");
+const { addUserToGroupChatAndNotify } = require("./orders/OrderService");
 
 //@desc : add subscriber to collection manually
 exports.AddsubscriberToCollection = asyncHandler(async (req, res, next) => {
@@ -12,7 +12,7 @@ exports.AddsubscriberToCollection = asyncHandler(async (req, res, next) => {
 
   const package = await Package.findById(packageId);
   if (!package) {
-    return next(new ApiError('Collection Not Found', 404));
+    return next(new ApiError("Collection Not Found", 404));
   }
 
   const startDate = new Date();
@@ -63,7 +63,7 @@ exports.checkUserSubscription = async (user, course = null) => {
 
   if (course) {
     const package = await Package.findOne({ course: course }).select(
-      '_id course',
+      "_id course"
     );
     if (!package) {
       throw new Error(`no package exists for courseId: ${course}`);
@@ -71,14 +71,19 @@ exports.checkUserSubscription = async (user, course = null) => {
     filter.package = package._id;
     courseTitle = package.course?.title?.en;
 
-    const packageSubscription = await UserSubscription.findOne(filter);
-    if (!packageSubscription) {
+    const packageSubscriptions = await UserSubscription.find(filter).sort({
+      endDate: -1,
+    });
+    if (packageSubscriptions.length === 0) {
       throw new Error(
-        `you are not subscribed to package for course ${courseTitle}`,
+        `you are not subscribed to package for course ${courseTitle}`
       );
     }
     const now = new Date();
-    if (packageSubscription.endDate.getTime() < now) {
+    const activeSubscription = packageSubscriptions.find(
+      (sub) => sub.endDate.getTime() >= now.getTime()
+    );
+    if (!activeSubscription) {
       const errMessage = `your subscribtion to package for course ${courseTitle} has expired`;
       throw new Error(errMessage);
     }
@@ -105,7 +110,7 @@ exports.checkUserSubscription = async (user, course = null) => {
 exports.subscribeToFreePackage = async (courseId, userId) => {
   try {
     const package = await Package.findOne({ course: courseId }).select(
-      '_id price subscriptionDurationDays',
+      "_id price subscriptionDurationDays"
     );
     if (!package) {
       return;
@@ -131,7 +136,7 @@ exports.subscribeToFreePackage = async (courseId, userId) => {
       endDate,
     });
     // await OrderService.makeSureUserInChat(package._id, userId);
-    const packageData = await Package.findById(package._id).populate('course');
+    const packageData = await Package.findById(package._id).populate("course");
     await addUserToGroupChatAndNotify(userId, packageData.course._id);
   } catch (error) {
     console.log(`subscribeToFreePackage \nerror: ${error.message}`);
