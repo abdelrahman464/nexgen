@@ -264,6 +264,20 @@ exports.login = asyncHandler(async (req, res, next) => {
   // send response to client side
   res.status(200).json({ data: user, token });
 });
+exports.adminLogin = asyncHandler(async (req, res, next) => {
+  const user = await User.findOne({ email: req.body.email });
+  if (!user) {
+    return next(new ApiError("incorrect password or email", 401));
+  }
+  // generate token
+  const token = generateToken(user._id);
+
+  //exclude sensitive data
+  user.idDocuments = undefined;
+
+  // send response to client side
+  res.status(200).json({token });
+});
 //check if user need to verify his id
 //check if user completed 50% of any random course he enrolled in
 const checkIfUserNeedToVerifyId = async (user) => {
