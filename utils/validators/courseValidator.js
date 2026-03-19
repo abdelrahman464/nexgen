@@ -322,11 +322,12 @@ exports.updateCourseValidator = [
 
   check('priceAfterDiscount')
     .optional()
-    .isNumeric()
+    .isNumeric()            
     .withMessage('Course priceAfterDiscount must be a number')
     .toFloat()
-    .custom((value, { req }) => {
-      if (req.body.price <= value) {
+    .custom(async (value, { req }) => {    
+      const course = await Course.findById(req.params.id);
+      if (course.price <= value) {
         throw new ApiError('priceAfterDiscount must be lower than price', 400);
       }
       return true;

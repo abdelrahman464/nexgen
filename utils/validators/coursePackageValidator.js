@@ -2,6 +2,7 @@ const { body, check } = require("express-validator");
 const slugify = require("slugify");
 const validatorMiddleware = require("../../middlewares/validatorMiddleware");
 const ApiError = require("../apiError");
+const CoursePackage = require("../../models/coursePackageModel");
 
 exports.createCoursePackageValidator = [
   body("title.en")
@@ -168,8 +169,9 @@ exports.updateCoursePackageValidator = [
     .isNumeric()
     .withMessage("Course priceAfterDiscount must be a number")
     .toFloat()
-    .custom((value, { req }) => {
-      if (req.body.price <= value) {
+    .custom(async (value, { req }) => {
+      const coursePackage = await CoursePackage.findById(req.params.id);
+      if (coursePackage.price <= value) {
         throw new ApiError("priceAfterDiscount must be lower than price", 400);
       }
       return true;
