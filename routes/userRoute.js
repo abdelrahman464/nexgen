@@ -41,6 +41,7 @@ const {
   getAllInstructorsWithBelongings,
   registerFcmToken,
   togglePushNotifications,
+  getUsersWithAlivePackageSubscription,
 } = require("../services/userService");
 
 
@@ -145,6 +146,12 @@ router.get(
   getUsersCourse,
 );
 router.get(
+  '/packages/usersWithAliveSubscriptions',
+  authServices.protect,
+  authServices.allowedTo('admin'),
+  getUsersWithAlivePackageSubscription,
+);
+router.get(
   '/order/purchasersAndNon',
   authServices.protect,
   authServices.allowedTo('admin'),
@@ -201,5 +208,7 @@ router.put(
   authServices.protect,
   togglePushNotifications
 );
+
+
 
 module.exports = router;
