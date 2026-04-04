@@ -677,10 +677,10 @@ exports.submitCourseAnswers = async (req, res, next) => {
       return next(new ApiError('Exam not found', 404));
     }
 
-    const course = await Course.findById(exam.course).populate(
-      'instructor',
-      'name email signatureImage',
-    );
+    const course = await Course.findById(exam.course).populate({
+      path:'instructor',
+       select:'name email signatureImage',
+  });
     if (!course) {
       return next(new ApiError('Course not found', 404));
     }
@@ -786,7 +786,7 @@ exports.submitCourseAnswers = async (req, res, next) => {
           (course.instructor && course.instructor.signatureImage) || '',
         language: lang,
       };
-      console.log('certificateDetails', certificateDetails);
+   
       const certificate = await generateCertificate(certificateDetails);
       await CourseProgress.findOneAndUpdate(
         { user: req.user._id, course: exam.course },

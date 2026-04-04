@@ -3,12 +3,15 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
   {
-    lang: String,
+    lang: {
+      type:string,
+      default:"ar"
+    },
     invitor: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
-    coach: {
+    coach: {  
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
