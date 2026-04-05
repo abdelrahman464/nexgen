@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 const userSchema = new mongoose.Schema(
   {
     lang: {
-      type:string,
+      type:String,
       default:"ar"
     },
     invitor: {

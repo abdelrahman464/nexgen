@@ -37,6 +37,13 @@ router
     createPackageValidator,
     packageService.createOne,
   );
+router.post(
+  '/emails/renewal',
+  authServices.protect,
+  authServices.allowedTo('admin'),
+  packageService.sendRenewalEmailsHandler,
+);
+
 router
   .route('/:id')
   .get(packageService.getOne)

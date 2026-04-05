@@ -6,6 +6,9 @@ const {
 } = require("../../services/marketing/marketingInvoicesService");
 const Order = require("../../models/orderModel");
 const { kickUnsubscribedUsersJob } = require("../migrationScripts");
+const {
+  sendSubscriptionRenewalEmails,
+} = require("../../services/packageService");
 
 exports.cronJobs = () => {
   cron.schedule("0 0 0 1 * *", () => {
@@ -18,6 +21,16 @@ exports.cronJobs = () => {
     console.log("Running kickUnsubscribedUsers cron job...");
     const result = await kickUnsubscribedUsersJob();
     console.log("Cron job finished:", result);
+  });
+  // Every day at 9:00 AM — remind users whose subscription expires within 3 days
+  cron.schedule("0 9 * * *", async () => {
+    console.log("Running subscription renewal reminder emails...");
+    try {
+      const result = await sendSubscriptionRenewalEmails(3);
+      console.log("Renewal reminder cron finished:", result);
+    } catch (err) {
+      console.error("Renewal reminder cron error:", err.message);
+    }
   });
 };
 

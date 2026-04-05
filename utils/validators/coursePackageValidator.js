@@ -114,8 +114,11 @@ exports.createCoursePackageValidator = [
     .withMessage("Course priceAfterDiscount must be a number")
     .toFloat()
     .custom((value, { req }) => {
-      if (req.body.price <= value) {
-        throw new Error("priceAfterDiscount must be lower than price");
+      if (req.body.price < value) {
+        throw new ApiError(
+          "priceAfterDiscount must be lower or equal to price",
+          400,
+        );
       }
       return true;
     }),
@@ -155,8 +158,6 @@ exports.updateCoursePackageValidator = [
     .isLength({ min: 10 })
     .withMessage(`ar description must at least 10 chars`),
 
-
-
   check("price")
     .optional()
     .isNumeric()
@@ -170,9 +171,15 @@ exports.updateCoursePackageValidator = [
     .withMessage("Course priceAfterDiscount must be a number")
     .toFloat()
     .custom(async (value, { req }) => {
-      const coursePackage = await CoursePackage.findById(req.params.id);
-      if (coursePackage.price <= value) {
-        throw new ApiError("priceAfterDiscount must be lower than price", 400);
+      const price = req.body.price
+        ? parseFloat(req.body.price)
+        : (await CoursePackage.findById(req.params.id))?.price;
+
+      if (price != null && value > price) {
+        throw new ApiError(
+          "priceAfterDiscount must be lower or equal to price",
+          400,
+        );
       }
       return true;
     }),
