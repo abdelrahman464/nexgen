@@ -1,35 +1,35 @@
-const mongoose = require('mongoose');
-const sharp = require('sharp');
-const { v4: uuidv4 } = require('uuid');
-const ApiError = require('../utils/apiError');
-const factory = require('./handllerFactory');
-const Package = require('../models/packageModel');
-const Post = require('../models/postModel');
-const UserSubscription = require('../models/userSubscriptionModel');
-const User = require('../models/userModel');
-const { uploadSingleFile } = require('../middlewares/uploadImageMiddleware');
-const Course = require('../models/courseModel');
-const { checkIfPackageHasAllFields } = require('../helpers/packageHelper');
-const sendEmail = require('../utils/sendEmail');
+const mongoose = require("mongoose");
+const sharp = require("sharp");
+const { v4: uuidv4 } = require("uuid");
+const ApiError = require("../utils/apiError");
+const factory = require("./handllerFactory");
+const Package = require("../models/packageModel");
+const Post = require("../models/postModel");
+const UserSubscription = require("../models/userSubscriptionModel");
+const User = require("../models/userModel");
+const { uploadSingleFile } = require("../middlewares/uploadImageMiddleware");
+const Course = require("../models/courseModel");
+const { checkIfPackageHasAllFields } = require("../helpers/packageHelper");
+const sendEmail = require("../utils/sendEmail");
 
 //upload course image
-exports.uploadPackageImage = uploadSingleFile('image');
+exports.uploadPackageImage = uploadSingleFile("image");
 //image processing
 exports.resizeImage = async (req, res, next) => {
   const { file } = req; // Access the uploaded file
   if (file) {
     const fileExtension = file.originalname.substring(
-      file.originalname.lastIndexOf('.'),
+      file.originalname.lastIndexOf("."),
     ); // Extract file extension
     const newFileName = `package-${uuidv4()}-${Date.now()}${fileExtension}`; // Generate new file name
 
     // Check if the file is an image for the profile picture
-    if (file.mimetype.startsWith('image/')) {
+    if (file.mimetype.startsWith("image/")) {
       // Process and save the image file using sharp for resizing, conversion, etc.
       const filePath = `uploads/packages/${newFileName}`;
 
       await sharp(file.buffer)
-        .toFormat('webp') // Convert to WebP
+        .toFormat("webp") // Convert to WebP
         .webp({ quality: 95 })
         .toFile(filePath);
 
@@ -38,7 +38,7 @@ exports.resizeImage = async (req, res, next) => {
     } else {
       return next(
         new ApiError(
-          'Unsupported file type. Only images are allowed for package.',
+          "Unsupported file type. Only images are allowed for package.",
           400,
         ),
       );
@@ -69,7 +69,7 @@ exports.convertToArray = (req, res, next) => {
 };
 
 exports.filterInstructorPackages = async (req, res, next) => {
-  if (req.user.role !== 'admin') {
+  if (req.user.role !== "admin") {
     req.filterObj = { instructor: req.user._id };
   }
   next();
@@ -78,18 +78,18 @@ exports.filterInstructorPackages = async (req, res, next) => {
 //@route GET /api/v1/collections
 //@access public
 exports.filterPackages = async (req, res, next) => {
-  const isAdmin = req.user && req.user.role === 'admin';
-  req.filterObj = { status: 'active' };
+  const isAdmin = req.user && req.user.role === "admin";
+  req.filterObj = { status: "active" };
   if (req.query.all || isAdmin) {
     req.filterObj = {};
   }
   if (req.query.keyword) {
-    const textPattern = new RegExp(req.query.keyword, 'i');
+    const textPattern = new RegExp(req.query.keyword, "i");
     req.filterObj.$or = [
-      { 'title.ar': { $regex: textPattern } },
-      { 'title.en': { $regex: textPattern } },
-      { 'description.ar': { $regex: textPattern } },
-      { 'description.en': { $regex: textPattern } },
+      { "title.ar": { $regex: textPattern } },
+      { "title.en": { $regex: textPattern } },
+      { "description.ar": { $regex: textPattern } },
+      { "description.en": { $regex: textPattern } },
     ];
   }
   return next();
@@ -99,21 +99,21 @@ exports.applyObjectFilters = (req, res, next) => {
   const { title, description, keyword } = req.query;
   const orFilters = [];
   if (keyword) {
-    const textPattern = new RegExp(keyword, 'i');
+    const textPattern = new RegExp(keyword, "i");
     orFilters.push(
-      { 'title.ar': { $regex: textPattern } },
-      { 'title.en': { $regex: textPattern } },
-      { 'description.ar': { $regex: textPattern } },
-      { 'description.en': { $regex: textPattern } },
+      { "title.ar": { $regex: textPattern } },
+      { "title.en": { $regex: textPattern } },
+      { "description.ar": { $regex: textPattern } },
+      { "description.en": { $regex: textPattern } },
     );
   }
   if (title) {
-    orFilters.push({ 'title.ar': title }, { 'title.en': title });
+    orFilters.push({ "title.ar": title }, { "title.en": title });
   }
   if (description) {
     orFilters.push(
-      { 'description.ar': description },
-      { 'description.en': description },
+      { "description.ar": description },
+      { "description.en": description },
     );
   }
   if (orFilters.length > 0) {
@@ -122,7 +122,7 @@ exports.applyObjectFilters = (req, res, next) => {
   return next();
 };
 
-exports.getAll = factory.getALl(Package, 'Package');
+exports.getAll = factory.getALl(Package, "Package");
 //@desc get specific collection by id
 //@route GET /api/v1/collections/:id
 //@access public
@@ -134,12 +134,12 @@ exports.createOne = async (req, res, next) => {
   const { course } = req.body;
   const courseDoc = await Course.findById(course);
   const isAllowed =
-    req.user.role === 'admin' ||
+    req.user.role === "admin" ||
     courseDoc.instructor._id.toString() === req.user._id.toString();
   if (!isAllowed) {
     return next(
       new ApiError(
-        'You are not allowed to create a package for this course',
+        "You are not allowed to create a package for this course",
         403,
       ),
     );
@@ -156,16 +156,16 @@ exports.updateOne = async (req, res, next) => {
     const package = await Package.findById(req.params.id).lean();
     if (!package) {
       return next(
-        new ApiError(res.__('errors.Not-Found', { document: 'document' }), 404),
+        new ApiError(res.__("errors.Not-Found", { document: "document" }), 404),
       );
     }
-    if (req.body.status && req.body.status === 'active') {
+    if (req.body.status && req.body.status === "active") {
       //check if this package has all fields
       const missedFields = await checkIfPackageHasAllFields(package, req.body);
       if (missedFields.length > 0) {
         return next(
           new ApiError(
-            `you cannot activate this Package, Package has missing required fields: ${missedFields.join(', ')}`,
+            `you cannot activate this Package, Package has missing required fields: ${missedFields.join(", ")}`,
             400,
           ),
         );
@@ -175,7 +175,7 @@ exports.updateOne = async (req, res, next) => {
       new: true,
     });
     if (!result) {
-      return next(new ApiError('Failed to update package', 400));
+      return next(new ApiError("Failed to update package", 400));
     }
     const localizedPackage = Package.schema.methods.toJSONLocalizedOnly(
       result,
@@ -183,10 +183,10 @@ exports.updateOne = async (req, res, next) => {
     );
     res
       .status(200)
-      .json({ status: 'updated successfully', data: localizedPackage });
+      .json({ status: "updated successfully", data: localizedPackage });
   } catch (error) {
-    console.error('Error updating document:', error.message);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Error updating document:", error.message);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
@@ -227,7 +227,7 @@ exports.deleteOne = async (req, res, next) => {
       return next(error);
     }
     // Handle other errors with a generic message
-    return next(new ApiError('Error during course deletion', 500));
+    return next(new ApiError("Error during course deletion", 500));
   }
 };
 
@@ -324,16 +324,16 @@ const getRenewalEmailHtml = (user, subscription, daysLeft) => `
     <p>مرحباً ${user.name}،</p>
     <p>نود تذكيرك بأن اشتراكك سينتهي قريباً. لا تفوّت الفرصة واستمر في رحلتك التعليمية!</p>
     <div style="text-align:center;">
-      <span class="badge">⏳ متبقي ${daysLeft} ${daysLeft === 1 ? 'يوم' : 'أيام'}</span>
+      <span class="badge">⏳ متبقي ${daysLeft} ${daysLeft === 1 ? "يوم" : "أيام"}</span>
     </div>
     <div class="info-box">
       <div class="info-row">
         <span class="info-label">الباقة</span>
-        <span class="info-value">${subscription.package?.title?.ar || subscription.package?.title?.en || 'N/A'}</span>
+        <span class="info-value">${subscription.package?.title?.ar || subscription.package?.title?.en || "N/A"}</span>
       </div>
       <div class="info-row">
         <span class="info-label">تاريخ الانتهاء</span>
-        <span class="info-value">${new Date(subscription.endDate).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+        <span class="info-value">${new Date(subscription.endDate).toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" })}</span>
       </div>
     </div>
     <a href="${process.env.BASE_URL}" class="cta-btn">تجديد الاشتراك</a>
@@ -355,20 +355,20 @@ exports.sendSubscriptionRenewalEmails = async (daysBeforeExpiry = 3) => {
   const futureDate = new Date(now);
   futureDate.setDate(futureDate.getDate() + daysBeforeExpiry);
 
-  
   const expiringSubscriptions = await UserSubscription.find({
     endDate: { $gte: now, $lte: futureDate },
   });
 
   if (expiringSubscriptions.length === 0) {
-    console.log('No expiring subscriptions found');
+    console.log("No expiring subscriptions found");
     return { sent: 0 };
   }
-  const userIds = [...new Set(expiringSubscriptions.map((s) => s.user.toString()))];
-  console.log("userIds",userIds);
+  const userIds = [
+    ...new Set(expiringSubscriptions.map((s) => s.user.toString())),
+  ];
   const users = await User.find({ _id: { $in: userIds } });
   const usersMap = new Map(users.map((u) => [u._id.toString(), u]));
-console.log("usersMap",usersMap);
+
   let sent = 0;
   let failed = 0;
 
@@ -376,19 +376,24 @@ console.log("usersMap",usersMap);
     const user = usersMap.get(sub.user.toString());
     if (!user?.email) return;
 
-    const daysLeft = Math.ceil((new Date(sub.endDate) - now) / (1000 * 60 * 60 * 24));
+    const daysLeft = Math.ceil(
+      (new Date(sub.endDate) - now) / (1000 * 60 * 60 * 24),
+    );
     const html = getRenewalEmailHtml(user, sub, daysLeft);
 
     try {
       await sendEmail({
         to: user.email,
-        subject: `تذكير: اشتراكك سينتهي خلال ${daysLeft} ${daysLeft === 1 ? 'يوم' : 'أيام'} - ${process.env.EMAIL_FROM}`,
+        subject: `تذكير: اشتراكك سينتهي خلال ${daysLeft} ${daysLeft === 1 ? "يوم" : "أيام"} - ${process.env.EMAIL_FROM}`,
         html,
       });
       sent++;
     } catch (err) {
       failed++;
-      console.error(`Failed to send renewal email to ${user.email}:`, err.message);
+      console.error(
+        `Failed to send renewal email to ${user.email}:`,
+        err.message,
+      );
     }
   });
 
@@ -402,7 +407,7 @@ exports.sendRenewalEmailsHandler = async (req, res, next) => {
     const days = parseInt(req.query.days, 10) || 3;
     const result = await exports.sendSubscriptionRenewalEmails(days);
     res.status(200).json({
-      status: 'success',
+      status: "success",
       message: `Renewal reminder emails sent`,
       data: result,
     });

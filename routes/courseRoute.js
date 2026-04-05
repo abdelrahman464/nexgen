@@ -1,12 +1,11 @@
 const express = require('express');
-
 const {
-  checkCourseIdParamValidator,
+  // checkCourseIdParamValidator,
   createCourseValidator,
   updateCourseValidator,
   // checkCourseOwnership,
   addUserToCourseValidator,
-  checkCourseInstructorOrAdmin,
+  // checkCourseInstructorOrAdmin,
 } = require('../utils/validators/courseValidator');
 const {
   filterActiveCourses,
@@ -14,13 +13,13 @@ const {
   createCourse,
   getAllCourses,
   getCourseById,
-  getCourseBySlug,
+  // getCourseBySlug,
   // deleteCourse,
   isTheCourseInstructor,
   updateCourse,
   addUserToCourse,
   getCourseDetails,
-  getCourseUsers,
+  // getCourseUsers,
   getMyCourses,
   setCategoryIdToBody,
   uploadCourseImage,
