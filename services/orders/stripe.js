@@ -111,7 +111,7 @@ exports.courseCheckoutSessionStripe = async (req, res, next) => {
     res.status(200).json({ status: 'success', session });
   } catch (err) {
     console.log(err);
-    next(new ApiError(`Internal Server Error ${err.message}`, 500));
+    next(new ApiError(`Internal Server Error ${err.message}`, err.statusCode));
   }
 };
 exports.packageCheckoutSessionStripe = async (req, res, next) => {
