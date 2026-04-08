@@ -187,7 +187,7 @@ router.post("/idDocument/upload", uploadImages, resizeImage, uploadIdDocument);
 router.post(
   "/idDocument/verify/:userId",
   authServices.protect,
-  authServices.allowedTo("user"),
+  authServices.allowedTo("admin"),
   verifyIdentityWithAI,
 );
 

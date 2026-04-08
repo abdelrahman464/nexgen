@@ -281,50 +281,50 @@ exports.adminLogin = asyncHandler(async (req, res, next) => {
 //check if user need to verify his id
 //check if user completed 50% of any random course he enrolled in
 const checkIfUserNeedToVerifyId = async (user) => {
-  // Admin users never need verification
   if (user.role === "admin") {
     return false;
   }
 
-  // If user is already verified, no need to check
   if (user.idVerification === "verified") {
     return false;
   }
 
   try {
-    // Find the user's course progress
-    const courseProgress = await CourseProgress.findOne({
+    const courseProgressList = await CourseProgress.find({
       user: user._id,
-      course: "664697c2ecf273280314ecab",
     })
       .select("course progress")
       .lean();
 
-    // If no course progress exists, no verification needed yet
-    if (!courseProgress) {
+    if (!courseProgressList || courseProgressList.length === 0) {
       return false;
     }
 
-    // Count total lessons in the course
-    const totalLessons = await Lesson.countDocuments({
-      course: courseProgress.course,
-    }).lean();
+    const courseIds = courseProgressList.map((cp) => cp.course);
 
-    // If no lessons exist in course, no verification needed
-    if (!totalLessons || totalLessons === 0) {
-      return false;
-    }
+    const lessonCounts = await Lesson.aggregate([
+      { $match: { course: { $in: courseIds } } },
+      { $group: { _id: "$course", total: { $sum: 1 } } },
+    ]);
 
-    // Calculate completed lessons
-    const completedLessons = courseProgress.progress.filter(
-      (lesson) => lesson.status === "Completed"
-    ).length;
-    // Check if completed at least 50% of lessons
-    const hasCompletedHalf = completedLessons >= Math.ceil(totalLessons / 2);
-    return hasCompletedHalf;
+    const lessonCountMap = new Map(
+      lessonCounts.map((lc) => [lc._id.toString(), lc.total])
+    );
+
+    const hasPassedHalfInAny = courseProgressList.some((cp) => {
+      const totalLessons = lessonCountMap.get(cp.course.toString()) || 0;
+      if (totalLessons === 0) return false;
+
+      const completedLessons = cp.progress.filter(
+        (lesson) => lesson.status === "Completed"
+      ).length;
+
+      return completedLessons >= Math.ceil(totalLessons / 2);
+    });
+
+    return hasPassedHalfInAny;
   } catch (err) {
     console.error("Error in checkIfUserNeedToVerifyId:", err);
-    // Fail-safe: return true to require verification if any error occurs
     return true;
   }
 };
