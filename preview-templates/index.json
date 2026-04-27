@@ -1,0 +1,32 @@
+[
+  {
+    "slug": "welcome",
+    "file": "welcome.html",
+    "subject": "Welcome to Nexgen Academy"
+  },
+  {
+    "slug": "resetPassword",
+    "file": "resetPassword.html",
+    "subject": "Your Password Reset Code (valid for 10 minutes)"
+  },
+  {
+    "slug": "courseEnrolled",
+    "file": "courseEnrolled.html",
+    "subject": "Course Enrollment Confirmation"
+  },
+  {
+    "slug": "newCourseAdded",
+    "file": "newCourseAdded.html",
+    "subject": "New Course Added"
+  },
+  {
+    "slug": "emailVerificationOtp",
+    "file": "emailVerificationOtp.html",
+    "subject": "Your Email Verification Code (valid for 10 minutes)"
+  },
+  {
+    "slug": "newLaunch",
+    "file": "newLaunch.html",
+    "subject": "إعلان إطلاق جديد"
+  }
+]
