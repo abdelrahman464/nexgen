@@ -5,6 +5,11 @@ const couponSchema = mongoose.Schema(
     marketer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
+      default: null,
+    },
+    isAdminCoupon: {
+      type: Boolean,
+      default: false,
     },
     couponName: {
       type: String,

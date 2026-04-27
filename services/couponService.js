@@ -13,8 +13,14 @@ exports.validateCoupon = async (couponName, marketerId) => {
   if (coupon.maxUsageTimes <= coupon.usedTimes) {
     return 'coupon-errors.Expired';
   }
-  if (!coupon.marketer.isInstructor && coupon.marketer?._id.toString() !== marketerId?.toString())
-    return 'coupon-errors.Un-Authorized';
+  if (!coupon.isAdminCoupon) {
+    const couponMarketerId = coupon.marketer?._id || coupon.marketer;
+    const isInstructorCoupon = coupon.marketer?.isInstructor === true;
+
+    if (!isInstructorCoupon && couponMarketerId?.toString() !== marketerId?.toString()) {
+      return 'coupon-errors.Un-Authorized';
+    }
+  }
   return coupon;
 };
 
@@ -103,7 +109,14 @@ exports.getOne = factory.getOne(Coupon);
 //@route POST /api/v1/coupons
 //@access private/protect/user  => role: marketer
 exports.createOne = (req, res, next) => {
-  req.body.marketer = req.user.id;
+  if (req.user.role === 'admin') {
+    req.body.isAdminCoupon = true;
+    req.body.marketer = null;
+  } else {
+    req.body.isAdminCoupon = false;
+    req.body.marketer = req.user.id;
+  }
+
   return factory.createOne(Coupon)(req, res, next);
 };
 
@@ -143,12 +156,18 @@ exports.getCouponDetails = async (req, res, next) => {
       return next(new ApiError(res.__('coupon-errors.Expired'), 404));
     }
 
-    if (
-      !coupon.marketer.isInstructor &&
-      coupon.marketer._id.toString() !== req.user._id.toString() &&
-      coupon.marketer._id.toString() !== req.user.invitor?.toString()
-    )
-      return next(new ApiError(res.__('coupon-errors.Un-Authorized'), 404));
+    if (!coupon.isAdminCoupon) {
+      const couponMarketerId = coupon.marketer?._id || coupon.marketer;
+      const isInstructorCoupon = coupon.marketer?.isInstructor === true;
+
+      if (
+        !isInstructorCoupon &&
+        couponMarketerId?.toString() !== req.user._id.toString() &&
+        couponMarketerId?.toString() !== req.user.invitor?.toString()
+      ) {
+        return next(new ApiError(res.__('coupon-errors.Un-Authorized'), 404));
+      }
+    }
 
     return res.status(200).json({ status: 'success', coupon });
   } catch (error) {
