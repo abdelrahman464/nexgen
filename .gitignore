@@ -1,7 +1,7 @@
 node_modules/
 data.json
 uploads/
-# config.env
+config.env
 nexgen.marketinglogs.json
 services/marketing/fixBugs.js
 TODO.txt
