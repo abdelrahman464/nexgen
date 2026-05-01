@@ -1,6 +1,13 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
-const { chatWithCatalogAssistant } = require('../services/aiChatService');
+const asyncHandler = require('express-async-handler');
+const authServices = require('../services/authServices');
+const {
+  chatWithCatalogAssistant,
+  createAiChatSession,
+  getAiChatSession,
+  getAiChatSessions,
+} = require('../services/aiChatService');
 
 const router = express.Router();
 
@@ -15,6 +22,17 @@ const aiChatLimiter = rateLimit({
   },
 });
 
-router.post('/', aiChatLimiter, chatWithCatalogAssistant);
+router
+  .route('/sessions')
+  .get(authServices.protect, asyncHandler(getAiChatSessions))
+  .post(authServices.protect, asyncHandler(createAiChatSession));
+
+router.get(
+  '/sessions/:id',
+  authServices.protect,
+  asyncHandler(getAiChatSession),
+);
+
+router.post('/', aiChatLimiter, authServices.optionalAuth, chatWithCatalogAssistant);
 
 module.exports = router;

@@ -526,12 +526,15 @@ exports.createAiKnowledge = asyncHandler(async (req, res) => {
 });
 
 exports.updateAiKnowledge = asyncHandler(async (req, res, next) => {
+  const { rag, ...safeBody } = req.body;
   const document = await AiKnowledge.findByIdAndUpdate(
     req.params.id,
     {
-      ...req.body,
-      'rag.status': 'pending',
-      'rag.error': '',
+      $set: {
+        ...safeBody,
+        'rag.status': 'pending',
+        'rag.error': '',
+      },
     },
     { new: true, runValidators: true },
   );
