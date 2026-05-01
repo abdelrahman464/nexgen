@@ -26,6 +26,182 @@ const Live = require("../models/liveModel");
 
 const { verifyIdentityWithOpenAI } = require('./identityVerificationService');
 
+const EMAIL_MARKETING_MAX_DEPTH = 5;
+const EMAIL_MARKETING_MAX_NODES = 100;
+const EMAIL_MARKETING_CONDITIONS_WITH_ID = new Set([
+  "boughtCourse",
+  "ownsCourse",
+  "boughtCoursePackage",
+  "boughtService",
+  "hadServiceSubscription",
+  "hasActiveServiceSubscription",
+]);
+
+const getConditionType = (node) =>
+  node.conditionType || node.condition || node.field || "";
+
+const getConditionValue = (node) =>
+  node.value || node.itemId || node.courseId || node.coursePackageId || node.packageId;
+
+const makeArrayHasMatchExpression = (input, variableName, cond) => ({
+  $gt: [
+    {
+      $size: {
+        $filter: {
+          input,
+          as: variableName,
+          cond,
+        },
+      },
+    },
+    0,
+  ],
+});
+
+const compileEmailMarketingCondition = (node, now) => {
+  const conditionType = getConditionType(node);
+  if (!conditionType) {
+    throw new ApiError("Email marketing condition type is required", 400);
+  }
+
+  if (conditionType === "hasPaidOrder") {
+    return makeArrayHasMatchExpression("$userOrders", "order", {
+      $eq: ["$$order.isPaid", true],
+    });
+  }
+
+  if (!EMAIL_MARKETING_CONDITIONS_WITH_ID.has(conditionType)) {
+    throw new ApiError(`Unsupported email marketing condition: ${conditionType}`, 400);
+  }
+
+  const value = getConditionValue(node);
+  if (!mongoose.Types.ObjectId.isValid(value)) {
+    throw new ApiError(`Invalid item id for condition: ${conditionType}`, 400);
+  }
+
+  const itemId = new mongoose.Types.ObjectId(value);
+
+  switch (conditionType) {
+    case "boughtCourse":
+      return makeArrayHasMatchExpression("$userOrders", "order", {
+        $and: [
+          { $eq: ["$$order.isPaid", true] },
+          { $eq: ["$$order.course", itemId] },
+        ],
+      });
+    case "ownsCourse":
+      return makeArrayHasMatchExpression("$courseProgress", "progress", {
+        $eq: ["$$progress.course", itemId],
+      });
+    case "boughtCoursePackage":
+      return makeArrayHasMatchExpression("$userOrders", "order", {
+        $and: [
+          { $eq: ["$$order.isPaid", true] },
+          { $eq: ["$$order.coursePackage", itemId] },
+        ],
+      });
+    case "boughtService":
+      return makeArrayHasMatchExpression("$userOrders", "order", {
+        $and: [
+          { $eq: ["$$order.isPaid", true] },
+          { $eq: ["$$order.package", itemId] },
+        ],
+      });
+    case "hadServiceSubscription":
+      return makeArrayHasMatchExpression("$userSubscriptions", "subscription", {
+        $eq: ["$$subscription.package", itemId],
+      });
+    case "hasActiveServiceSubscription":
+      return makeArrayHasMatchExpression("$userSubscriptions", "subscription", {
+        $and: [
+          { $eq: ["$$subscription.package", itemId] },
+          { $gte: ["$$subscription.endDate", now] },
+        ],
+      });
+    default:
+      throw new ApiError(`Unsupported email marketing condition: ${conditionType}`, 400);
+  }
+};
+
+const compileEmailMarketingQuery = (node, now, depth = 0, counter = { count: 0 }) => {
+  if (!node || typeof node !== "object") {
+    throw new ApiError("Email marketing query node is required", 400);
+  }
+
+  counter.count += 1;
+  if (counter.count > EMAIL_MARKETING_MAX_NODES) {
+    throw new ApiError("Email marketing query is too large", 400);
+  }
+  if (depth > EMAIL_MARKETING_MAX_DEPTH) {
+    throw new ApiError("Email marketing query is too deeply nested", 400);
+  }
+
+  if (node.type === "condition") {
+    return compileEmailMarketingCondition(node, now);
+  }
+
+  if (node.type === "not") {
+    if (!node.child) {
+      throw new ApiError("NOT query node requires a child", 400);
+    }
+    return { $not: [compileEmailMarketingQuery(node.child, now, depth + 1, counter)] };
+  }
+
+  if (node.type !== "group") {
+    throw new ApiError(`Unsupported email marketing query node: ${node.type}`, 400);
+  }
+
+  const operator = node.operator;
+  if (!["AND", "OR"].includes(operator)) {
+    throw new ApiError("Email marketing group operator must be AND or OR", 400);
+  }
+
+  if (!Array.isArray(node.children)) {
+    throw new ApiError("Email marketing group children must be an array", 400);
+  }
+
+  if (node.children.length === 0) {
+    return { $eq: [1, 1] };
+  }
+
+  const children = node.children.map((child) =>
+    compileEmailMarketingQuery(child, now, depth + 1, counter)
+  );
+
+  return operator === "AND" ? { $and: children } : { $or: children };
+};
+
+const projectEmailMarketingUser = {
+  _id: 1,
+  name: 1,
+  email: 1,
+  phone: 1,
+  country: 1,
+  role: 1,
+  isInstructor: 1,
+  isMarketer: 1,
+  active: 1,
+  emailVerified: 1,
+  idVerification: 1,
+  idDocuments: 1,
+  createdAt: 1,
+  updatedAt: 1,
+  profileImg: {
+    $cond: {
+      if: {
+        $and: [
+          { $ifNull: ["$profileImg", false] },
+          { $ne: ["$profileImg", ""] },
+        ],
+      },
+      then: {
+        $concat: [process.env.BASE_URL, "/users/", "$profileImg"],
+      },
+      else: null,
+    },
+  },
+};
+
 
 //upload user images
 exports.uploadImages = uploadMixOfFiles([
@@ -375,6 +551,91 @@ exports.getPurchasersUsersAndNon = async (req, res, next) => {
     });
   } catch (err) {
     return next(new ApiError(err.message, 400));
+  }
+};
+
+exports.queryEmailMarketingUsers = async (req, res, next) => {
+  try {
+    const page = Math.max(parseInt(req.body.page, 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.body.limit, 10) || 50, 1), 10000);
+    const skip = (page - 1) * limit;
+    const now = new Date();
+    const query = req.body.query || {
+      type: "group",
+      operator: "AND",
+      children: [],
+    };
+    const compiledQuery = compileEmailMarketingQuery(query, now);
+
+    const basePipeline = [
+      {
+        $match: {
+          role: { $nin: ["admin", "campaign"] },
+        },
+      },
+      {
+        $lookup: {
+          from: "orders",
+          localField: "_id",
+          foreignField: "user",
+          as: "userOrders",
+        },
+      },
+      {
+        $lookup: {
+          from: "courseprogresses",
+          localField: "_id",
+          foreignField: "user",
+          as: "courseProgress",
+        },
+      },
+      {
+        $lookup: {
+          from: "usersubscriptions",
+          localField: "_id",
+          foreignField: "user",
+          as: "userSubscriptions",
+        },
+      },
+      {
+        $match: {
+          $expr: compiledQuery,
+        },
+      },
+    ];
+
+    const [aggregationResult] = await User.aggregate([
+      ...basePipeline,
+      {
+        $facet: {
+          data: [
+            { $sort: { createdAt: -1 } },
+            { $skip: skip },
+            { $limit: limit },
+            { $project: projectEmailMarketingUser },
+          ],
+          total: [{ $count: "count" }],
+        },
+      },
+    ]);
+
+    const data = aggregationResult?.data || [];
+    const totalCount = aggregationResult?.total?.[0]?.count || 0;
+    const numberOfPages = Math.ceil(totalCount / limit);
+
+    return res.status(200).json({
+      success: true,
+      results: data.length,
+      paginationResult: {
+        totalCount,
+        currentPage: page,
+        limit,
+        numberOfPages,
+      },
+      data,
+    });
+  } catch (err) {
+    return next(err);
   }
 };
 //@desc get list of user

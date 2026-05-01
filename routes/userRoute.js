@@ -41,6 +41,7 @@ const {
   getAllInstructorsWithBelongings,
   registerFcmToken,
   togglePushNotifications,
+  queryEmailMarketingUsers,
 } = require("../services/userService");
 
 
@@ -94,6 +95,13 @@ router.put(
   authServices.allowedTo('admin'),
   changeUserPasswordValidator,
   changeUserPassword,
+);
+
+router.post(
+  '/email-marketing/query',
+  authServices.protect,
+  authServices.allowedTo('admin'),
+  queryEmailMarketingUsers,
 );
 
 router
