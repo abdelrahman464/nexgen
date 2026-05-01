@@ -7,6 +7,7 @@ const router = express.Router();
 router.use(authServices.protect, authServices.allowedTo('admin'));
 
 router.get('/sync-status', aiKnowledgeService.getSyncStatus);
+router.get('/sync-logs', aiKnowledgeService.getSyncLogs);
 router.post('/sync-selected', aiKnowledgeService.syncSelected);
 router.post('/sync-pending', aiKnowledgeService.syncPending);
 router.post('/retry-failed', aiKnowledgeService.retryFailed);

@@ -6,6 +6,7 @@ const OpenAI = require('openai');
 const asyncHandler = require('express-async-handler');
 const ApiError = require('../utils/apiError');
 const AiKnowledge = require('../models/aiKnowledgeModel');
+const AiKnowledgeSyncLog = require('../models/aiKnowledgeSyncLogModel');
 const Course = require('../models/courseModel');
 const CoursePackage = require('../models/coursePackageModel');
 const Package = require('../models/packageModel');
@@ -426,6 +427,59 @@ const syncAllActiveSources = async () => {
   return results;
 };
 
+const summarizeSyncResults = (results) =>
+  (results || []).reduce(
+    (summary, result) => {
+      summary.total += 1;
+      if (result.status === 'synced') summary.synced += 1;
+      if (result.status === 'failed') summary.failed += 1;
+      if (result.status === 'skipped') summary.skipped += 1;
+      if (result.status === 'unchanged') summary.unchanged += 1;
+      return summary;
+    },
+    { total: 0, synced: 0, failed: 0, skipped: 0, unchanged: 0 },
+  );
+
+const runWithSyncLog = async (req, action, sourceCount, syncHandler) => {
+  const startedAt = new Date();
+  const log = await AiKnowledgeSyncLog.create({
+    action,
+    mode: req.body?.mode === 'auto' ? 'auto' : 'manual',
+    status: 'running',
+    vectorStoreId: process.env.OPENAI_VECTOR_STORE_ID || '',
+    triggeredBy: req.user?._id,
+    sourceCount,
+    startedAt,
+  });
+
+  try {
+    const results = await syncHandler();
+    const completedAt = new Date();
+    const summary = summarizeSyncResults(results);
+    log.status = summary.failed > 0 ? 'completed_with_errors' : 'success';
+    log.summary = summary;
+    log.items = results.slice(0, 200).map((item) => ({
+      sourceType: item.sourceType,
+      sourceId: item.sourceId,
+      status: item.status,
+      error: item.error,
+      reason: item.reason,
+    }));
+    log.completedAt = completedAt;
+    log.durationMs = completedAt.getTime() - startedAt.getTime();
+    await log.save();
+    return results;
+  } catch (error) {
+    const completedAt = new Date();
+    log.status = 'failed';
+    log.error = error.message || 'AI knowledge sync failed';
+    log.completedAt = completedAt;
+    log.durationMs = completedAt.getTime() - startedAt.getTime();
+    await log.save();
+    throw error;
+  }
+};
+
 const getQueryFilter = (query) => {
   const filter = {};
   if (query.type && query.type !== 'all') filter.type = query.type;
@@ -553,6 +607,20 @@ exports.getSyncStatus = asyncHandler(async (req, res) => {
   });
 });
 
+exports.getSyncLogs = asyncHandler(async (req, res) => {
+  const limit = Math.min(Number(req.query.limit) || 50, 100);
+  const logs = await AiKnowledgeSyncLog.find({})
+    .populate({ path: 'triggeredBy', select: 'name email' })
+    .sort({ createdAt: -1 })
+    .limit(limit);
+
+  return res.status(200).json({
+    status: 'success',
+    results: logs.length,
+    data: logs,
+  });
+});
+
 exports.syncSelected = asyncHandler(async (req, res, next) => {
   const items = Array.isArray(req.body.items)
     ? req.body.items
@@ -565,25 +633,39 @@ exports.syncSelected = asyncHandler(async (req, res, next) => {
     return next(new ApiError('sourceType and sourceId are required', 400));
   }
 
-  const results = [];
-  for (const item of items) {
-    results.push(await syncOneSource(item.sourceType, item.sourceId));
-  }
+  const results = await runWithSyncLog(
+    req,
+    'sync_selected',
+    items.length,
+    async () => {
+      const syncedItems = [];
+      for (const item of items) {
+        syncedItems.push(await syncOneSource(item.sourceType, item.sourceId));
+      }
+      return syncedItems;
+    },
+  );
 
   return res.status(200).json({ status: 'success', data: { results } });
 });
 
 exports.syncPending = asyncHandler(async (req, res) => {
-  const results = await syncByStatus('pending');
+  const results = await runWithSyncLog(req, 'sync_pending', 0, () =>
+    syncByStatus('pending'),
+  );
   return res.status(200).json({ status: 'success', data: { results } });
 });
 
 exports.retryFailed = asyncHandler(async (req, res) => {
-  const results = await syncByStatus('failed');
+  const results = await runWithSyncLog(req, 'retry_failed', 0, () =>
+    syncByStatus('failed'),
+  );
   return res.status(200).json({ status: 'success', data: { results } });
 });
 
 exports.fullRebuild = asyncHandler(async (req, res) => {
-  const results = await syncAllActiveSources();
+  const results = await runWithSyncLog(req, 'full_rebuild', 0, () =>
+    syncAllActiveSources(),
+  );
   return res.status(200).json({ status: 'success', data: { results } });
 });
