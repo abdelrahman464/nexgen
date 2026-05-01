@@ -1,5 +1,21 @@
 const mongoose = require("mongoose");
 
+const ragSyncSchema = new mongoose.Schema(
+  {
+    fileId: String,
+    vectorStoreId: String,
+    contentHash: String,
+    syncedAt: Date,
+    status: {
+      type: String,
+      enum: ["pending", "synced", "failed"],
+      default: "pending",
+    },
+    error: String,
+  },
+  { _id: false }
+);
+
 //**
 // @desc : each package avail users to attend (lives) only , not any thing else
 // @desc : each package is related to one course only
@@ -85,9 +101,14 @@ const packageSchema = new mongoose.Schema(
       enum: ["service", "course"],
       default: "service",
     },
+    rag: {
+      type: ragSyncSchema,
+      default: () => ({ status: "pending" }),
+    },
   },
   { timestamps: true }
 );
+packageSchema.index({ "rag.status": 1 });
 // ^find => it mean if part of of teh word contains find
 packageSchema.pre(/^find/, function (next) {
   if (this.getOptions && this.getOptions().skipPopulate) return next();

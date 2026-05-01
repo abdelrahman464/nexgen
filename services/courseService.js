@@ -376,6 +376,8 @@ exports.updateCourse = async (req, res, next) => {
         );
       }
     }
+    req.body['rag.status'] = 'pending';
+    req.body['rag.error'] = '';
     const result = await Course.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
     });

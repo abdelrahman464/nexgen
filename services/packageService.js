@@ -198,6 +198,8 @@ exports.updateOne = async (req, res, next) => {
         );
       }
     }
+    req.body['rag.status'] = 'pending';
+    req.body['rag.error'] = '';
     const result = await Package.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
     });

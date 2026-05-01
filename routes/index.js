@@ -31,6 +31,8 @@ const marketerRateingRoute = require("./marketerRatingRoute");
 const leaderBoardRoute = require("./leaderBoardRoute");
 const contactUsRoute = require("./contactUsRoute");
 const marketingAnalytics = require("./marketingAnalyticsRoute");
+const aiChatRoute = require("./aiChatRoute");
+const aiKnowledgeRoute = require("./aiKnowledgeRoute");
 
 const mountRoutes = (app) => {
   // Mount Routes
@@ -79,5 +81,7 @@ const mountRoutes = (app) => {
   app.use("/api/v1/contactUs", contactUsRoute);
 
   app.use("/api/v1/instructorProfits", instructorProfitsRoute);
+  app.use("/api/v1/ai-chat", aiChatRoute);
+  app.use("/api/v1/ai-knowledge", aiKnowledgeRoute);
 };
 module.exports = mountRoutes;

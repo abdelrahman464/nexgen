@@ -1,5 +1,21 @@
 const mongoose = require('mongoose');
 
+const ragSyncSchema = new mongoose.Schema(
+  {
+    fileId: String,
+    vectorStoreId: String,
+    contentHash: String,
+    syncedAt: Date,
+    status: {
+      type: String,
+      enum: ['pending', 'synced', 'failed'],
+      default: 'pending',
+    },
+    error: String,
+  },
+  { _id: false },
+);
+
 const courseSchema = new mongoose.Schema(
   {
     category: {
@@ -143,6 +159,10 @@ const courseSchema = new mongoose.Schema(
       index: true,
     },
     promotionVideo: String,
+    rag: {
+      type: ragSyncSchema,
+      default: () => ({ status: 'pending' }),
+    },
   },
   {
     timestamps: true,
@@ -154,6 +174,7 @@ const courseSchema = new mongoose.Schema(
 
 courseSchema.index({ status: 1 });
 courseSchema.index({ instructor: 1, status: 1 }); // Compound index for instructor queries with status filter
+courseSchema.index({ 'rag.status': 1 });
 
 // virtual field =>reviews
 courseSchema.virtual('reviews', {

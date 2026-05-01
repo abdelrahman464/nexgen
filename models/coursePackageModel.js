@@ -1,5 +1,21 @@
 const mongoose = require("mongoose");
 
+const ragSyncSchema = new mongoose.Schema(
+  {
+    fileId: String,
+    vectorStoreId: String,
+    contentHash: String,
+    syncedAt: Date,
+    status: {
+      type: String,
+      enum: ["pending", "synced", "failed"],
+      default: "pending",
+    },
+    error: String,
+  },
+  { _id: false }
+);
+
 const coursePackageSchema = new mongoose.Schema(
   {
     instructor: {
@@ -87,11 +103,16 @@ const coursePackageSchema = new mongoose.Schema(
       type: String,
       i18n: true,
     },
+    rag: {
+      type: ragSyncSchema,
+      default: () => ({ status: "pending" }),
+    },
   },
   {
     timestamps: true,
   }
 );
+coursePackageSchema.index({ "rag.status": 1 });
 coursePackageSchema.pre(/^find/, function (next) {
   if (this.getOptions && this.getOptions().skipPopulate) return next();
   this.populate({ path: "courses", select: "title courseDuration" })
