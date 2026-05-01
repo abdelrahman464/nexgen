@@ -1,69 +1,68 @@
 {
-  "errors": {
-    "invalidAction": "Invalid action",
-    "transactionError": "Error during transaction",
-    "Not-Authorized": "you are not authorized to perform this action",
-    "Not-Found": "{{doc}} not found"
-  },
-  "analytics-errors": {
-    "hasNoInvitor": "Unauthorized action ,You have no invitor",
-    "Un-Authorized-Invitor": "Unauthorized action ,You are not his invitor",
-    "Not-Found": "No analytics found",
-    "One-Not-Found": "No analytic found for the given id"
-  },
-  "coupon-errors": {
-    "Not-Found": "this coupon is not found",
-    "unActive": "this coupon has not been accepted yet",
-    "Expired": "this coupon reached it's max usage",
-    "Un-Authorized": "you are Unauthorized to use this coupon, coupon is not belong to your marketer"
-  },
-
-  "marketing-errors": {
-    "marketLog-Not-Found": "marketing date not found",
-    "No-Profits-Found": "no profits to be withdrawn",
-    "balance-Not-Enough": "your balance is not enough",
-    "No-Team-Members": "No team members found"
-  },
-
-  "user-errors": {
-    "unSubscribe": "Unauthorized action , You are not subscribed to any package",
-    "alreadyFollowing": "You are already following this user",
-    "notFollowing": "You are not following this user",
-    "cannotFollowSelf": "You cannot follow yourself",
-    "cannotUnfollowSelf": "You cannot unfollow yourself",
-    "followed": "You followed this user",
-    "unfollowed": "You unfollowed this user",
-    "idVerified": "Congratulations! Your ID documents have been approved",
-    "idRejected": "Your ID documents have been rejected, please upload a valid one",
-    "idAlreadyVerified": "You have already verified your ID document",
-    "idUploaded": "ID document uploaded successfully",
-    "notActive": "You are not active",
-    "passwordChanged": "User recently changed their password, please login again",
-    "loginRequired": "You are not logged in, please login first"
-  },
-  "notification": {
-    "follow": "{{name}} followed you",
-    "idVerification": {
-      "verified": "Your ID documents have been approved",
-      "rejected": "Your ID documents have been rejected, please upload a valid one"
-    }
-  },
-  "success": {
-    "default": "Success",
-    "idUploaded": "ID document uploaded successfully",
-    "notificationBellActivated": "Notification bell activated",
-    "notificationBellDeactivated": "Notification bell deactivated"
-  },
-  "postService": {
-    "hasNoCourses": "this page is for paid courses's posts only and you have no paid courses"
-  },
-  "package-errors": {
-    "Not-Found": "package not found",
-    "not-free": "this package is not free"
-  },
-  "subscription-messages": {
-    "Not-Found": "your subscription not found",
-    "already-subscribed": "you are already subscribed",
-    "successfully-subscribed": "successfully subscribed"
-  }
+	"errors": {
+		"invalidAction": "Invalid action",
+		"transactionError": "Error during transaction",
+		"Not-Authorized": "you are not authorized to perform this action",
+		"Not-Found": "{{doc}} not found"
+	},
+	"analytics-errors": {
+		"hasNoInvitor": "Unauthorized action ,You have no invitor",
+		"Un-Authorized-Invitor": "Unauthorized action ,You are not his invitor",
+		"Not-Found": "No analytics found",
+		"One-Not-Found": "No analytic found for the given id"
+	},
+	"coupon-errors": {
+		"Not-Found": "this coupon is not found",
+		"unActive": "this coupon has not been accepted yet",
+		"Expired": "this coupon reached it's max usage",
+		"Un-Authorized": "you are Unauthorized to use this coupon, coupon is not belong to your marketer"
+	},
+	"marketing-errors": {
+		"marketLog-Not-Found": "marketing date not found",
+		"No-Profits-Found": "no profits to be withdrawn",
+		"balance-Not-Enough": "your balance is not enough",
+		"No-Team-Members": "No team members found",
+		"No-Profitable-Items": "marketing-errors.No-Profitable-Items"
+	},
+	"user-errors": {
+		"unSubscribe": "Unauthorized action , You are not subscribed to any package",
+		"alreadyFollowing": "You are already following this user",
+		"notFollowing": "You are not following this user",
+		"cannotFollowSelf": "You cannot follow yourself",
+		"cannotUnfollowSelf": "You cannot unfollow yourself",
+		"followed": "You followed this user",
+		"unfollowed": "You unfollowed this user",
+		"idVerified": "Congratulations! Your ID documents have been approved",
+		"idRejected": "Your ID documents have been rejected, please upload a valid one",
+		"idAlreadyVerified": "You have already verified your ID document",
+		"idUploaded": "ID document uploaded successfully",
+		"notActive": "You are not active",
+		"passwordChanged": "User recently changed their password, please login again",
+		"loginRequired": "You are not logged in, please login first"
+	},
+	"notification": {
+		"follow": "{{name}} followed you",
+		"idVerification": {
+			"verified": "Your ID documents have been approved",
+			"rejected": "Your ID documents have been rejected, please upload a valid one"
+		}
+	},
+	"success": {
+		"default": "Success",
+		"idUploaded": "ID document uploaded successfully",
+		"notificationBellActivated": "Notification bell activated",
+		"notificationBellDeactivated": "Notification bell deactivated"
+	},
+	"postService": {
+		"hasNoCourses": "this page is for paid courses's posts only and you have no paid courses"
+	},
+	"package-errors": {
+		"Not-Found": "package not found",
+		"not-free": "this package is not free"
+	},
+	"subscription-messages": {
+		"Not-Found": "your subscription not found",
+		"already-subscribed": "you are already subscribed",
+		"successfully-subscribed": "successfully subscribed"
+	}
 }

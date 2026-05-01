@@ -1,32 +1,32 @@
-const asyncHandler = require('express-async-handler');
-const mongoose = require('mongoose');
-const fs = require('fs');
-const sharp = require('sharp');
-const { v4: uuidv4 } = require('uuid');
-const ApiError = require('../utils/apiError');
-const Post = require('../models/postModel');
-const Comment = require('../models/commentModel');
-const Reaction = require('../models/reactionModel');
-const Course = require('../models/courseModel');
-const Package = require('../models/packageModel');
-const UserSubscription = require('../models/userSubscriptionModel');
-const User = require('../models/userModel');
-const CourseProgress = require('../models/courseProgressModel');
-const Notification = require('../models/notificationModel');
-const factory = require('./handllerFactory');
-const { uploadMixOfFiles } = require('../middlewares/uploadImageMiddleware');
+const asyncHandler = require("express-async-handler");
+const mongoose = require("mongoose");
+const fs = require("fs");
+const sharp = require("sharp");
+const { v4: uuidv4 } = require("uuid");
+const ApiError = require("../utils/apiError");
+const Post = require("../models/postModel");
+const Comment = require("../models/commentModel");
+const Reaction = require("../models/reactionModel");
+const Course = require("../models/courseModel");
+const Package = require("../models/packageModel");
+const UserSubscription = require("../models/userSubscriptionModel");
+const User = require("../models/userModel");
+const CourseProgress = require("../models/courseProgressModel");
+const Notification = require("../models/notificationModel");
+const factory = require("./handllerFactory");
+const { uploadMixOfFiles } = require("../middlewares/uploadImageMiddleware");
 
 exports.uploadFiles = uploadMixOfFiles([
   {
-    name: 'imageCover',
+    name: "imageCover",
     maxCount: 1,
   },
   {
-    name: 'images',
+    name: "images",
     maxCount: 30,
   },
   {
-    name: 'documents',
+    name: "documents",
     maxCount: 10,
   },
 ]);
@@ -35,25 +35,25 @@ exports.processFiles = asyncHandler(async (req, res, next) => {
   // Image processing for imageCover
   if (
     req.files.imageCover &&
-    req.files.imageCover[0].mimetype.startsWith('image/')
+    req.files.imageCover[0].mimetype.startsWith("image/")
   ) {
     const imageCoverFileName = `post-${uuidv4()}-${Date.now()}-cover.webp`;
 
     await sharp(req.files.imageCover[0].buffer)
-      .toFormat('webp') // Convert to WebP
+      .toFormat("webp") // Convert to WebP
       .webp({ quality: 95 })
       .toFile(`uploads/posts/${imageCoverFileName}`);
 
     // Save imageCover file name in the request body for database saving
     req.body.imageCover = imageCoverFileName;
   } else if (req.files.imageCover) {
-    return next(new ApiError('Image cover is not an image file', 400));
+    return next(new ApiError("Image cover is not an image file", 400));
   }
 
   // Image processing for images
   if (req.files.images) {
     const imageProcessingPromises = req.files.images.map(async (img, index) => {
-      if (!img.mimetype.startsWith('image/')) {
+      if (!img.mimetype.startsWith("image/")) {
         return next(
           new ApiError(`File ${index + 1} is not an image file.`, 400),
         );
@@ -62,7 +62,7 @@ exports.processFiles = asyncHandler(async (req, res, next) => {
       const imageName = `post-${uuidv4()}-${Date.now()}-${index + 1}.webp`;
 
       await sharp(img.buffer)
-        .toFormat('webp') // Convert to WebP
+        .toFormat("webp") // Convert to WebP
         .webp({ quality: 95 })
         .toFile(`uploads/posts/${imageName}`);
 
@@ -81,9 +81,9 @@ exports.processFiles = asyncHandler(async (req, res, next) => {
     const documentProcessingPromises = req.files.documents.map(
       async (doc, index) => {
         const allowedMimeTypes = [
-          'application/pdf',
-          'application/msword',
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          "application/pdf",
+          "application/msword",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         ];
 
         if (!allowedMimeTypes.includes(doc.mimetype)) {
@@ -95,15 +95,15 @@ exports.processFiles = asyncHandler(async (req, res, next) => {
           );
         }
 
-        let fileExtension = '.doc';
-        if (doc.mimetype === 'application/pdf') {
-          fileExtension = '.pdf';
+        let fileExtension = ".doc";
+        if (doc.mimetype === "application/pdf") {
+          fileExtension = ".pdf";
         } else if (
           doc.mimetype.includes(
-            'openxmlformats-officedocument.wordprocessingml.document',
+            "openxmlformats-officedocument.wordprocessingml.document",
           )
         ) {
-          fileExtension = '.docx';
+          fileExtension = ".docx";
         }
 
         const documentName = `post-${uuidv4()}-${Date.now()}-${index + 1}${fileExtension}`;
@@ -137,21 +137,25 @@ exports.createFilterObjAllowedCoursePosts = asyncHandler(
       const { course } = req.params;
       //check is mongoose object id
       if (course && !mongoose.Types.ObjectId.isValid(course)) {
-        return next(new ApiError('courseId is required', 400));
+        return next(new ApiError("courseId is required", 400));
       }
       //if role is user
-      if (req.user.role === 'user') {
+      if (req.user.role === "user") {
         const package = await Package.findOne({ course: course }).select(
-          '_id course',
+          "_id course",
         );
         if (!package) {
-          return next(new ApiError('No package found for this course', 404));
+          return next(new ApiError("No package found for this course", 404));
         }
         //check if he is the instructor of course
-        const instructorId = package.instructor || package.course.instructor._id
+        const instructorId =
+          package.instructor || package.course.instructor._id;
 
-        if(instructorId && instructorId.toString() === req.user._id.toString() ){
-          req.filterObj = { sharedTo: 'course', course: { $in: [course] } };
+        if (
+          instructorId &&
+          instructorId.toString() === req.user._id.toString()
+        ) {
+          req.filterObj = { sharedTo: "course", course: { $in: [course] } };
           return next();
         }
         //-------------------------------------------------------------
@@ -159,7 +163,7 @@ exports.createFilterObjAllowedCoursePosts = asyncHandler(
         const userSubscription = await UserSubscription.findOne({
           user: req.user._id,
           package: package._id,
-        }).select('_id package endDate');
+        }).select("_id package endDate");
 
         if (!userSubscription) {
           //const courseTitle = package?.course?.title?.en || "this";
@@ -190,7 +194,7 @@ exports.createFilterObjAllowedCoursePosts = asyncHandler(
         }
         //------------------------------------------------------------
       }
-      req.filterObj = { sharedTo: 'course', course: { $in: [course] } };
+      req.filterObj = { sharedTo: "course", course: { $in: [course] } };
       return next();
     } catch (error) {
       return next(
@@ -209,21 +213,21 @@ exports.createFilterObjPackagesPosts = asyncHandler(async (req, res, next) => {
     const { package: packageId } = req.params;
     if (packageId && !mongoose.Types.ObjectId.isValid(packageId)) {
       return next(
-        new ApiError('packageId is not a valid mongoose object id', 400),
+        new ApiError("packageId is not a valid mongoose object id", 400),
       );
     }
     const package =
-      await Package.findById(packageId).select('_id course title');
+      await Package.findById(packageId).select("_id course title");
     if (!package) {
-      return next(new ApiError('package not found', 404));
+      return next(new ApiError("package not found", 404));
     }
-    const instructorId = package.instructor || package.course.instructor._id
+    const instructorId = package.instructor || package.course.instructor._id;
 
-    if(instructorId && instructorId.toString() === req.user._id.toString() ){
+    if (instructorId && instructorId.toString() === req.user._id.toString()) {
       req.filterObj = {
-        sharedTo: 'package',
+        sharedTo: "package",
         package: { $in: [package._id] },
-      };  
+      };
       return next();
     }
 
@@ -231,11 +235,11 @@ exports.createFilterObjPackagesPosts = asyncHandler(async (req, res, next) => {
       title: { en: packageTitle },
     } = package;
 
-    if (req.user.role === 'user') {
+    if (req.user.role === "user") {
       const userSubscription = await UserSubscription.findOne({
         user: req.user._id,
         package: package._id,
-      }).select('_id package endDate');
+      }).select("_id package endDate");
 
       if (!userSubscription) {
         return next(
@@ -257,7 +261,7 @@ exports.createFilterObjPackagesPosts = asyncHandler(async (req, res, next) => {
     }
 
     req.filterObj = {
-      sharedTo: 'package',
+      sharedTo: "package",
       package: { $in: [package._id] },
     };
 
@@ -275,19 +279,19 @@ exports.createFilterObjPackagesPosts = asyncHandler(async (req, res, next) => {
 //filter to get public posts only
 exports.createFilterObjHomePosts = async (req, res, next) => {
   let filterObject = {
-    sharedTo: 'home',
+    sharedTo: "home",
   };
 
   if (req.query.type) {
-    if (req.query.type === 'feed') {
+    if (req.query.type === "feed" || req.query.type === "profile") {
       //1-get all profile posts
-      filterObject = { sharedTo: 'profile' };
+      filterObject = { sharedTo: "profile" };
       if (req.query.user) {
         filterObject.user = mongoose.Types.ObjectId(req.query.user);
       }
-    } else if (req.query.type === 'following') {
+    } else if (req.query.type === "following") {
       //1-get users he follow
-      const user = await User.findById(req.user._id).select('following');
+      const user = await User.findById(req.user._id).select("following");
       //2-get usersIds from user.following
       const usersIds = user.following.map((object) =>
         mongoose.Types.ObjectId(object.user),
@@ -295,7 +299,7 @@ exports.createFilterObjHomePosts = async (req, res, next) => {
 
       //3-filter posts to get posts of these users
       filterObject = {
-        sharedTo: 'profile',
+        sharedTo: "profile",
         user: { $in: usersIds },
       };
     }
@@ -339,13 +343,13 @@ async function fetchUsersFromTarget(target, ids) {
       let targetModel;
       let usersInTarget;
 
-      if (target === 'package') {
+      if (target === "package") {
         targetModel = Package;
         usersInTarget = await UserSubscription.find({
           package: id,
           endDate: { $gte: new Date() },
         });
-      } else if (target === 'course') {
+      } else if (target === "course") {
         targetModel = Course;
         usersInTarget = await CourseProgress.find({ course: id });
       }
@@ -370,19 +374,19 @@ exports.createPost = asyncHandler(async (req, res, next) => {
     req.body;
 
   let users = [];
-  if (sharedTo === 'package') {
+  if (sharedTo === "package") {
     if (!package || !Array.isArray(package) || package.length === 0) {
       return next(
-        new ApiError('Package IDs must be provided as an array', 400),
+        new ApiError("Package IDs must be provided as an array", 400),
       );
     }
-    users = await fetchUsersFromTarget('package', package);
-  } else if (sharedTo === 'course') {
+    users = await fetchUsersFromTarget("package", package);
+  } else if (sharedTo === "course") {
     if (!course || !Array.isArray(course) || course.length === 0) {
-      return next(new ApiError('Course IDs must be provided as an array', 400));
+      return next(new ApiError("Course IDs must be provided as an array", 400));
     }
-    users = await fetchUsersFromTarget('course', course);
-  } else if (sharedTo === 'profile') {
+    users = await fetchUsersFromTarget("course", course);
+  } else if (sharedTo === "profile") {
     //get users who follow this guy
     users = await getUserFollowers(req.user._id);
   }
@@ -391,8 +395,8 @@ exports.createPost = asyncHandler(async (req, res, next) => {
   const post = await Post.create({
     user: req.user._id,
     content,
-    package: sharedTo === 'package' ? package : [],
-    course: sharedTo === 'course' ? course : [],
+    package: sharedTo === "package" ? package : [],
+    course: sharedTo === "course" ? course : [],
     imageCover,
     images,
     sharedTo,
@@ -400,7 +404,7 @@ exports.createPost = asyncHandler(async (req, res, next) => {
   });
 
   // Populate the user field
-  await post.populate('user', 'name email profileImg');
+  await post.populate("user", "name email profileImg");
   // Create notifications for users
   if (users.length !== 0)
     await Promise.all(
@@ -412,7 +416,7 @@ exports.createPost = asyncHandler(async (req, res, next) => {
             ar: `${req.user.name} قام بمشاركة منشور جديد معك`,
           },
           post: post._id,
-          type: req.body.sharedTo === 'profile' ? 'follow' : 'post',
+          type: req.body.sharedTo === "profile" ? "follow" : "post",
         });
       }),
     );
@@ -454,36 +458,36 @@ exports.getPosts = asyncHandler(async (req, res) => {
     // Minimal user info
     {
       $lookup: {
-        from: 'users',
-        localField: 'user',
-        foreignField: '_id',
-        as: 'user',
+        from: "users",
+        localField: "user",
+        foreignField: "_id",
+        as: "user",
         pipeline: [{ $project: { _id: 1, name: 1, profileImg: 1 } }],
       },
     },
-    { $unwind: '$user' },
+    { $unwind: "$user" },
 
     // Reactions count and types with counts
     {
       $lookup: {
-        from: 'reactions',
-        let: { postId: '$_id' },
+        from: "reactions",
+        let: { postId: "$_id" },
         pipeline: [
-          { $match: { $expr: { $eq: ['$post', '$$postId'] } } },
+          { $match: { $expr: { $eq: ["$post", "$$postId"] } } },
           {
             $group: {
-              _id: '$type',
+              _id: "$type",
               count: { $sum: 1 },
             },
           },
           {
             $group: {
               _id: null,
-              totalCount: { $sum: '$count' },
+              totalCount: { $sum: "$count" },
               typesCount: {
                 $push: {
-                  k: '$_id',
-                  v: '$count',
+                  k: "$_id",
+                  v: "$count",
                 },
               },
             },
@@ -491,21 +495,21 @@ exports.getPosts = asyncHandler(async (req, res) => {
           {
             $project: {
               _id: 0,
-              count: '$totalCount',
-              typesCount: { $arrayToObject: '$typesCount' },
+              count: "$totalCount",
+              typesCount: { $arrayToObject: "$typesCount" },
             },
           },
         ],
-        as: 'reactionsAgg',
+        as: "reactionsAgg",
       },
     },
     {
       $addFields: {
         reactionsCount: {
-          $ifNull: [{ $first: '$reactionsAgg.count' }, 0],
+          $ifNull: [{ $first: "$reactionsAgg.count" }, 0],
         },
         reactionTypes: {
-          $ifNull: [{ $first: '$reactionsAgg.typesCount' }, {}],
+          $ifNull: [{ $first: "$reactionsAgg.typesCount" }, {}],
         },
       },
     },
@@ -515,15 +519,15 @@ exports.getPosts = asyncHandler(async (req, res) => {
       ? [
           {
             $lookup: {
-              from: 'reactions',
-              let: { postId: '$_id', uid: loggedUserObjectId },
+              from: "reactions",
+              let: { postId: "$_id", uid: loggedUserObjectId },
               pipeline: [
                 {
                   $match: {
                     $expr: {
                       $and: [
-                        { $eq: ['$post', '$$postId'] },
-                        { $eq: ['$user', '$$uid'] },
+                        { $eq: ["$post", "$$postId"] },
+                        { $eq: ["$user", "$$uid"] },
                       ],
                     },
                   },
@@ -531,12 +535,12 @@ exports.getPosts = asyncHandler(async (req, res) => {
                 { $project: { _id: 1, type: 1 } },
                 { $limit: 1 },
               ],
-              as: 'loggedUserReactionArr',
+              as: "loggedUserReactionArr",
             },
           },
           {
             $addFields: {
-              loggedUserReaction: { $first: '$loggedUserReactionArr' },
+              loggedUserReaction: { $first: "$loggedUserReactionArr" },
             },
           },
         ]
@@ -545,19 +549,19 @@ exports.getPosts = asyncHandler(async (req, res) => {
     // Comments count
     {
       $lookup: {
-        from: 'comments',
-        let: { postId: '$_id' },
+        from: "comments",
+        let: { postId: "$_id" },
         pipeline: [
-          { $match: { $expr: { $eq: ['$post', '$$postId'] } } },
-          { $count: 'count' },
+          { $match: { $expr: { $eq: ["$post", "$$postId"] } } },
+          { $count: "count" },
         ],
-        as: 'commentsCountArr',
+        as: "commentsCountArr",
       },
     },
     {
       $addFields: {
         commentsCount: {
-          $ifNull: [{ $first: '$commentsCountArr.count' }, 0],
+          $ifNull: [{ $first: "$commentsCountArr.count" }, 0],
         },
       },
     },
@@ -565,30 +569,30 @@ exports.getPosts = asyncHandler(async (req, res) => {
     // Last comment (with its user)
     {
       $lookup: {
-        from: 'comments',
-        let: { postId: '$_id' },
+        from: "comments",
+        let: { postId: "$_id" },
         pipeline: [
-          { $match: { $expr: { $eq: ['$post', '$$postId'] } } },
+          { $match: { $expr: { $eq: ["$post", "$$postId"] } } },
           { $sort: { createdAt: -1 } },
           { $limit: 1 },
           {
             $lookup: {
-              from: 'users',
-              localField: 'user',
-              foreignField: '_id',
-              as: 'user',
+              from: "users",
+              localField: "user",
+              foreignField: "_id",
+              as: "user",
               pipeline: [{ $project: { _id: 1, name: 1, profileImg: 1 } }],
             },
           },
-          { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+          { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
           { $project: { _id: 1, content: 1, createdAt: 1, user: 1 } },
         ],
-        as: 'lastCommentArr',
+        as: "lastCommentArr",
       },
     },
     {
       $addFields: {
-        lastComment: { $first: '$lastCommentArr' },
+        lastComment: { $first: "$lastCommentArr" },
       },
     },
 
@@ -704,99 +708,99 @@ exports.getPost = asyncHandler(async (req, res, next) => {
     // author (lightweight)
     {
       $lookup: {
-        from: 'users',
-        localField: 'user',
-        foreignField: '_id',
-        as: 'user',
+        from: "users",
+        localField: "user",
+        foreignField: "_id",
+        as: "user",
         pipeline: [{ $project: { _id: 1, name: 1, profileImg: 1 } }],
       },
     },
-    { $unwind: '$user' },
+    { $unwind: "$user" },
 
     // reactions: count + distinct types (all in one small group)
     {
       $lookup: {
-        from: 'reactions',
-        let: { postId: '$_id' },
+        from: "reactions",
+        let: { postId: "$_id" },
         pipeline: [
-          { $match: { $expr: { $eq: ['$post', '$$postId'] } } },
+          { $match: { $expr: { $eq: ["$post", "$$postId"] } } },
           {
             $group: {
               _id: null,
               count: { $sum: 1 },
-              types: { $addToSet: '$type' },
+              types: { $addToSet: "$type" },
             },
           },
           { $project: { _id: 0, count: 1, types: 1 } },
         ],
-        as: 'reactionsAgg',
+        as: "reactionsAgg",
       },
     },
     {
       $addFields: {
-        reactionsCount: { $ifNull: [{ $first: '$reactionsAgg.count' }, 0] },
-        reactionTypes: { $ifNull: [{ $first: '$reactionsAgg.types' }, []] },
+        reactionsCount: { $ifNull: [{ $first: "$reactionsAgg.count" }, 0] },
+        reactionTypes: { $ifNull: [{ $first: "$reactionsAgg.types" }, []] },
       },
     },
 
     // comments: count
     {
       $lookup: {
-        from: 'comments',
-        let: { postId: '$_id' },
+        from: "comments",
+        let: { postId: "$_id" },
         pipeline: [
-          { $match: { $expr: { $eq: ['$post', '$$postId'] } } },
-          { $count: 'count' },
+          { $match: { $expr: { $eq: ["$post", "$$postId"] } } },
+          { $count: "count" },
         ],
-        as: 'commentsCountArr',
+        as: "commentsCountArr",
       },
     },
     {
       $addFields: {
-        commentsCount: { $ifNull: [{ $first: '$commentsCountArr.count' }, 0] },
+        commentsCount: { $ifNull: [{ $first: "$commentsCountArr.count" }, 0] },
       },
     },
 
     // last comment (with its user)
     {
       $lookup: {
-        from: 'comments',
-        let: { postId: '$_id' },
+        from: "comments",
+        let: { postId: "$_id" },
         pipeline: [
-          { $match: { $expr: { $eq: ['$post', '$$postId'] } } },
+          { $match: { $expr: { $eq: ["$post", "$$postId"] } } },
           { $sort: { createdAt: -1 } },
           { $limit: 1 },
           {
             $lookup: {
-              from: 'users',
-              localField: 'user',
-              foreignField: '_id',
-              as: 'user',
+              from: "users",
+              localField: "user",
+              foreignField: "_id",
+              as: "user",
               pipeline: [{ $project: { _id: 1, name: 1, profileImg: 1 } }],
             },
           },
-          { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+          { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
           { $project: { _id: 1, content: 1, createdAt: 1, user: 1 } },
         ],
-        as: 'lastCommentArr',
+        as: "lastCommentArr",
       },
     },
-    { $addFields: { lastComment: { $first: '$lastCommentArr' } } },
+    { $addFields: { lastComment: { $first: "$lastCommentArr" } } },
 
     // logged user's reaction (type + _id), if logged in
     ...(loggedUserId
       ? [
           {
             $lookup: {
-              from: 'reactions',
-              let: { postId: '$_id', uid: loggedUserId },
+              from: "reactions",
+              let: { postId: "$_id", uid: loggedUserId },
               pipeline: [
                 {
                   $match: {
                     $expr: {
                       $and: [
-                        { $eq: ['$post', '$$postId'] },
-                        { $eq: ['$user', '$$uid'] },
+                        { $eq: ["$post", "$$postId"] },
+                        { $eq: ["$user", "$$uid"] },
                       ],
                     },
                   },
@@ -804,12 +808,12 @@ exports.getPost = asyncHandler(async (req, res, next) => {
                 { $project: { _id: 1, type: 1 } },
                 { $limit: 1 },
               ],
-              as: 'loggedUserReactionArr',
+              as: "loggedUserReactionArr",
             },
           },
           {
             $addFields: {
-              loggedUserReaction: { $first: '$loggedUserReactionArr' },
+              loggedUserReaction: { $first: "$loggedUserReactionArr" },
             },
           },
         ]
@@ -828,7 +832,7 @@ exports.getPost = asyncHandler(async (req, res, next) => {
 
   const docs = await Post.aggregate(pipeline);
   if (!docs || docs.length === 0) {
-    return next(new ApiError('No post found with that ID', 404));
+    return next(new ApiError("No post found with that ID", 404));
   }
 
   const p = docs[0];
@@ -896,7 +900,7 @@ exports.deletePost = asyncHandler(async (req, res, next) => {
       // Find and delete the course
       const post = await Post.findByIdAndDelete(id).session(session);
       // Check if post exists
-      if (!post) return next(new ApiError('post not found ', 404));
+      if (!post) return next(new ApiError("post not found ", 404));
 
       // Delete associated lessons and reviews
       await Promise.all([
@@ -909,13 +913,13 @@ exports.deletePost = asyncHandler(async (req, res, next) => {
     res.status(204).send();
   } catch (error) {
     // Handle any transaction-related errors
-    console.error('Transaction error:', error);
+    console.error("Transaction error:", error);
     if (error instanceof ApiError) {
       // Forward specific ApiError instances
       return next(error);
     }
     // Handle other errors with a generic message
-    return next(new ApiError('Error during post deletion', 500));
+    return next(new ApiError("Error during post deletion", 500));
   }
 });
 // get best 10 users who have the most posts
@@ -923,10 +927,10 @@ exports.deletePost = asyncHandler(async (req, res, next) => {
 exports.getTopProfilePosters = async (req, res, next) => {
   try {
     const topUsers = await Post.aggregate([
-      { $match: { sharedTo: 'profile' } },
+      { $match: { sharedTo: "profile" } },
 
       // count posts per user
-      { $group: { _id: '$user', postsCount: { $sum: 1 } } },
+      { $group: { _id: "$user", postsCount: { $sum: 1 } } },
 
       // sort by count desc (and tie-break by _id for deterministic order)
       { $sort: { postsCount: -1, _id: 1 } },
@@ -937,20 +941,20 @@ exports.getTopProfilePosters = async (req, res, next) => {
       // join user basic info
       {
         $lookup: {
-          from: 'users',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'user',
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "user",
           pipeline: [{ $project: { _id: 1, name: 1, profileImg: 1 } }],
         },
       },
-      { $unwind: '$user' }, // if a user might be missing, add preserveNullAndEmptyArrays: true
+      { $unwind: "$user" }, // if a user might be missing, add preserveNullAndEmptyArrays: true
 
       // shape output
       {
         $project: {
           _id: 0,
-          user: '$user',
+          user: "$user",
           postsCount: 1,
         },
       },
