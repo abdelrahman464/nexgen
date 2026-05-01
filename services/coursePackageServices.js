@@ -10,6 +10,11 @@ const ApiError = require('../utils/apiError');
 const {
   checkIfCoursePackageHasAllFields,
 } = require('../helpers/coursePackageHelper');
+const {
+  assignNextOrder,
+  getReorderItems,
+  updateItemsOrder,
+} = require('./reorderService');
 //upload course image
 exports.uploadCoursePackageImage = uploadSingleFile('image');
 //image processing
@@ -113,6 +118,9 @@ exports.applyObjectFilters = (req, res, next) => {
   return next();
 };
 exports.getCoursePackages = factory.getALl(CoursePackage, 'CoursePackage');
+exports.assignNextCoursePackageOrder = assignNextOrder(CoursePackage);
+exports.getCoursePackagesReorderItems = getReorderItems(CoursePackage);
+exports.updateCoursePackagesOrder = updateItemsOrder(CoursePackage);
 
 //@desc get specific CoursePackage by id
 //@route GET /api/v1/coursePackages/:id

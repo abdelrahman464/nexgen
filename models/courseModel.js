@@ -137,6 +137,11 @@ const courseSchema = new mongoose.Schema(
       enum: ["active", "inActive" , "pending"],
       default: "pending",
     },
+    order: {
+      type: Number,
+      default: 0,
+      index: true,
+    },
     promotionVideo: String,
   },
   {

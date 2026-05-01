@@ -9,6 +9,11 @@ const UserSubscription = require('../models/userSubscriptionModel');
 const { uploadSingleFile } = require('../middlewares/uploadImageMiddleware');
 const Course = require('../models/courseModel');
 const { checkIfPackageHasAllFields } = require('../helpers/packageHelper');
+const {
+  assignNextOrder,
+  getReorderItems,
+  updateItemsOrder,
+} = require('./reorderService');
 
 //upload course image
 exports.uploadPackageImage = uploadSingleFile('image');
@@ -142,6 +147,9 @@ exports.applyObjectFilters = (req, res, next) => {
 };
 
 exports.getAll = factory.getALl(Package, 'Package');
+exports.assignNextPackageOrder = assignNextOrder(Package);
+exports.getPackagesReorderItems = getReorderItems(Package);
+exports.updatePackagesOrder = updateItemsOrder(Package);
 //@desc get specific collection by id
 //@route GET /api/v1/collections/:id
 //@access public

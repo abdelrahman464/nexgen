@@ -1,7 +1,8 @@
 class ApiFeatures {
-  constructor(mongooseQuery, queryStr) {
+  constructor(mongooseQuery, queryStr, defaultSort = '-createdAt') {
     this.mongooseQuery = mongooseQuery;
     this.queryStr = queryStr;
+    this.defaultSort = defaultSort;
   }
 
   filter() {
@@ -16,7 +17,7 @@ class ApiFeatures {
       const sortBy = this.queryStr.sort.split('.').join(' ');
       this.mongooseQuery = this.mongooseQuery.sort(sortBy);
     } else {
-      this.mongooseQuery = this.mongooseQuery.sort('-createdAt');
+      this.mongooseQuery = this.mongooseQuery.sort(this.defaultSort);
     }
     return this;
   }

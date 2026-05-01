@@ -6,6 +6,7 @@
   "scripts": {
     "start:dev": "nodemon server.js",
     "start:": " node server.js",
+    "backfill:item-order": "node scripts/backfillItemOrder.js",
     "email:dev": "npx react-email dev --dir ./emails",
     "email:check": "tsc -p tsconfig.emails.json --noEmit",
     "email:generate": "tsx --tsconfig tsconfig.emails.json ./emails/scripts/generateEmails.ts"

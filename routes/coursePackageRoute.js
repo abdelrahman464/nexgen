@@ -27,9 +27,24 @@ router
     authServices.checkIfUserIsAdminOrInstructor,
     coursePackage.uploadCoursePackageImage,
     coursePackage.resizeImage,
+    coursePackage.assignNextCoursePackageOrder,
     coursePackageValidator.createCoursePackageValidator,
     coursePackage.createCoursePackage,
   );
+
+router
+  .route('/reorder')
+  .get(
+    authServices.protect,
+    authServices.allowedTo('admin'),
+    coursePackage.getCoursePackagesReorderItems,
+  )
+  .patch(
+    authServices.protect,
+    authServices.allowedTo('admin'),
+    coursePackage.updateCoursePackagesOrder,
+  );
+
 router
   .route('/:id')
   .get(coursePackage.getCoursePackage)

@@ -34,9 +34,24 @@ router
     packageService.uploadPackageImage,
     packageService.resizeImage,
     packageService.convertToArray,
+    packageService.assignNextPackageOrder,
     createPackageValidator,
     packageService.createOne,
   );
+
+router
+  .route('/reorder')
+  .get(
+    authServices.protect,
+    authServices.allowedTo('admin'),
+    packageService.getPackagesReorderItems,
+  )
+  .patch(
+    authServices.protect,
+    authServices.allowedTo('admin'),
+    packageService.updatePackagesOrder,
+  );
+
 router
   .route('/:id')
   .get(packageService.getOne)

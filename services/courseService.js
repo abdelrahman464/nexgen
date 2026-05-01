@@ -26,6 +26,11 @@ const {
   checkIfCourseHasAllFields,
   addTranslationFields,
 } = require('../helpers/courseHelper');
+const {
+  assignNextOrder,
+  getReorderItems,
+  updateItemsOrder,
+} = require('./reorderService');
 
 exports.getInstructorCourses = asyncHandler(async (req, res, next) => {
   req.filterObj = {
@@ -324,6 +329,9 @@ exports.filterActiveCourses = (req, res, next) => {
 // Get all courses
 // Note: instructor, category, accessibleCourses are populated via Course model's pre-find hook
 exports.getAllCourses = factory.getALl(Course, 'Course');
+exports.assignNextCourseOrder = assignNextOrder(Course);
+exports.getCoursesReorderItems = getReorderItems(Course);
+exports.updateCoursesOrder = updateItemsOrder(Course);
 
 // Get a specific course by ID
 // exports.getCourseById = factory.getOne(Course, "reviews", "instructor");

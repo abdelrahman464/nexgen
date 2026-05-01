@@ -39,6 +39,11 @@ const coursePackageSchema = new mongoose.Schema(
       enum: ["active", "pending" , "inActive"],
       default: "pending",
     },
+    order: {
+      type: Number,
+      default: 0,
+      index: true,
+    },
     description: { type: String, i18n: true },
     highlights: [{ type: Object, i18n: true }],
     whatWillLearn: [
@@ -88,7 +93,10 @@ const coursePackageSchema = new mongoose.Schema(
   }
 );
 coursePackageSchema.pre(/^find/, function (next) {
-  this.populate({ path: "courses", select: "title courseDuration" });
+  if (this.getOptions && this.getOptions().skipPopulate) return next();
+  this.populate({ path: "courses", select: "title courseDuration" })
+    .populate({ path: "category", select: "title" })
+    .populate({ path: "instructor", select: "name email profileImg" });
   next();
 });
 

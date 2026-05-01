@@ -34,6 +34,9 @@ const {
   getInstructorCourses,
   getCertificateLink,
   applyFilter,
+  assignNextCourseOrder,
+  getCoursesReorderItems,
+  updateCoursesOrder,
 } = require('../services/courseService');
 const authServices = require('../services/authServices');
 // nested routes
@@ -63,6 +66,7 @@ router.post(
   resizeImage,
   convertToArray,
   setCategoryIdToBody,
+  assignNextCourseOrder,
   createCourseValidator,
   createCourse,
 );
@@ -91,6 +95,20 @@ router.get(
   applyFilter,
   getAllCourses,
 );
+
+router
+  .route('/reorder')
+  .get(
+    authServices.protect,
+    authServices.allowedTo('admin'),
+    getCoursesReorderItems,
+  )
+  .patch(
+    authServices.protect,
+    authServices.allowedTo('admin'),
+    updateCoursesOrder,
+  );
+
 // Get a specific course by ID
 router.get('/:id', getCourseById);
 

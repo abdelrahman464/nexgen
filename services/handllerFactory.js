@@ -129,6 +129,10 @@ exports.getALl =
   (Model, modelName = '', populationOpt) =>
   async (req, res) => {
     try {
+      const orderedModelNames = ['Course', 'Package', 'CoursePackage'];
+      const defaultSort = orderedModelNames.includes(modelName)
+        ? 'order -createdAt'
+        : '-createdAt';
       let filter = {};
 
       // Apply initial filter if exists
@@ -154,7 +158,7 @@ exports.getALl =
       }
 
       // Apply API features
-      const apiFeatures = new ApiFeatures(query, req.query)
+      const apiFeatures = new ApiFeatures(query, req.query, defaultSort)
         .filter()
         .search(modelName)
         .sort()

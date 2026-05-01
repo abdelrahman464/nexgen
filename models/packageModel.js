@@ -54,6 +54,11 @@ const packageSchema = new mongoose.Schema(
       enum: ["active", "pending" , "inActive"],
       default: "pending",
     },
+    order: {
+      type: Number,
+      default: 0,
+      index: true,
+    },
     price: {
       type: Number,
       trim: true,
@@ -85,11 +90,14 @@ const packageSchema = new mongoose.Schema(
 );
 // ^find => it mean if part of of teh word contains find
 packageSchema.pre(/^find/, function (next) {
+  if (this.getOptions && this.getOptions().skipPopulate) return next();
   // this => query
   this.populate({
     path: "course",
     select: "title colors -accessibleCourses -category",
-  });
+  })
+    .populate({ path: "category", select: "title" })
+    .populate({ path: "instructor", select: "name email profileImg" });
   next();
 });
 const setImageURL = (doc) => {
