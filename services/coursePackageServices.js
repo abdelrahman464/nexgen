@@ -49,7 +49,7 @@ exports.resizeImage = asyncHandler(async (req, res, next) => {
 //@access public
 exports.filterCoursePackages = async (req, res, next) => {
   const filterObj = {};
-  if (req.user.isInstructor) {
+  if (req.user.role !== 'admin' && req.user.isInstructor) {
     const courses = await Course.find({ instructor: req.user._id });
 
     if (courses.length === 0) {
@@ -67,6 +67,49 @@ exports.filterCoursePackages = async (req, res, next) => {
 exports.filterActiveCoursePackages = async (req, res, next) => {
   req.filterObj = { status: 'active' };
 
+  return next();
+};
+
+exports.applyObjectFilters = (req, res, next) => {
+  req.filterObj = req.filterObj || {};
+  const { title, description, keyword, category, status } = req.query;
+  const orFilters = [];
+  if (category) {
+    req.filterObj.category = category;
+  }
+  if (status && req.user && (req.user.role === 'admin' || req.user.isInstructor)) {
+    req.filterObj.status = status;
+  }
+  if (keyword) {
+    const textPattern = new RegExp(keyword, 'i');
+    orFilters.push(
+      { 'title.ar': { $regex: textPattern } },
+      { 'title.en': { $regex: textPattern } },
+      { 'description.ar': { $regex: textPattern } },
+      { 'description.en': { $regex: textPattern } },
+    );
+  }
+  if (title) {
+    orFilters.push({ 'title.ar': title }, { 'title.en': title });
+  }
+  if (description) {
+    orFilters.push(
+      { 'description.ar': description },
+      { 'description.en': description },
+    );
+  }
+  if (orFilters.length > 0) {
+    if (req.filterObj.$or) {
+      req.filterObj.$and = [
+        ...(req.filterObj.$and || []),
+        { $or: req.filterObj.$or },
+        { $or: orFilters },
+      ];
+      delete req.filterObj.$or;
+    } else {
+      req.filterObj.$or = [...(req.filterObj.$or || []), ...orFilters];
+    }
+  }
   return next();
 };
 exports.getCoursePackages = factory.getALl(CoursePackage, 'CoursePackage');

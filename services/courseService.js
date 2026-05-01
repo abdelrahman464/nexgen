@@ -285,8 +285,14 @@ exports.getMyCourses = asyncHandler(async (req, res, next) => {
 });
 exports.applyFilter = (req, res, next) => {
   req.filterObj = req.filterObj || {};
-  const { title, description, keyword } = req.query;
+  const { title, description, keyword, category, status } = req.query;
   const orFilters = [];
+  if (category) {
+    req.filterObj.category = category;
+  }
+  if (status && req.user && (req.user.role === 'admin' || req.user.isInstructor)) {
+    req.filterObj.status = status;
+  }
   if (keyword) {
     const textPattern = new RegExp(keyword, 'i');
     orFilters.push(

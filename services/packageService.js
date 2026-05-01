@@ -67,10 +67,22 @@ exports.convertToArray = (req, res, next) => {
 };
 
 exports.filterInstructorPackages = async (req, res, next) => {
-  if (req.user.role !== 'admin') {
-    req.filterObj = { instructor: req.user._id };
+  try {
+    if (req.user.role !== 'admin') {
+      const instructorCourses = await Course.find({ instructor: req.user._id })
+        .select('_id')
+        .setOptions({ skipPopulate: true })
+        .lean();
+
+      req.filterObj = {
+        ...(req.filterObj || {}),
+        course: { $in: instructorCourses.map((course) => course._id) },
+      };
+    }
+    return next();
+  } catch (error) {
+    return next(error);
   }
-  next();
 };
 //@desc get list of collections
 //@route GET /api/v1/collections
@@ -94,8 +106,17 @@ exports.filterPackages = async (req, res, next) => {
 };
 exports.applyObjectFilters = (req, res, next) => {
   req.filterObj = req.filterObj || {};
-  const { title, description, keyword } = req.query;
+  const { title, description, keyword, category, status } = req.query;
   const orFilters = [];
+  if (category) {
+    req.filterObj.category = category;
+  }
+  if (
+    status &&
+    (req.user?.role === 'admin' || req.user?.isInstructor || req.query.all)
+  ) {
+    req.filterObj.status = status;
+  }
   if (keyword) {
     const textPattern = new RegExp(keyword, 'i');
     orFilters.push(

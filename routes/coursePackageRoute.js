@@ -12,12 +12,14 @@ router.get(
   authServices.protect,
   authServices.checkIfUserIsAdminOrInstructor,
   coursePackage.filterCoursePackages,
+  coursePackage.applyObjectFilters,
   coursePackage.getCoursePackages,
 );
 router
   .route('/')
   .get(
     coursePackage.filterActiveCoursePackages,
+    coursePackage.applyObjectFilters,
     coursePackage.getCoursePackages,
   )
   .post(
