@@ -264,6 +264,18 @@ exports.login = asyncHandler(async (req, res, next) => {
   // send response to client side
   res.status(200).json({ data: user, token });
 });
+//@desc    Admin: issue a JWT for another user (e.g. support / impersonation)
+//@route   POST /api/v1/auth/admin/issue-user-token
+//@access  Private (admin)
+exports.adminIssueUserToken = asyncHandler(async (req, res, next) => {
+  const user = await User.findById(req.body.userId);
+  if (!user) {
+    return next(new ApiError("no user found for this id", 404));
+  }
+  const token = generateToken(user._id);
+  user.idDocuments = undefined;
+  res.status(200).json({ data: user, token });
+});
 //check if user need to verify his id
 //check if user completed 50% of any random course he enrolled in
 const checkIfUserNeedToVerifyId = async (user) => {

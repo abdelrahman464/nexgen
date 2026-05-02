@@ -111,3 +111,12 @@ exports.loginValidator = [
     .withMessage('password must be at least 8 characters'),
   validatorMiddleware,
 ];
+
+exports.adminIssueUserTokenValidator = [
+  check('userId')
+    .notEmpty()
+    .withMessage('userId required')
+    .isMongoId()
+    .withMessage('Invalid user id'),
+  validatorMiddleware,
+];

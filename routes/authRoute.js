@@ -4,9 +4,11 @@ const passport = require("passport");
 const {
   signupValidator,
   loginValidator,
+  adminIssueUserTokenValidator,
 } = require("../utils/validators/authValidator");
 const {
   protect,
+  allowedTo,
   signup,
   login,
   forgotPassword,
@@ -16,6 +18,7 @@ const {
   verifyEmail,
   getLoggedUserData,
   googleMobileAuth,
+  adminIssueUserToken,
 } = require("../services/authServices");
 const { uploadImages, resizeImage } = require("../services/userService");
 //const { cleanUpSubscriptions } = require("../services/marketing/fixBugs");
@@ -58,6 +61,14 @@ router.route("/resetPassword").put(resetPassword);
 router.route("/verifyEmail").post(verifyEmail);
 router.route("/resendEmailCode").post(resendEmailCode);
 router.route("/getMe").get(getLoggedUserData);
+router
+  .route("/admin/issue-user-token")
+  .post(
+    protect,
+    allowedTo("admin"),
+    adminIssueUserTokenValidator,
+    adminIssueUserToken
+  );
 
 // Mobile Google OAuth endpoint
 router.post("/google/mobile", async (req, res) => {
