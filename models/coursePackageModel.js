@@ -107,6 +107,7 @@ const coursePackageSchema = new mongoose.Schema(
       type: ragSyncSchema,
       default: () => ({ status: "pending" }),
     },
+    appleProductId: String,
   },
   {
     timestamps: true,

@@ -105,6 +105,7 @@ const packageSchema = new mongoose.Schema(
       type: ragSyncSchema,
       default: () => ({ status: "pending" }),
     },
+    appleProductId: String,
   },
   { timestamps: true }
 );
