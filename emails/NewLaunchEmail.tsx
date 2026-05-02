@@ -1,7 +1,6 @@
 import { Column, Heading, Img, Link, Row, Section, Text } from "@react-email/components";
 import * as React from "react";
 import { Button } from "./components/Button";
-import { Divider } from "./components/Divider";
 import { EmailLayout } from "./components/EmailLayout";
 import { EmailSection } from "./components/EmailSection";
 import { Eyebrow } from "./components/Eyebrow";
@@ -38,12 +37,6 @@ export type NewLaunchEmailProps = {
   learnSectionTitle: string;
   learnSectionIntro: string;
   learnItems: LaunchFeature[];
-  practicalSectionTitle: string;
-  practicalSectionText: string;
-  audienceSectionTitle: string;
-  audienceItems: string[];
-  perksSectionTitle: string;
-  perksItems: Array<{ title: string; description: string }>;
   promoLabel: string;
   promoTitle: string;
   promoText: string;
@@ -68,57 +61,37 @@ export const PreviewProps: NewLaunchEmailProps = {
   launchType: "course",
   pageTitle: "كورس تحليل الرسم البياني — NexGen Academy",
   preheader:
-    "دورة جديدة على NexGen Academy: تحليل الرسم البياني — احترف قراءة الأسواق المالية. خصم 10% للمسجّلين بكود NEXGEN10.",
+    "دورة جديدة على NexGen Academy: تحليل الرسم البياني بخطة واضحة. خصم 25٪ لفترة محدودة بكود NEXGEN25.",
   topBarLabel: "إعلان كورس جديد",
   eyebrowLabel: "دورة جديدة • متاحة الآن",
-  title: "تحليل الرسم البياني",
-  subtitle: "احترف قراءة الأسواق المالية — من الصفر وحتى بناء استراتيجية تداول قابلة للتطبيق.",
+  title: "هل بتفتح صفقات وبتخسر بدون ما تفهم السبب؟",
+  subtitle: "المشكلة غالباً مش في السوق… بل في طريقة تحليلك.",
   introText:
-    "هل تبحث عن أفضل كورس تحليل فني يمنحك القدرة على فهم حركة السعر بدقة؟ النجاح في التداول يبدأ من إتقان الرسوم البيانية. انضم الآن إلى كورس محلل رسم بياني الشامل من NexGen Academy، المصمَّم خصيصاً لنقلك من البداية وحتى الاحتراف في قراءة الأسواق المالية.",
+    "لو عندك أساسيات التداول لكن لسه بتدخل صفقات بدون خطة واضحة، فالمشكلة مش في السوق — المشكلة في قراءة الشارت.",
   rating: "4.9",
   reviewCountText: "(46 تقييم)",
   levelLabel: "متوسط",
   accessDurationLabel: "مدى الحياة",
   certificateLabel: "معتمدة",
   launchUrl: "https://nexgen-academy.com/ar/courses/mastering-technical-analysis",
-  launchUrlText: "سجّل الآن في الكورس",
+  launchUrlText: "احصل على الخصم وابدأ الآن",
   heroImageUrl: "assets/hero-banner.png",
   logoUrl: "assets/nexgen-logo.png",
   learnSectionTitle: "ماذا ستتعلم في كورس محلل رسم بياني؟",
-  learnSectionIntro:
-    "صُمِّمت هذه الدورة لتكون دورة تعليم تداول احترافية تركّز على الجانب التطبيقي الذي يحتاجه المتداول يومياً:",
+  learnSectionIntro: "تركّز الدورة على المهارات التي تحتاجها لتحليل الشارت واتخاذ قرارات أوضح:",
   learnItems: [
-    { index: "01", title: "تعلّم التداول من الصفر", description: "فهم أساسيات الأسواق المالية وخطوات الدخول الأولى للمبتدئين بثقة." },
-    { index: "02", title: "الشموع اليابانية", description: "احتراف قراءة نماذج الشموع وتوقُّع انعكاسات السعر القوية." },
-    { index: "03", title: "الدعم والمقاومة", description: "تحديد مناطق السيولة وفهم تحليل هيكل السوق (Market Structure) بدقة." },
-    { index: "04", title: "استراتيجيات البرايس أكشن", description: "التداول باحترافية عبر فهم سلوك السعر المباشر بعيداً عن تشتُّت المؤشرات." },
-    { index: "05", title: "مناطق العرض والطلب", description: "كشف تمركزات السيولة الضخمة للبنوك والمؤسسات المالية الكبرى." },
-  ],
-  practicalSectionTitle: "التطبيق العملي وإدارة المخاطر",
-  practicalSectionText:
-    "المعرفة النظرية لا تكفي، لذا يتضمّن الكورس شرح منصة TradingView بالتفصيل، بدءاً من رسم الترند وصولاً إلى استخدام الأدوات الاحترافية. كما نضع تركيزاً مكثّفاً على إدارة المخاطر في التداول لضمان حماية رأس مالك والاستدامة في هذا المجال.",
-  audienceSectionTitle: "لمن هذه الدورة؟",
-  audienceItems: [
-    "لمن يمتلك أساسيات الفوركس ويريد تعلّم التحليل الفني بشكل منهجي.",
-    "للمتداول الذي يفتح صفقات لكن بدون خطة واضحة.",
-    "لمن يريد فهم الرسم البياني بدل الاعتماد على الإشارات.",
-    "لكل من يسعى لبناء أسلوب تداول احترافي وقابل للتطبيق.",
-  ],
-  perksSectionTitle: "مميزات الانضمام إلى NexGen Academy",
-  perksItems: [
-    { title: "منهج مكثّف", description: "يركّز على «خلاصة التجربة» وما يحقّق نتائج فعّالة." },
-    { title: "شهادة معتمدة", description: "شهادة محلل فني فور إتمام الدورة بنجاح." },
-    { title: "تطبيقات حيّة", description: "تشمل تحليل الذهب اليومي وأسهم الأسواق العالمية." },
+    { index: "01", title: "فهم حركة السعر", description: "تفهم السوق بدل الاعتماد على إشارات عشوائية." },
+    { index: "02", title: "تحديد الدخول والخروج", description: "تحدد نقاط الدخول والخروج بدقة أعلى." },
+    { index: "03", title: "بناء استراتيجية تداول", description: "تبني نظام تداول واضح وقابل للتطبيق." },
   ],
   promoLabel: "عرض خاص للمسجَّلين",
-  promoTitle: "خصم 10% لأنك جزء من العائلة",
-  promoText:
-    "لأنك مسجّل بالفعل في NexGen Academy، استخدم الكود التالي عند الدفع للحصول على خصم فوري على سعر الكورس.",
-  promoCode: "NEXGEN10",
-  promoFooterText: "العرض ساري لفترة محدودة • قابل للاستخدام مرة واحدة لكل حساب",
+  promoTitle: "خصم 25٪ لفترة محدودة",
+  promoText: "عرض خاص للمسجّلين — استخدم الكود للحصول على خصم فوري.",
+  promoCode: "NEXGEN25",
+  promoFooterText: "ينتهي خلال 48 ساعة • استخدمه الآن قبل انتهاء العرض",
   finalCtaTitle: "ابدأ رحلة احتراف التداول اليوم",
   finalCtaText: "لا تُضِع مزيداً من الوقت في المحاولات العشوائية — انضم إلى من أتقن قراءة الأسواق المالية بمنهجية واضحة.",
-  finalCtaButtonText: "اشترك الآن في الكورس",
+  finalCtaButtonText: "اشترك الآن بخصم 25٪",
   browseAllText: "جميع الدورات",
   browseAllUrl: "https://nexgen-academy.com/ar/courses",
   footerTagline: "أكاديمية متخصّصة في تعليم التداول والتحليل الفني للأسواق المالية.",
@@ -132,8 +105,11 @@ export const PreviewProps: NewLaunchEmailProps = {
 };
 
 export function NewLaunchEmail(props: NewLaunchEmailProps) {
-  const perksTop = props.perksItems.slice(0, 2);
-  const perkBottom = props.perksItems[2];
+  const launchUrl = withUtm(props.launchUrl);
+  const browseAllUrl = withUtm(props.browseAllUrl);
+  const websiteUrl = withUtm(props.websiteUrl);
+  const privacyUrl = withUtm(props.privacyUrl);
+  const termsUrl = withUtm(props.termsUrl);
 
   return (
     <EmailLayout
@@ -143,15 +119,15 @@ export function NewLaunchEmail(props: NewLaunchEmailProps) {
       showTopBarLabel
       logoUrl={props.logoUrl}
       footerTagline={props.footerTagline}
-      websiteUrl={props.websiteUrl}
+      websiteUrl={websiteUrl}
       contactEmail={props.contactEmail}
-      privacyUrl={props.privacyUrl}
-      termsUrl={props.termsUrl}
+      privacyUrl={privacyUrl}
+      termsUrl={termsUrl}
       unsubscribeUrl={props.unsubscribeUrl}
       disclaimer={`${props.disclaimer} ${props.copyrightText}`}
     >
       <Section style={heroWrap}>
-        <Link href={props.launchUrl}>
+        <Link href={launchUrl}>
           <Img src={props.heroImageUrl} alt={props.pageTitle} width="536" style={heroImage} />
         </Link>
       </Section>
@@ -186,7 +162,7 @@ export function NewLaunchEmail(props: NewLaunchEmailProps) {
       </EmailSection>
 
       <EmailSection align="center">
-        <Button href={props.launchUrl}>{props.launchUrlText} ←</Button>
+        <Button href={launchUrl}>{props.launchUrlText}</Button>
       </EmailSection>
 
       <EmailSection align="right">
@@ -195,43 +171,6 @@ export function NewLaunchEmail(props: NewLaunchEmailProps) {
         </Heading>
         <Text style={bodyText}>{props.learnSectionIntro}</Text>
         <FeatureList items={props.learnItems} />
-      </EmailSection>
-
-      <Divider />
-
-      <EmailSection align="right">
-        <Heading as="h2" style={h2}>
-          {props.practicalSectionTitle}
-        </Heading>
-        <Text style={bodyText}>{props.practicalSectionText}</Text>
-      </EmailSection>
-
-      <EmailSection align="right">
-        <Heading as="h2" style={h2}>
-          {props.audienceSectionTitle}
-        </Heading>
-        {props.audienceItems.map((item) => (
-          <Text key={item} style={audienceItem}>
-            ✓ {item}
-          </Text>
-        ))}
-      </EmailSection>
-
-      <EmailSection align="right">
-        <Heading as="h2" style={h2}>
-          {props.perksSectionTitle}
-        </Heading>
-        <Row>
-          <Column width="50%" style={perksColLeft}>
-            <Card title={perksTop[0]?.title} description={perksTop[0]?.description} />
-          </Column>
-          <Column width="50%" style={perksColRight}>
-            <Card title={perksTop[1]?.title} description={perksTop[1]?.description} />
-          </Column>
-        </Row>
-        <Section style={perkBottomWrap}>
-          <Card title={perkBottom?.title} description={perkBottom?.description} />
-        </Section>
       </EmailSection>
 
       <EmailSection>
@@ -252,12 +191,12 @@ export function NewLaunchEmail(props: NewLaunchEmailProps) {
       </EmailSection>
 
       <EmailSection align="center">
-        <Button href={props.launchUrl} width={300}>
-          {props.finalCtaButtonText} ←
+        <Button href={launchUrl} width={300}>
+          {props.finalCtaButtonText}
         </Button>
         <Text style={browseRow}>
           أو تصفّح{" "}
-          <Link href={props.browseAllUrl} style={browseLink}>
+          <Link href={browseAllUrl} style={browseLink}>
             {props.browseAllText}
           </Link>
         </Text>
@@ -268,13 +207,25 @@ export function NewLaunchEmail(props: NewLaunchEmailProps) {
 
 export default NewLaunchEmail;
 
-function Card({ title, description }: { title?: string; description?: string }) {
-  return (
-    <Section style={card}>
-      <Text style={cardTitle}>{title || ""}</Text>
-      <Text style={cardBody}>{description || ""}</Text>
-    </Section>
-  );
+function withUtm(url: string) {
+  if (!url || url.startsWith("{{")) {
+    return url;
+  }
+
+  try {
+    const trackedUrl = new URL(url);
+
+    trackedUrl.searchParams.set("utm_source", "email");
+    trackedUrl.searchParams.set("utm_campaign", "offer25");
+
+    return trackedUrl.toString();
+  } catch {
+    const [baseUrl, hash = ""] = url.split("#");
+    const separator = baseUrl.includes("?") ? "&" : "?";
+    const hashSuffix = hash ? `#${hash}` : "";
+
+    return `${baseUrl}${separator}utm_source=email&utm_campaign=offer25${hashSuffix}`;
+  }
 }
 
 const heroWrap = { paddingBottom: "8px" };
@@ -287,12 +238,5 @@ const rating = { margin: 0, fontSize: "14px", fontWeight: 700, color: "#0b1f3a" 
 const stars = { color: "#f5b301", letterSpacing: "1px", margin: "0 8px" };
 const ratingMeta = { fontWeight: 400, color: "#7b879b", fontSize: "13px" };
 const metaCol = { padding: "0 4px" };
-const audienceItem = { margin: "0 0 8px 0", fontSize: "15px", lineHeight: "1.85", color: "#3a4a64" };
-const perksColLeft = { paddingLeft: "8px" };
-const perksColRight = { paddingRight: "8px" };
-const perkBottomWrap = { paddingTop: "14px" };
-const card = { backgroundColor: "#f6f9ff", border: "1px solid #e3edfb", borderRadius: "10px", padding: "18px" };
-const cardTitle = { margin: "0 0 6px 0", fontSize: "15px", fontWeight: 800, color: "#0b1f3a" };
-const cardBody = { margin: 0, fontSize: "13.5px", lineHeight: "1.85", color: "#3a4a64" };
 const browseRow = { marginTop: "14px", fontSize: "12.5px", color: "#7b879b" };
 const browseLink = { color: "#1e7ff6", textDecoration: "none", fontWeight: 700 };

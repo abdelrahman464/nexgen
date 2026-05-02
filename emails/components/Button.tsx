@@ -1,4 +1,4 @@
-import { Button as BaseButton } from "@react-email/components";
+import { Link } from "@react-email/components";
 import * as React from "react";
 
 type ButtonProps = {
@@ -9,9 +9,11 @@ type ButtonProps = {
 
 export function Button({ href, children, width = 280 }: ButtonProps) {
   return (
-    <BaseButton href={href} style={{ ...button, width: `${width}px` }}>
-      {children}
-    </BaseButton>
+    <Link href={href} dir="auto" style={{ ...button, width: `${width}px` }}>
+      <span dir="auto" style={buttonText}>
+        {children}
+      </span>
+    </Link>
   );
 }
 
@@ -27,4 +29,13 @@ const button = {
   textAlign: "center" as const,
   textDecoration: "none",
   letterSpacing: "0.3px",
+  direction: "inherit" as const,
+  unicodeBidi: "isolate" as const,
+};
+
+const buttonText = {
+  display: "inline-block",
+  lineHeight: "54px",
+  direction: "inherit" as const,
+  unicodeBidi: "isolate" as const,
 };
