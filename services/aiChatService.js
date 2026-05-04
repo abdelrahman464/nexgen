@@ -258,6 +258,9 @@ const safeTitle = (title, fallback) =>
 const getFallbackTitle = (message) =>
   safeTitle(message?.content?.replace(/\s+/g, ' '), 'New AI chat');
 
+const getGuestKeyFromRequest = (req) =>
+  String(req.body?.guestKey || req.headers['x-ai-chat-guest-key'] || '').trim();
+
 const findOrCreateSession = async (req, latestUserMessage) => {
   const chatId = req.body.chatId;
   const user = req.user || null;
@@ -271,13 +274,24 @@ const findOrCreateSession = async (req, latestUserMessage) => {
     if (session) return session;
   }
 
-  if (!user && chatId && mongoose.Types.ObjectId.isValid(chatId)) {
+  if (!user && chatId) {
+    if (!mongoose.Types.ObjectId.isValid(chatId)) {
+      throw new ApiError('Invalid AI chat session id', 400);
+    }
+
+    const guestKey = getGuestKeyFromRequest(req);
+    if (!guestKey) {
+      throw new ApiError('Guest chat key is required', 401);
+    }
+
     const session = await AiChatSession.findOne({
       _id: chatId,
-      user: { $exists: false },
+      $or: [{ user: { $exists: false } }, { user: null }],
+      guestKey,
       status: 'active',
     });
     if (session) return session;
+    throw new ApiError('AI chat session not found', 404);
   }
 
   return AiChatSession.create({
@@ -541,6 +555,7 @@ Memory rules:
       status: 'success',
       data: {
         chatId: session._id.toString(),
+        guestKey: req.user ? undefined : session.guestKey,
         answer,
         clarifyingQuestion: parsed.clarifyingQuestion || null,
         recommendations,

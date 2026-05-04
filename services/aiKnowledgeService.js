@@ -416,8 +416,13 @@ const syncByStatus = async (ragStatus) => {
 const syncAllActiveSources = async () => {
   const results = [];
   for (const sourceType of SOURCE_TYPES) {
-    const filter = { status: 'active' };
-    if (sourceType === 'service') filter.type = 'service';
+    const baseFilter = sourceType === 'service' ? { type: 'service' } : {};
+    const filter = combineFilters(baseFilter, {
+      $or: [
+        { status: 'active' },
+        { 'rag.fileId': { $exists: true, $nin: [null, ''] } },
+      ],
+    });
     const Model = getModel(sourceType);
     const sources = await Model.find(filter).select('_id').limit(10000);
     for (const source of sources) {

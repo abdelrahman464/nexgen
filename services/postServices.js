@@ -16,6 +16,11 @@ const Notification = require("../models/notificationModel");
 const factory = require("./handllerFactory");
 const { uploadMixOfFiles } = require("../middlewares/uploadImageMiddleware");
 
+const getDocumentId = (value) => {
+  if (!value) return null;
+  return value._id || value;
+};
+
 exports.uploadFiles = uploadMixOfFiles([
   {
     name: "imageCover",
@@ -141,15 +146,17 @@ exports.createFilterObjAllowedCoursePosts = asyncHandler(
       }
       //if role is user
       if (req.user.role === "user") {
-        const package = await Package.findOne({ course: course }).select(
-          "_id course",
-        );
+        const package = await Package.findOne({ course: course })
+          .select("_id course title instructor")
+          .setOptions({ skipPopulate: true })
+          .populate({ path: "course", select: "title instructor" });
         if (!package) {
           return next(new ApiError("No package found for this course", 404));
         }
         //check if he is the instructor of course
         const instructorId =
-          package.instructor || package.course.instructor._id;
+          getDocumentId(package.instructor) ||
+          getDocumentId(package.course?.instructor);
 
         if (
           instructorId &&
@@ -168,26 +175,22 @@ exports.createFilterObjAllowedCoursePosts = asyncHandler(
         if (!userSubscription) {
           //const courseTitle = package?.course?.title?.en || "this";
           const {
-            course: {
-              title: { en: courseTitle },
-            },
+            course: { title: { en: courseTitle } = {} } = {},
           } = package;
           return next(
             new ApiError(
-              `You are not subscribed to ${courseTitle} package`,
+              `You are not subscribed to ${courseTitle || "this"} package`,
               404,
             ),
           );
         }
         if (userSubscription.endDate.getTime() < Date.now()) {
           const {
-            course: {
-              title: { en: courseTitle },
-            },
+            course: { title: { en: courseTitle } = {} } = {},
           } = package;
           return next(
             new ApiError(
-              `Your subscription to ${courseTitle} package has been expired`,
+              `Your subscription to ${courseTitle || "this"} package has been expired`,
               404,
             ),
           );
@@ -216,12 +219,15 @@ exports.createFilterObjPackagesPosts = asyncHandler(async (req, res, next) => {
         new ApiError("packageId is not a valid mongoose object id", 400),
       );
     }
-    const package =
-      await Package.findById(packageId).select("_id course title");
+    const package = await Package.findById(packageId)
+      .select("_id course title instructor")
+      .setOptions({ skipPopulate: true })
+      .populate({ path: "course", select: "title instructor" });
     if (!package) {
       return next(new ApiError("package not found", 404));
     }
-    const instructorId = package.instructor || package.course.instructor._id;
+    const instructorId =
+      getDocumentId(package.instructor) || getDocumentId(package.course?.instructor);
 
     if (instructorId && instructorId.toString() === req.user._id.toString()) {
       req.filterObj = {
@@ -232,7 +238,7 @@ exports.createFilterObjPackagesPosts = asyncHandler(async (req, res, next) => {
     }
 
     const {
-      title: { en: packageTitle },
+      title: { en: packageTitle } = {},
     } = package;
 
     if (req.user.role === "user") {
@@ -244,7 +250,7 @@ exports.createFilterObjPackagesPosts = asyncHandler(async (req, res, next) => {
       if (!userSubscription) {
         return next(
           new ApiError(
-            `You are not subscribed to ${packageTitle} package`,
+            `You are not subscribed to ${packageTitle || "this"} package`,
             404,
           ),
         );
@@ -253,7 +259,7 @@ exports.createFilterObjPackagesPosts = asyncHandler(async (req, res, next) => {
       if (userSubscription.endDate.getTime() < Date.now()) {
         return next(
           new ApiError(
-            `Your subscription to ${packageTitle} package has been expired`,
+            `Your subscription to ${packageTitle || "this"} package has been expired`,
             404,
           ),
         );
