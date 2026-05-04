@@ -1,4 +1,12 @@
-import { Column, Heading, Img, Link, Row, Section, Text } from "@react-email/components";
+import {
+  Column,
+  Heading,
+  Img,
+  Link,
+  Row,
+  Section,
+  Text,
+} from "@react-email/components";
 import * as React from "react";
 import { Button } from "./components/Button";
 import { EmailLayout } from "./components/EmailLayout";
@@ -15,6 +23,12 @@ export type LaunchFeature = {
   title: string;
   description: string;
 };
+
+/** Primary CTA: course checkout with coupon (+ UTM via `withUtm`). */
+const LAUNCH_EMAIL_CTA =
+  "https://nexgen-academy.com/ar/courses/mastering-technical-analysis?coupon=NEXGEN25";
+
+const DEFAULT_BROWSE_COURSES = "https://nexgen-academy.com/ar/courses";
 
 export type NewLaunchEmailProps = {
   launchType: LaunchType;
@@ -73,16 +87,29 @@ export const PreviewProps: NewLaunchEmailProps = {
   levelLabel: "متوسط",
   accessDurationLabel: "مدى الحياة",
   certificateLabel: "معتمدة",
-  launchUrl: "https://nexgen-academy.com/ar/courses/mastering-technical-analysis",
+  launchUrl: LAUNCH_EMAIL_CTA,
   launchUrlText: "احصل على الخصم وابدأ الآن",
-  heroImageUrl: "assets/hero-banner.png",
+  heroImageUrl: "https://nexgen-academy.com/images/graph-course-image.png",
   logoUrl: "assets/nexgen-logo.png",
   learnSectionTitle: "ماذا ستتعلم في كورس محلل رسم بياني؟",
-  learnSectionIntro: "تركّز الدورة على المهارات التي تحتاجها لتحليل الشارت واتخاذ قرارات أوضح:",
+  learnSectionIntro:
+    "تركّز الدورة على المهارات التي تحتاجها لتحليل الشارت واتخاذ قرارات أوضح:",
   learnItems: [
-    { index: "01", title: "فهم حركة السعر", description: "تفهم السوق بدل الاعتماد على إشارات عشوائية." },
-    { index: "02", title: "تحديد الدخول والخروج", description: "تحدد نقاط الدخول والخروج بدقة أعلى." },
-    { index: "03", title: "بناء استراتيجية تداول", description: "تبني نظام تداول واضح وقابل للتطبيق." },
+    {
+      index: "01",
+      title: "فهم حركة السعر",
+      description: "تفهم السوق بدل الاعتماد على إشارات عشوائية.",
+    },
+    {
+      index: "02",
+      title: "تحديد الدخول والخروج",
+      description: "تحدد نقاط الدخول والخروج بدقة أعلى.",
+    },
+    {
+      index: "03",
+      title: "بناء استراتيجية تداول",
+      description: "تبني نظام تداول واضح وقابل للتطبيق.",
+    },
   ],
   promoLabel: "عرض خاص للمسجَّلين",
   promoTitle: "خصم 25٪ لفترة محدودة",
@@ -90,23 +117,26 @@ export const PreviewProps: NewLaunchEmailProps = {
   promoCode: "NEXGEN25",
   promoFooterText: "ينتهي خلال 48 ساعة • استخدمه الآن قبل انتهاء العرض",
   finalCtaTitle: "ابدأ رحلة احتراف التداول اليوم",
-  finalCtaText: "لا تُضِع مزيداً من الوقت في المحاولات العشوائية — انضم إلى من أتقن قراءة الأسواق المالية بمنهجية واضحة.",
+  finalCtaText:
+    "لا تُضِع مزيداً من الوقت في المحاولات العشوائية — انضم إلى من أتقن قراءة الأسواق المالية بمنهجية واضحة.",
   finalCtaButtonText: "اشترك الآن بخصم 25٪",
   browseAllText: "جميع الدورات",
-  browseAllUrl: "https://nexgen-academy.com/ar/courses",
-  footerTagline: "أكاديمية متخصّصة في تعليم التداول والتحليل الفني للأسواق المالية.",
+  browseAllUrl: DEFAULT_BROWSE_COURSES,
+  footerTagline:
+    "أكاديمية متخصّصة في تعليم التداول والتحليل الفني للأسواق المالية.",
   contactEmail: "[email protected]",
   websiteUrl: "https://nexgen-academy.com",
   privacyUrl: "https://nexgen-academy.com/ar/privacy",
   termsUrl: "https://nexgen-academy.com/ar/terms",
   unsubscribeUrl: "{{unsubscribe_url}}",
-  disclaimer: "هذه الرسالة جزء من اشتراكك في NexGen Academy. التداول في الأسواق المالية ينطوي على مخاطر، والمحتوى المُقدَّم لأغراض تعليمية فقط ولا يُعدّ نصيحة استثمارية.",
+  disclaimer:
+    "هذه الرسالة جزء من اشتراكك في NexGen Academy. التداول في الأسواق المالية ينطوي على مخاطر، والمحتوى المُقدَّم لأغراض تعليمية فقط ولا يُعدّ نصيحة استثمارية.",
   copyrightText: "© 2026 NexGen Academy. جميع الحقوق محفوظة.",
 };
 
 export function NewLaunchEmail(props: NewLaunchEmailProps) {
-  const launchUrl = withUtm(props.launchUrl);
-  const browseAllUrl = withUtm(props.browseAllUrl);
+  const ctaUrl = withUtm(LAUNCH_EMAIL_CTA);
+  const browseCoursesUrl = withUtm(props.browseAllUrl || DEFAULT_BROWSE_COURSES);
   const websiteUrl = withUtm(props.websiteUrl);
   const privacyUrl = withUtm(props.privacyUrl);
   const termsUrl = withUtm(props.termsUrl);
@@ -127,9 +157,13 @@ export function NewLaunchEmail(props: NewLaunchEmailProps) {
       disclaimer={`${props.disclaimer} ${props.copyrightText}`}
     >
       <Section style={heroWrap}>
-        <Link href={launchUrl}>
-          <Img src={props.heroImageUrl} alt={props.pageTitle} width="536" style={heroImage} />
-        </Link>
+        <Img
+          src={props.heroImageUrl}
+          alt={props.pageTitle}
+          width="536"
+          height="300"
+          style={heroImage}
+        />
       </Section>
 
       <EmailSection align="right">
@@ -139,7 +173,8 @@ export function NewLaunchEmail(props: NewLaunchEmailProps) {
         </Heading>
         <Text style={subhead}>{props.subtitle}</Text>
         <Text style={rating}>
-          {props.rating} <span style={stars}>★★★★★</span> <span style={ratingMeta}>{props.reviewCountText}</span>
+          {props.rating} <span style={stars}>★★★★★</span>{" "}
+          <span style={ratingMeta}>{props.reviewCountText}</span>
         </Text>
       </EmailSection>
 
@@ -162,7 +197,7 @@ export function NewLaunchEmail(props: NewLaunchEmailProps) {
       </EmailSection>
 
       <EmailSection align="center">
-        <Button href={launchUrl}>{props.launchUrlText}</Button>
+        <Button href={ctaUrl}>{props.launchUrlText}</Button>
       </EmailSection>
 
       <EmailSection align="right">
@@ -179,6 +214,7 @@ export function NewLaunchEmail(props: NewLaunchEmailProps) {
           title={props.promoTitle}
           description={props.promoText}
           code={props.promoCode}
+          codeHref={ctaUrl}
           footerText={props.promoFooterText}
         />
       </EmailSection>
@@ -191,12 +227,12 @@ export function NewLaunchEmail(props: NewLaunchEmailProps) {
       </EmailSection>
 
       <EmailSection align="center">
-        <Button href={launchUrl} width={300}>
+        <Button href={ctaUrl} width={300}>
           {props.finalCtaButtonText}
         </Button>
         <Text style={browseRow}>
           أو تصفّح{" "}
-          <Link href={browseAllUrl} style={browseLink}>
+          <Link href={browseCoursesUrl} style={browseLink}>
             {props.browseAllText}
           </Link>
         </Text>
@@ -204,6 +240,12 @@ export function NewLaunchEmail(props: NewLaunchEmailProps) {
     </EmailLayout>
   );
 }
+
+(
+  NewLaunchEmail as typeof NewLaunchEmail & {
+    PreviewProps: NewLaunchEmailProps;
+  }
+).PreviewProps = PreviewProps;
 
 export default NewLaunchEmail;
 
@@ -229,14 +271,52 @@ function withUtm(url: string) {
 }
 
 const heroWrap = { paddingBottom: "8px" };
-const heroImage = { width: "100%", maxWidth: "536px", borderRadius: "8px" };
-const h1 = { margin: "0 0 14px 0", fontSize: "30px", lineHeight: "1.35", fontWeight: 800, color: "#0b1f3a" };
-const h2 = { margin: "0 0 10px 0", fontSize: "22px", lineHeight: "1.4", fontWeight: 800, color: "#0b1f3a" };
-const subhead = { margin: "0 0 14px 0", fontSize: "17px", lineHeight: "1.9", fontWeight: 500, color: "#3a4a64" };
-const bodyText = { margin: 0, fontSize: "15px", lineHeight: "1.95", color: "#3a4a64" };
-const rating = { margin: 0, fontSize: "14px", fontWeight: 700, color: "#0b1f3a" };
+const heroImage: React.CSSProperties = {
+  width: "100%",
+  maxWidth: "536px",
+  borderRadius: "8px",
+  display: "block",
+  objectFit: "cover",
+};
+const h1 = {
+  margin: "0 0 14px 0",
+  fontSize: "30px",
+  lineHeight: "1.35",
+  fontWeight: 800,
+  color: "#0b1f3a",
+};
+const h2 = {
+  margin: "0 0 10px 0",
+  fontSize: "22px",
+  lineHeight: "1.4",
+  fontWeight: 800,
+  color: "#0b1f3a",
+};
+const subhead = {
+  margin: "0 0 14px 0",
+  fontSize: "17px",
+  lineHeight: "1.9",
+  fontWeight: 500,
+  color: "#3a4a64",
+};
+const bodyText = {
+  margin: 0,
+  fontSize: "15px",
+  lineHeight: "1.95",
+  color: "#3a4a64",
+};
+const rating = {
+  margin: 0,
+  fontSize: "14px",
+  fontWeight: 700,
+  color: "#0b1f3a",
+};
 const stars = { color: "#f5b301", letterSpacing: "1px", margin: "0 8px" };
 const ratingMeta = { fontWeight: 400, color: "#7b879b", fontSize: "13px" };
 const metaCol = { padding: "0 4px" };
 const browseRow = { marginTop: "14px", fontSize: "12.5px", color: "#7b879b" };
-const browseLink = { color: "#1e7ff6", textDecoration: "none", fontWeight: 700 };
+const browseLink = {
+  color: "#1e7ff6",
+  textDecoration: "none",
+  fontWeight: 700,
+};

@@ -28,4 +28,6 @@ export function WelcomeEmail({ name, loginUrl }: WelcomeEmailProps) {
   );
 }
 
+(WelcomeEmail as typeof WelcomeEmail & { PreviewProps: WelcomeEmailProps }).PreviewProps = PreviewProps;
+
 export default WelcomeEmail;

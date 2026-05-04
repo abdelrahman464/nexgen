@@ -35,4 +35,8 @@ export function EmailVerificationOtpEmail({
   );
 }
 
+(EmailVerificationOtpEmail as typeof EmailVerificationOtpEmail & {
+  PreviewProps: EmailVerificationOtpEmailProps;
+}).PreviewProps = PreviewProps;
+
 export default EmailVerificationOtpEmail;

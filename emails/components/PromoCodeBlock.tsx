@@ -1,4 +1,4 @@
-import { CodeInline, Section, Text } from "@react-email/components";
+import { Link, Section, Text } from "@react-email/components";
 import * as React from "react";
 
 type PromoCodeBlockProps = {
@@ -6,17 +6,32 @@ type PromoCodeBlockProps = {
   title: string;
   description: string;
   code: string;
+  /** When set, the code is a link (e.g. checkout URL with coupon). */
+  codeHref?: string;
   footerText: string;
 };
 
-export function PromoCodeBlock({ label, title, description, code, footerText }: PromoCodeBlockProps) {
+export function PromoCodeBlock({
+  label,
+  title,
+  description,
+  code,
+  codeHref,
+  footerText,
+}: PromoCodeBlockProps) {
   return (
     <Section style={wrap}>
       <Text style={labelStyle}>{label}</Text>
       <Text style={titleStyle}>{title}</Text>
       <Text style={descriptionStyle}>{description}</Text>
       <Text style={codeWrap}>
-        <CodeInline style={codeStyle}>{code}</CodeInline>
+        {codeHref ? (
+          <Link href={codeHref} style={codeLinkStyle}>
+            {code}
+          </Link>
+        ) : (
+          <span style={codeStyle}>{code}</span>
+        )}
       </Text>
       <Text style={footerStyle}>{footerText}</Text>
     </Section>
@@ -67,10 +82,14 @@ const codeStyle = {
   padding: "14px 28px",
 };
 
+const codeLinkStyle: React.CSSProperties = {
+  ...codeStyle,
+  textDecoration: "none",
+};
+
 const footerStyle = {
   margin: 0,
   color: "#7eb8ff",
   fontSize: "12.5px",
   lineHeight: "1.8",
 };
-

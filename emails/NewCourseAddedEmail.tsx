@@ -39,4 +39,7 @@ export function NewCourseAddedEmail({
   );
 }
 
+(NewCourseAddedEmail as typeof NewCourseAddedEmail & { PreviewProps: NewCourseAddedEmailProps }).PreviewProps =
+  PreviewProps;
+
 export default NewCourseAddedEmail;

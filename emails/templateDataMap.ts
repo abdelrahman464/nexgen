@@ -16,7 +16,9 @@ export type TemplatePropsBySlug = {
 
 export type TemplateSlug = keyof TemplatePropsBySlug;
 
-export const templateDataMap: { [K in TemplateSlug]: { defaultData: TemplatePropsBySlug[K] } } = {
+export const templateDataMap: {
+  [K in TemplateSlug]: { defaultData: TemplatePropsBySlug[K] };
+} = {
   welcome: {
     defaultData: {
       name: "Nexgen Learner",
@@ -70,16 +72,30 @@ export const templateDataMap: { [K in TemplateSlug]: { defaultData: TemplateProp
       levelLabel: "متوسط",
       accessDurationLabel: "مدى الحياة",
       certificateLabel: "معتمدة",
-      launchUrl: "https://nexgen-academy.com/ar/courses/mastering-technical-analysis",
+      launchUrl:
+        "https://nexgen-academy.com/ar/courses/mastering-technical-analysis",
       launchUrlText: "احصل على الخصم وابدأ الآن",
-      heroImageUrl: "assets/hero-banner.png",
+      heroImageUrl: "https://nexgen-academy.com/images/graph-course-image.png",
       logoUrl: "assets/nexgen-logo.png",
       learnSectionTitle: "ماذا ستتعلم في كورس محلل رسم بياني؟",
-      learnSectionIntro: "تركّز الدورة على المهارات التي تحتاجها لتحليل الشارت واتخاذ قرارات أوضح:",
+      learnSectionIntro:
+        "تركّز الدورة على المهارات التي تحتاجها لتحليل الشارت واتخاذ قرارات أوضح:",
       learnItems: [
-        { index: "01", title: "فهم حركة السعر", description: "تفهم السوق بدل الاعتماد على إشارات عشوائية." },
-        { index: "02", title: "تحديد الدخول والخروج", description: "تحدد نقاط الدخول والخروج بدقة أعلى." },
-        { index: "03", title: "بناء استراتيجية تداول", description: "تبني نظام تداول واضح وقابل للتطبيق." },
+        {
+          index: "01",
+          title: "فهم حركة السعر",
+          description: "تفهم السوق بدل الاعتماد على إشارات عشوائية.",
+        },
+        {
+          index: "02",
+          title: "تحديد الدخول والخروج",
+          description: "تحدد نقاط الدخول والخروج بدقة أعلى.",
+        },
+        {
+          index: "03",
+          title: "بناء استراتيجية تداول",
+          description: "تبني نظام تداول واضح وقابل للتطبيق.",
+        },
       ],
       promoLabel: "عرض خاص للمسجَّلين",
       promoTitle: "خصم 25٪ لفترة محدودة",
@@ -92,7 +108,8 @@ export const templateDataMap: { [K in TemplateSlug]: { defaultData: TemplateProp
       finalCtaButtonText: "اشترك الآن بخصم 25٪",
       browseAllText: "جميع الدورات",
       browseAllUrl: "https://nexgen-academy.com/ar/courses",
-      footerTagline: "أكاديمية متخصّصة في تعليم التداول والتحليل الفني للأسواق المالية.",
+      footerTagline:
+        "أكاديمية متخصّصة في تعليم التداول والتحليل الفني للأسواق المالية.",
       contactEmail: "[email protected]",
       websiteUrl: "https://nexgen-academy.com",
       privacyUrl: "https://nexgen-academy.com/ar/privacy",

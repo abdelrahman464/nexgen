@@ -35,4 +35,7 @@ export function ResetPasswordEmail({
   );
 }
 
+(ResetPasswordEmail as typeof ResetPasswordEmail & { PreviewProps: ResetPasswordEmailProps }).PreviewProps =
+  PreviewProps;
+
 export default ResetPasswordEmail;
