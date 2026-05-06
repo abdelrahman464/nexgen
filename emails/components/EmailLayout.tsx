@@ -34,13 +34,10 @@ export function EmailLayout({
   children,
   dir = "ltr",
   brandName = "Nexgen Academy",
-  topBarLabel,
-  showTopBarLabel = false,
+  logoUrl,
   footerTagline,
   websiteUrl,
   contactEmail,
-  privacyUrl,
-  termsUrl,
   unsubscribeUrl,
   disclaimer,
 }: EmailLayoutProps) {
@@ -48,14 +45,19 @@ export function EmailLayout({
   const finalFooterTagline =
     footerTagline ||
     "Nexgen Academy email communication. Please do not reply to this automated message.";
-  const logoUrl = "https://nexgen-academy.com/images/Logo.png";
+  const finalLogoUrl = logoUrl || "https://nexgen-academy.com/images/Logo.png";
   const iconicLogo = "https://nexgen-academy.com/logos/iconicLogo.png";
+  const privacyUrl = "https://nexgen-academy.com/ar/privacy-policy";
+  const termsUrl = "https://nexgen-academy.com/ar/terms-of-services";
   return (
     <Html lang={isRtl ? "ar" : "en"} dir={dir}>
-      <Head />
+      <Head>
+        <style>{mobileStyles}</style>
+      </Head>
       <Preview>{preview}</Preview>
-      <Body style={body} dir={dir}>
-        <Container style={outerContainer} dir={dir}>
+      <Body className="mobile-body" style={body} dir={dir}>
+        <Section className="desktop-y-padding" style={desktopYSpacer} />
+        <Container className="mobile-container" style={outerContainer} dir={dir}>
           <Section style={headerSection}>
             <table
               role="presentation"
@@ -65,7 +67,7 @@ export function EmailLayout({
               border={0}
             >
               <tr>
-                <td align={"center"}>
+                <td align="center">
                   <table
                     role="presentation"
                     cellPadding={0}
@@ -75,7 +77,7 @@ export function EmailLayout({
                     <tr>
                       <td style={logoIconWrap}>
                         <Img
-                          src={logoUrl}
+                          src={finalLogoUrl}
                           alt={`${brandName} logo`}
                           width="207"
                           height="86"
@@ -88,9 +90,11 @@ export function EmailLayout({
               </tr>
             </table>
           </Section>
-          <Section style={contentSection}>{children}</Section>
+          <Section className="mobile-content" style={contentSection}>
+            {children}
+          </Section>
           <Hr style={divider} />
-          <Section style={footerSection}>
+          <Section className="mobile-footer" style={footerSection}>
             <Img
               src={iconicLogo}
               alt={`${brandName} logo`}
@@ -100,7 +104,7 @@ export function EmailLayout({
             />
             <Text style={footerBrand}>{brandName}</Text>
             <Text style={footerTaglineStyle}>{finalFooterTagline}</Text>
-            {/* {(contactEmail || websiteUrl) && (
+            {(contactEmail || websiteUrl) && (
               <Text style={footerMeta}>
                 {contactEmail ? (
                   <>
@@ -113,7 +117,7 @@ export function EmailLayout({
                 {contactEmail && websiteUrl ? " • " : null}
                 {websiteUrl ? (
                   <Link href={websiteUrl} style={footerLink}>
-                    {websiteUrl.replace(/^https?:\/\//, "")}
+                    {formatDisplayUrl(websiteUrl)}
                   </Link>
                 ) : null}
               </Text>
@@ -138,23 +142,40 @@ export function EmailLayout({
                   </Link>
                 ) : null}
               </Text>
-            )} */}
-            {/* <Text style={footerDisclaimer}>
+            )}
+            <Text style={footerDisclaimer}>
               {disclaimer ||
                 `© ${new Date().getFullYear()} ${brandName}. All rights reserved.`}
-            </Text> */}
+            </Text>
           </Section>
         </Container>
+        <Section className="desktop-y-padding" style={desktopYSpacer} />
       </Body>
     </Html>
   );
 }
 
+function formatDisplayUrl(url: string) {
+  try {
+    const parsedUrl = new URL(url);
+
+    return parsedUrl.host;
+  } catch {
+    return url.replace(/^https?:\/\//, "").split(/[?#]/)[0];
+  }
+}
+
 const body = {
   backgroundColor: "#f1f4f9",
   margin: 0,
-  padding: "24px 12px",
+  padding: 0,
   fontFamily: "'Tajawal','Cairo',Tahoma,Arial,sans-serif",
+};
+
+const desktopYSpacer = {
+  fontSize: "1px",
+  height: "24px",
+  lineHeight: "24px",
 };
 
 const outerContainer = {
@@ -166,39 +187,28 @@ const headerSection = {
   backgroundColor: "#ffffff",
   borderRadius: "14px 14px 0 0",
   borderBottom: "1px solid #eef1f6",
-  // padding: "22px 32px",
 };
 
 const logoIconWrap = { padding: "0 10px 0 0" };
 const logoIcon = { display: "block" };
-const logoText = {
-  fontSize: "18px",
-  fontWeight: 800,
-  color: "#0b1f3a",
-  letterSpacing: "0.2px",
-};
-const topBarMeta = {
-  fontSize: "12px",
-  fontWeight: 500,
-  color: "#7b879b",
-  letterSpacing: "0.4px",
-};
 
 const contentSection = {
   backgroundColor: "#ffffff",
+  boxSizing: "border-box" as const,
   color: "#0b1f3a",
   fontSize: "15px",
   lineHeight: "1.9",
-  padding: "28px 32px",
+  padding: "28px 24px",
 };
 
 const divider = { borderColor: "#1c3158", margin: 0 };
 
 const footerSection = {
   backgroundColor: "#0b1f3a",
+  boxSizing: "border-box" as const,
   borderRadius: "0 0 14px 14px",
   textAlign: "center" as const,
-  padding: "28px 32px",
+  padding: "28px 24px",
 };
 const footerLogo = { display: "inline-block", margin: "0 auto 12px auto" };
 const footerBrand = {
@@ -226,3 +236,63 @@ const footerDisclaimer = {
   lineHeight: "1.8",
   margin: "8px 0 0 0",
 };
+
+const mobileStyles = `
+  @media only screen and (max-width: 600px) {
+    .desktop-y-padding {
+      display: none !important;
+      height: 0 !important;
+      line-height: 0 !important;
+      overflow: hidden !important;
+    }
+    .mobile-container {
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+  }
+  @media only screen and (max-width: 480px) {
+    .mobile-body {
+      padding: 0 !important;
+    }
+    .mobile-container {
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+    .mobile-content {
+      padding: 20px 14px !important;
+    }
+    .mobile-footer {
+      padding: 22px 14px !important;
+    }
+    .mobile-hero {
+      height: auto !important;
+      max-width: 100% !important;
+    }
+    .mobile-h1 {
+      font-size: 24px !important;
+      line-height: 1.4 !important;
+    }
+    .mobile-button {
+      max-width: 260px !important;
+      width: 100% !important;
+    }
+    .mobile-meta-col {
+      display: block !important;
+      width: 100% !important;
+      padding: 0 0 8px 0 !important;
+    }
+    .mobile-meta-card {
+      padding: 12px 10px !important;
+    }
+    .mobile-promo-block {
+      padding: 24px 14px !important;
+    }
+    .mobile-promo-code {
+      font-size: 22px !important;
+      letter-spacing: 2px !important;
+      padding: 12px 14px !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+    }
+  }
+`;

@@ -2,6 +2,10 @@ const Coupon = require('../models/couponModel');
 const factory = require('./handllerFactory');
 const ApiError = require('../utils/apiError');
 
+const getCouponMarketerId = (coupon) => coupon.marketer?._id || coupon.marketer;
+
+const isInstructorCoupon = (coupon) => coupon.marketer?.isInstructor === true;
+
 exports.validateCoupon = async (couponName, marketerId) => {
   const coupon = await Coupon.findOne({ couponName });
   if (!coupon) {
@@ -14,10 +18,13 @@ exports.validateCoupon = async (couponName, marketerId) => {
     return 'coupon-errors.Expired';
   }
   if (!coupon.isAdminCoupon) {
-    const couponMarketerId = coupon.marketer?._id || coupon.marketer;
-    const isInstructorCoupon = coupon.marketer?.isInstructor === true;
+    const couponMarketerId = getCouponMarketerId(coupon);
 
-    if (!isInstructorCoupon && couponMarketerId?.toString() !== marketerId?.toString()) {
+    if (
+      !isInstructorCoupon(coupon) &&
+      (!couponMarketerId ||
+        couponMarketerId.toString() !== marketerId?.toString())
+    ) {
       return 'coupon-errors.Un-Authorized';
     }
   }
@@ -157,13 +164,15 @@ exports.getCouponDetails = async (req, res, next) => {
     }
 
     if (!coupon.isAdminCoupon) {
-      const couponMarketerId = coupon.marketer?._id || coupon.marketer;
-      const isInstructorCoupon = coupon.marketer?.isInstructor === true;
+      const couponMarketerId = getCouponMarketerId(coupon);
+      const userId = req.user?._id?.toString();
+      const userInvitorId = req.user?.invitor?.toString();
 
       if (
-        !isInstructorCoupon &&
-        couponMarketerId?.toString() !== req.user._id.toString() &&
-        couponMarketerId?.toString() !== req.user.invitor?.toString()
+        !isInstructorCoupon(coupon) &&
+        (!couponMarketerId ||
+          (couponMarketerId.toString() !== userId &&
+            couponMarketerId.toString() !== userInvitorId))
       ) {
         return next(new ApiError(res.__('coupon-errors.Un-Authorized'), 404));
       }

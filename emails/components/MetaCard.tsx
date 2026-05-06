@@ -8,7 +8,7 @@ type MetaCardProps = {
 
 export function MetaCard({ label, value }: MetaCardProps) {
   return (
-    <div style={card}>
+    <div className="mobile-meta-card" style={card}>
       <Text style={labelStyle}>{label}</Text>
       <Text style={valueStyle}>{value}</Text>
     </div>
@@ -19,8 +19,10 @@ const card = {
   backgroundColor: "#f6f9ff",
   border: "1px solid #e3edfb",
   borderRadius: "10px",
+  boxSizing: "border-box" as const,
   textAlign: "center" as const,
-  padding: "14px 10px",
+  padding: "14px 8px",
+  width: "100%",
 };
 
 const labelStyle = {

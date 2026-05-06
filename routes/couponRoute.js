@@ -12,7 +12,7 @@ const router = express.Router();
 //@actor: user
 router.get(
   "/getCouponDetails/:couponName",
-  authServices.protect,
+  authServices.optionalAuth,
   CouponService.getCouponDetails
 );
 router

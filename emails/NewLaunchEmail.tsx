@@ -2,7 +2,6 @@ import {
   Column,
   Heading,
   Img,
-  Link,
   Row,
   Section,
   Text,
@@ -24,7 +23,7 @@ export type LaunchFeature = {
   description: string;
 };
 
-/** Primary CTA: course checkout with coupon (+ UTM via `withUtm`). */
+/** Primary CTA fallback: course checkout with coupon (+ UTM via `withUtm`). */
 const LAUNCH_EMAIL_CTA =
   "https://nexgen-academy.com/ar/courses/mastering-technical-analysis?coupon=NEXGEN25";
 
@@ -38,9 +37,11 @@ export type NewLaunchEmailProps = {
   eyebrowLabel: string;
   title: string;
   subtitle: string;
+  offerLeadText: string;
   introText: string;
   rating: string;
   reviewCountText: string;
+  socialProofText: string;
   levelLabel: string;
   accessDurationLabel: string;
   certificateLabel: string;
@@ -75,68 +76,71 @@ export const PreviewProps: NewLaunchEmailProps = {
   launchType: "course",
   pageTitle: "كورس تحليل الرسم البياني — NexGen Academy",
   preheader:
-    "دورة جديدة على NexGen Academy: تحليل الرسم البياني بخطة واضحة. خصم 25٪ لفترة محدودة بكود NEXGEN25.",
+    "كورس تحليل الرسم البياني من NexGen Academy متاح الآن بخصم 25% لفترة محدودة بكود NEXGEN25.",
   topBarLabel: "إعلان كورس جديد",
   eyebrowLabel: "دورة جديدة • متاحة الآن",
   title: "هل بتفتح صفقات وبتخسر بدون ما تفهم السبب؟",
-  subtitle: "المشكلة غالباً مش في السوق… بل في طريقة تحليلك.",
+  subtitle:
+    "كورس تحليل الرسم البياني من NexGen Academy هيساعدك تفهم السوق بشكل مختلف تمامًا.",
+  offerLeadText: "متاح الآن بخصم 25% لفترة محدودة 👇",
   introText:
-    "لو عندك أساسيات التداول لكن لسه بتدخل صفقات بدون خطة واضحة، فالمشكلة مش في السوق — المشكلة في قراءة الشارت.",
+    "لو عندك أساسيات التداول لكن لسه بتدخل صفقات بدون خطة واضحة، فالمشكلة مش في السوق — المشكلة في قراءة الشارت. الكورس ده هيساعدك تبني طريقة تفكير واضحة قبل أي صفقة.",
   rating: "4.9",
   reviewCountText: "(46 تقييم)",
+  socialProofText: "أكثر من 40 متداول قيّموا الكورس بـ 4.9/5 ⭐",
   levelLabel: "متوسط",
   accessDurationLabel: "مدى الحياة",
   certificateLabel: "معتمدة",
   launchUrl: LAUNCH_EMAIL_CTA,
   launchUrlText: "احصل على الخصم وابدأ الآن",
   heroImageUrl: "https://nexgen-academy.com/images/graph-course-image.png",
-  logoUrl: "assets/nexgen-logo.png",
+  logoUrl: "https://nexgen-academy.com/images/Logo.png",
   learnSectionTitle: "ماذا ستتعلم في كورس محلل رسم بياني؟",
   learnSectionIntro:
     "تركّز الدورة على المهارات التي تحتاجها لتحليل الشارت واتخاذ قرارات أوضح:",
   learnItems: [
     {
       index: "01",
-      title: "فهم حركة السعر",
-      description: "تفهم السوق بدل الاعتماد على إشارات عشوائية.",
+      title: "تحدد الدخول والخروج",
+      description: "قبل ما تدخل الصفقة.",
     },
     {
       index: "02",
-      title: "تحديد الدخول والخروج",
-      description: "تحدد نقاط الدخول والخروج بدقة أعلى.",
+      title: "تبني خطة تداول",
+      description: "تقلل القرارات العاطفية.",
     },
     {
       index: "03",
-      title: "بناء استراتيجية تداول",
-      description: "تبني نظام تداول واضح وقابل للتطبيق.",
+      title: "تفهم حركة السعر",
+      description: "بدون الاعتماد على إشارات.",
     },
   ],
   promoLabel: "عرض خاص للمسجَّلين",
-  promoTitle: "خصم 25٪ لفترة محدودة",
-  promoText: "عرض خاص للمسجّلين — استخدم الكود للحصول على خصم فوري.",
+  promoTitle: "خصم 25% لفترة محدودة",
+  promoText:
+    "يشمل:\n✔ وصول مدى الحياة\n✔ شهادة معتمدة\n✔ تطبيقات عملية على السوق\n✔ خصم 25% مطبّق عند الدفع",
   promoCode: "NEXGEN25",
-  promoFooterText: "ينتهي خلال 48 ساعة • استخدمه الآن قبل انتهاء العرض",
+  promoFooterText: "عرض خاص لفترة محدودة",
   finalCtaTitle: "ابدأ رحلة احتراف التداول اليوم",
   finalCtaText:
     "لا تُضِع مزيداً من الوقت في المحاولات العشوائية — انضم إلى من أتقن قراءة الأسواق المالية بمنهجية واضحة.",
-  finalCtaButtonText: "اشترك الآن بخصم 25٪",
+  finalCtaButtonText: "اشترك الآن بخصم 25%",
   browseAllText: "جميع الدورات",
   browseAllUrl: DEFAULT_BROWSE_COURSES,
   footerTagline:
     "أكاديمية متخصّصة في تعليم التداول والتحليل الفني للأسواق المالية.",
-  contactEmail: "[email protected]",
+  contactEmail: "info@nexgen-academy.com",
   websiteUrl: "https://nexgen-academy.com",
   privacyUrl: "https://nexgen-academy.com/ar/privacy",
   termsUrl: "https://nexgen-academy.com/ar/terms",
-  unsubscribeUrl: "{{unsubscribe_url}}",
+  unsubscribeUrl: "{{ unsubscribe }}",
   disclaimer:
     "هذه الرسالة جزء من اشتراكك في NexGen Academy. التداول في الأسواق المالية ينطوي على مخاطر، والمحتوى المُقدَّم لأغراض تعليمية فقط ولا يُعدّ نصيحة استثمارية.",
   copyrightText: "© 2026 NexGen Academy. جميع الحقوق محفوظة.",
 };
 
 export function NewLaunchEmail(props: NewLaunchEmailProps) {
-  const ctaUrl = withUtm(LAUNCH_EMAIL_CTA);
-  const browseCoursesUrl = withUtm(props.browseAllUrl || DEFAULT_BROWSE_COURSES);
+  const ctaUrl = withUtm(props.launchUrl || LAUNCH_EMAIL_CTA);
   const websiteUrl = withUtm(props.websiteUrl);
   const privacyUrl = withUtm(props.privacyUrl);
   const termsUrl = withUtm(props.termsUrl);
@@ -158,6 +162,7 @@ export function NewLaunchEmail(props: NewLaunchEmailProps) {
     >
       <Section style={heroWrap}>
         <Img
+          className="mobile-hero"
           src={props.heroImageUrl}
           alt={props.pageTitle}
           width="536"
@@ -168,14 +173,12 @@ export function NewLaunchEmail(props: NewLaunchEmailProps) {
 
       <EmailSection align="right">
         <Eyebrow>{props.eyebrowLabel}</Eyebrow>
-        <Heading as="h1" style={h1}>
+        <Heading as="h1" className="mobile-h1" style={h1}>
           {props.title}
         </Heading>
         <Text style={subhead}>{props.subtitle}</Text>
-        <Text style={rating}>
-          {props.rating} <span style={stars}>★★★★★</span>{" "}
-          <span style={ratingMeta}>{props.reviewCountText}</span>
-        </Text>
+        <Text style={offerLead}>{props.offerLeadText}</Text>
+        <Text style={socialProof}>{props.socialProofText}</Text>
       </EmailSection>
 
       <EmailSection align="right" compact>
@@ -184,13 +187,13 @@ export function NewLaunchEmail(props: NewLaunchEmailProps) {
 
       <EmailSection compact>
         <Row>
-          <Column width="33.33%" style={metaCol}>
+          <Column width="33.33%" className="mobile-meta-col" style={metaCol}>
             <MetaCard label="المستوى" value={props.levelLabel} />
           </Column>
-          <Column width="33.33%" style={metaCol}>
+          <Column width="33.33%" className="mobile-meta-col" style={metaCol}>
             <MetaCard label="مدة الوصول" value={props.accessDurationLabel} />
           </Column>
-          <Column width="33.33%" style={metaCol}>
+          <Column width="33.33%" className="mobile-meta-col" style={metaCol}>
             <MetaCard label="الشهادة" value={props.certificateLabel} />
           </Column>
         </Row>
@@ -230,12 +233,6 @@ export function NewLaunchEmail(props: NewLaunchEmailProps) {
         <Button href={ctaUrl} width={300}>
           {props.finalCtaButtonText}
         </Button>
-        <Text style={browseRow}>
-          أو تصفّح{" "}
-          <Link href={browseCoursesUrl} style={browseLink}>
-            {props.browseAllText}
-          </Link>
-        </Text>
       </EmailSection>
     </EmailLayout>
   );
@@ -274,6 +271,7 @@ const heroWrap = { paddingBottom: "8px" };
 const heroImage: React.CSSProperties = {
   width: "100%",
   maxWidth: "536px",
+  height: "auto",
   borderRadius: "8px",
   display: "block",
   objectFit: "cover",
@@ -293,11 +291,18 @@ const h2 = {
   color: "#0b1f3a",
 };
 const subhead = {
-  margin: "0 0 14px 0",
+  margin: "0 0 10px 0",
   fontSize: "17px",
   lineHeight: "1.9",
   fontWeight: 500,
   color: "#3a4a64",
+};
+const offerLead = {
+  margin: "0 0 14px 0",
+  fontSize: "15px",
+  lineHeight: "1.8",
+  fontWeight: 700,
+  color: "#1e7ff6",
 };
 const bodyText = {
   margin: 0,
@@ -313,10 +318,10 @@ const rating = {
 };
 const stars = { color: "#f5b301", letterSpacing: "1px", margin: "0 8px" };
 const ratingMeta = { fontWeight: 400, color: "#7b879b", fontSize: "13px" };
-const metaCol = { padding: "0 4px" };
-const browseRow = { marginTop: "14px", fontSize: "12.5px", color: "#7b879b" };
-const browseLink = {
-  color: "#1e7ff6",
-  textDecoration: "none",
-  fontWeight: 700,
+const socialProof = {
+  margin: "6px 0 0 0",
+  fontSize: "13.5px",
+  lineHeight: "1.8",
+  color: "#3a4a64",
 };
+const metaCol = { boxSizing: "border-box" as const, padding: "0 3px" };

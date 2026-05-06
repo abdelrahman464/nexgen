@@ -9,7 +9,12 @@ type ButtonProps = {
 
 export function Button({ href, children, width = 280 }: ButtonProps) {
   return (
-    <Link href={href} dir="auto" style={{ ...button, width: `${width}px` }}>
+    <Link
+      href={href}
+      dir="auto"
+      className="mobile-button"
+      style={{ ...button, maxWidth: `${width}px` }}
+    >
       <span dir="auto" style={buttonText}>
         {children}
       </span>
@@ -20,6 +25,7 @@ export function Button({ href, children, width = 280 }: ButtonProps) {
 const button = {
   backgroundColor: "#1e7ff6",
   borderRadius: "10px",
+  boxSizing: "border-box" as const,
   color: "#ffffff",
   display: "inline-block",
   fontSize: "16px",
@@ -31,6 +37,7 @@ const button = {
   letterSpacing: "0.3px",
   direction: "inherit" as const,
   unicodeBidi: "isolate" as const,
+  width: "100%",
 };
 
 const buttonText = {
