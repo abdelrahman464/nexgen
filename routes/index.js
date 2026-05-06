@@ -70,9 +70,6 @@ const mountRoutes = (app) => {
 
   app.use("/api/v1/contactInfo", contactRoute);
 
-  app.use("/api/v1/analytics", analyticsRoute);
-
-  app.use("/api/v1/systemReviews", systemReviewRoute);
   app.use("/api/v1/coupons", couponRoute);
   app.use("/api/v1/marketerRating", marketerRateingRoute);
   app.use("/api/v1/leaderBoard", leaderBoardRoute);

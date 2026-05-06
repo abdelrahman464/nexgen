@@ -894,8 +894,10 @@ exports.getCertificate = asyncHandler(async (req, res, next) => {
 // Middleware to get certificate link by courseId
 exports.getCertificateLink = asyncHandler(async (req, res, next) => {
   const { courseId } = req.params;
-  // const userId = req.user._id; // Assuming user is authenticated
-  const userId = '66447ad7a7957a07c0ae9e69'; // Assuming user is authenticated
+  const userId = req.user?._id;
+  if (!userId) {
+    return next(new ApiError('Authentication required', 401));
+  }
 
   // Validate courseId
   if (!mongoose.Types.ObjectId.isValid(courseId)) {

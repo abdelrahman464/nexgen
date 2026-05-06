@@ -148,15 +148,19 @@ exports.createCourseValidator = [
     .optional()
     .isArray()
     .withMessage('accessibleCourses must be an array of course ids')
-    .custom((coursesIds) => {
+    .custom(async (coursesIds) => {
       if (coursesIds.length > 0) {
-        coursesIds.forEach((courseId) => {
-          if (!Course.findById(courseId)) {
-            return Promise.reject(
-              new ApiError(`Course Not Found ${courseId}`, 404),
-            );
-          }
-        });
+        await Promise.all(
+          coursesIds.map(async (courseId) => {
+            const course = await Course.findById(courseId).select('_id').lean();
+            if (!course) {
+              return Promise.reject(
+                new ApiError(`Course Not Found ${courseId}`, 404),
+              );
+            }
+            return true;
+          }),
+        );
       }
       return true;
     }),

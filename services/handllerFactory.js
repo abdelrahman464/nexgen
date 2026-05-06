@@ -27,11 +27,11 @@ exports.updateOne = (Model) => async (req, res, next) => {
       .json({ status: `updated successfully`, data: localizedDocument });
   } catch (error) {
     console.error('Error updating document:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return next(error);
   }
 };
 
-exports.createOne = (Model) => async (req, res) => {
+exports.createOne = (Model) => async (req, res, next) => {
   try {
     const document = await Model.create(req.body);
     const localizedDocument = Model.schema.methods.toJSONLocalizedOnly(
@@ -43,7 +43,7 @@ exports.createOne = (Model) => async (req, res) => {
       .json({ status: `created successfully`, data: localizedDocument });
   } catch (error) {
     console.error('Error creating document:', error);
-    return res.status(500).json({ error: error.message });
+    return next(error);
   }
 };
 
@@ -80,7 +80,7 @@ exports.getOne = (Model, populationOpt) => async (req, res, next) => {
     return res.status(200).json({ data: localizedResult });
   } catch (error) {
     console.error('Error fetching document:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return next(error);
   }
 };
 
@@ -121,13 +121,13 @@ exports.getOneBySlug = (Model, populationOpt) => async (req, res, next) => {
     return res.status(200).json({ status: 'success', data: localizedResult });
   } catch (error) {
     console.error('Error fetching document by slug:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return next(error);
   }
 };
 
 exports.getALl =
   (Model, modelName = '', populationOpt) =>
-  async (req, res) => {
+  async (req, res, next) => {
     try {
       const orderedModelNames = ['Course', 'Package', 'CoursePackage'];
       const defaultSort = orderedModelNames.includes(modelName)
@@ -198,10 +198,7 @@ exports.getALl =
       });
     } catch (error) {
       console.error('Error fetching documents:', error);
-      res.status(500).json({
-        error: 'Internal server error',
-        message: error.message,
-      });
+      return next(error);
     }
   };
 
@@ -217,6 +214,6 @@ exports.deleteOne = (Model) => async (req, res, next) => {
     res.status(204).send();
   } catch (error) {
     console.error('Error deleting document:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return next(error);
   }
 };
