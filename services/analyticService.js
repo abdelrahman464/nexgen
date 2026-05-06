@@ -3,6 +3,7 @@ const sharp = require('sharp');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs/promises');
 const path = require('path');
+const mongoose = require('mongoose');
 const ApiError = require('../utils/apiError');
 const Analytic = require('../models/analyticsModel');
 const CourseProgress = require('../models/courseProgressModel');
@@ -12,6 +13,7 @@ const Lesson = require('../models/lessonModel');
 const _ = require('lodash');
 const { checkUserSubscription } = require('./userSubscriptionService');
 const Course = require('../models/courseModel');
+const User = require('../models/userModel');
 
 exports.uploadMedia = uploadMixOfFiles([
   {
@@ -99,11 +101,24 @@ exports.checkUserSubscription = async (req, res, next) => {
     let course = null;
     const { lesson } = req.query;
     if (lesson) {
+      if (!mongoose.isValidObjectId(lesson)) {
+        return next(new ApiError('Invalid lesson id', 400));
+      }
       const courseDoc = await Lesson.findOne({ _id: lesson });
       if (!courseDoc) return next(new ApiError('Lesson not found', 404));
       course = courseDoc.course._id;
+    } else if (req.query.course) {
+      if (!mongoose.isValidObjectId(req.query.course)) {
+        return next(new ApiError('Invalid course id', 400));
+      }
+      course = req.query.course;
+    } else if (req.body.course) {
+      course = req.body.course;
     }
-    await checkUserSubscription(req.user._id, course);
+    if (!course) {
+      return next(new ApiError('course is required', 400));
+    }
+    await checkUserSubscription(req.user, course);
     return next();
   } catch (err) {
     return next(new ApiError(err.message, 500));
@@ -111,23 +126,70 @@ exports.checkUserSubscription = async (req, res, next) => {
 };
 //----- filters
 //3
-exports.filterOnUserRole = (req, res, next) => {
-  if (!req.query.course) {
+exports.filterOnUserRole = asyncHandler(async (req, res, next) => {
+  const { course, forceRole } = req.query;
+
+  if (!course) {
     return next(new ApiError('course is required', 400));
   }
-  req.filterObj = { course: req.query.course };
-  //initialize the new query object  ,i will use it to remove the 'asMarketer' key from the query and 'isPassed' key then => req.query = newQuery ,
-  //cause req.query is passed in apiFeatures class and i don't want to pass the 'asMarketer' key to the apiFeatures class
-  const newQuery = { ...req.query };
-  //1-if this key exists in the query then the marketer is trying to get his own analytics
-  if (req.user.isMarketer && !req.user.isInstructor) {
-    req.filterObj.marketer = req.user._id;
-  } else if (!req.user.isMarketer && !req.user.isInstructor) {
-    req.filterObj.user = req.user._id;
+
+  if (!mongoose.isValidObjectId(course)) {
+    return next(new ApiError('Invalid course id', 400));
   }
-  req.newQuery = newQuery;
+
+  if (forceRole && !['student', 'marketer', 'instructor'].includes(forceRole)) {
+    return next(new ApiError('Invalid forceRole', 400));
+  }
+
+  req.filterObj = { course };
+  req.newQuery = { ...req.query };
+  delete req.newQuery.course;
+  delete req.newQuery.forceRole;
+
+  const applyStudentFilter = () => {
+    req.filterObj.user = req.user._id;
+    return next();
+  };
+
+  const applyMarketerFilter = async () => {
+    if (!req.user.isMarketer) {
+      return next(new ApiError('You are not authorized as marketer', 403));
+    }
+
+    const children = await User.find({ invitor: req.user._id }).select('_id');
+    req.filterObj.user = { $in: children.map((child) => child._id) };
+    return next();
+  };
+
+  if (forceRole === 'student') return applyStudentFilter();
+  if (forceRole === 'marketer') return applyMarketerFilter();
+  if (!forceRole && !req.user.isInstructor && !req.user.isMarketer) {
+    return applyStudentFilter();
+  }
+
+  const courseDoc = await Course.findById(course)
+    .select('_id title instructor')
+    .populate('instructor', 'name email');
+
+  if (!courseDoc) {
+    return next(new ApiError('Course not found', 404));
+  }
+
+  const courseInstructor = courseDoc.instructor;
+  const courseInstructorId = courseInstructor?._id || courseInstructor;
+  const isCourseInstructor =
+    courseInstructorId?.toString() === req.user._id.toString();
+
+  if (!isCourseInstructor) {
+    if (!forceRole && req.user.isMarketer) {
+      return applyMarketerFilter();
+    }
+
+    return next(new ApiError('You are not the instructor of this course', 403));
+  }
+
   return next();
-};
+});
 //1
 exports.filterStatus = async (req, res, next) => {
   //initialize the filter object if not initialized in the previous middleware
@@ -136,12 +198,16 @@ exports.filterStatus = async (req, res, next) => {
     req.newQuery = { ...req.query };
   }
 
-  if (req.query.isPassed) {
-    if (req.query.isPassed === '1' || req.query.isPassed === 'true')
-      req.filterObj.isPassed = true;
-    else if (req.query.isPassed === '0' || req.query.isPassed === 'false')
-      req.filterObj.isPassed = false;
-    else return next(new ApiError('Invalid query', 400));
+  const parseBooleanQuery = (value) => {
+    if (value === '1' || value === 'true' || value === true) return true;
+    if (value === '0' || value === 'false' || value === false) return false;
+    return null;
+  };
+
+  if (req.query.isPassed !== undefined) {
+    const isPassed = parseBooleanQuery(req.query.isPassed);
+    if (isPassed === null) return next(new ApiError('Invalid query', 400));
+    req.filterObj.isPassed = isPassed;
     //remove the key from the query
     delete req.newQuery.isPassed;
   }
@@ -154,8 +220,10 @@ exports.filterStatus = async (req, res, next) => {
   //   req.filterObj.lesson = req.query.lesson;
   //   delete req.newQuery.lesson;
   // }
-  if (req.query.isSeen) {
-    req.filterObj.isSeen = req.query.isSeen === '0' ? false : true;
+  if (req.query.isSeen !== undefined) {
+    const isSeen = parseBooleanQuery(req.query.isSeen);
+    if (isSeen === null) return next(new ApiError('Invalid query', 400));
+    req.filterObj.isSeen = isSeen;
     delete req.newQuery.isSeen;
   }
   req.query = req.newQuery;
@@ -165,6 +233,9 @@ exports.filterStatus = async (req, res, next) => {
 exports.assignIds = (req, res, next) => {
   req.body.user = req.user._id;
   req.body.marketer = req.user.coach || null;
+  if (!req.body.course && req.query.course) {
+    req.body.course = req.query.course;
+  }
   next();
 };
 

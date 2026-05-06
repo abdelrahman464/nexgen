@@ -4,6 +4,8 @@ const ApiError = require("../utils/apiError");
 // Configure multer for image, PDF, and Word document upload
 const multerOptions = () => {
   const multerStorage = multer.memoryStorage();
+  const maxFileSize =
+    Number(process.env.MAX_UPLOAD_FILE_SIZE) || 20 * 1024 * 1024;
 
   const multerFilter = (req, file, cb) => {
     // Allowed MIME types
@@ -24,7 +26,11 @@ const multerOptions = () => {
     }
   };
 
-  return multer({ storage: multerStorage, fileFilter: multerFilter });
+  return multer({
+    storage: multerStorage,
+    fileFilter: multerFilter,
+    limits: { fileSize: maxFileSize },
+  });
 };
 
 // Upload a single file field
