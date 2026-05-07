@@ -15,4 +15,10 @@ export default () => ({
     secret: process.env.JWT_SECRET_KEY,
     expiresIn: process.env.JWT_EXPIRE_TIME,
   },
+  ai: {
+    openAiApiKey: process.env.OPENAI_API_KEY,
+    vectorStoreId: process.env.OPENAI_VECTOR_STORE_ID,
+    chatModel: process.env.AI_CHAT_MODEL || 'gpt-5.1',
+    syncLimit: Number(process.env.AI_KNOWLEDGE_SYNC_LIMIT) || 25,
+  },
 });

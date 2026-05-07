@@ -56,7 +56,6 @@ const aiKnowledgeSyncLogSchema = new mongoose.Schema(
 aiKnowledgeSyncLogSchema.index({ createdAt: -1 });
 aiKnowledgeSyncLogSchema.index({ mode: 1, action: 1, status: 1 });
 
-module.exports = mongoose.model(
-  'AiKnowledgeSyncLog',
-  aiKnowledgeSyncLogSchema,
-);
+module.exports =
+  mongoose.models.AiKnowledgeSyncLog ||
+  mongoose.model('AiKnowledgeSyncLog', aiKnowledgeSyncLogSchema);

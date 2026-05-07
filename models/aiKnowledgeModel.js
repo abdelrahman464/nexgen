@@ -88,4 +88,5 @@ aiKnowledgeSchema.pre('save', function (next) {
   next();
 });
 
-module.exports = mongoose.model('AiKnowledge', aiKnowledgeSchema);
+module.exports =
+  mongoose.models.AiKnowledge || mongoose.model('AiKnowledge', aiKnowledgeSchema);

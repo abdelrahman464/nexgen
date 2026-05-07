@@ -353,7 +353,7 @@ Checklist:
 Task 7 notes for later cleanup:
 - No intentional frontend path or response-shape changes were made.
 - Presence remains process-local; Redis/shared presence is deferred.
-- AI chat is still Task 8.
+- AI chat moved in Task 8.
 - Legacy JS files remain until Task 9 cleanup, but migrated model exports now reuse `mongoose.models.*`.
 
 ## Task 8: AI And Knowledge Features
@@ -366,13 +366,29 @@ Order:
 3. Knowledge sync logs.
 4. Vector/file sync jobs.
 
-Flow:
-1. Read old AI routes, services, models, OpenAI usage, subscription checks, and knowledge sync behavior.
-2. Create an isolated AI module with OpenAI config and provider services.
-3. Ensure migrated catalog/order/subscription services are used for access checks.
-4. Add smoke tests for protected chat creation, knowledge upload/sync request, and failure logging.
-5. Update `FRONT_CHANGES.md` for API cleanup.
-6. Run tests, TypeScript build, review diff, and commit.
+Checklist:
+- [x] Read old AI routes, services, models, OpenAI usage, user ID verification flow, and sync behavior.
+- [x] Confirm paths, auth rules, response shapes, collections, and environment keys.
+- [x] Add schemas with explicit collection names: `aichatsessions`, `aiknowledges`, and `aiknowledgesynclogs`.
+- [x] Patch matching legacy model exports to reuse `mongoose.models.*` while legacy routes remain mounted.
+- [x] Add DTOs and validation for chat, sessions, knowledge CRUD, sync actions, and ID document admin actions.
+- [x] Add `OpenAiProviderService` for chat, vector store sync, file deletion, and ID document vision verification.
+- [x] Add `AiChatService` without Express `req/res`, preserving protected sessions and optional-auth guest chat.
+- [x] Add `AiKnowledgeService` for CRUD, status filtering, sync-selected, sync-pending, retry-failed, full-rebuild, vector file deletion, and sync logs.
+- [x] Add `IdentityVerificationService` for ID document upload, AI verification, duplicate ID-number checks, and manual admin action.
+- [x] Add controllers with JWT/optional-auth/role guards and upload interceptors.
+- [x] Keep paths unchanged: `/api/v1/ai-chat`, `/api/v1/ai-knowledge`, and `/api/v1/users/idDocument/*`.
+- [x] Preserve current AI chat response fields: `chatId`, `guestKey`, `answer`, `clarifyingQuestion`, `recommendations`, and `handoff`.
+- [x] Preserve AI knowledge filters and sync action names.
+- [x] Add sync/failure logging tests with OpenAI calls mocked.
+- [x] Update `FRONT_CHANGES.md` only if API behavior changes.
+- [x] Run `npm run build`, `npm test`, `npm run email:check`, and `node --check` for touched legacy AI model files.
+- [x] Review diff and commit.
+
+Task 8 notes:
+- [x] Nest rate limiting is implemented as a route-local in-memory limiter to avoid adding a dependency during this task.
+- [x] OpenAI network calls are isolated behind `OpenAiProviderService` and mocked in tests.
+- [x] No frontend path or response-shape changes were intended.
 
 ## Task 9: Cleanup And Cutover
 
