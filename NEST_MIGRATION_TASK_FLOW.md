@@ -290,13 +290,34 @@ Order:
 5. Marketer rating.
 6. Leaderboard.
 
-Flow:
-1. Read old marketing routes, services, models, validators, cron dependencies, and order dependencies.
-2. Convert monthly reset cron logic to `@nestjs/schedule`.
-3. Preserve current commission and profit calculations unless tests support refactoring.
-4. Add tests for invitation tracking, invoice generation, profit reset, and analytics totals.
-5. Update `FRONT_CHANGES.md` for API cleanup.
-6. Run tests, TypeScript build, review diff, and commit.
+Checklist:
+- [x] Read old marketing routes, services, models, validators, cron dependencies, and order dependencies.
+- [x] Add `MarketingRevenueModule` after `CommerceModule`.
+- [x] Register explicit collection names: `marketinglogs`, `instructorprofits`, `invitationlinkanalytics`, `marketerratings`, and `leaderboards`.
+- [x] Patch matching legacy model files to reuse existing Mongoose models while legacy routes remain mounted.
+- [x] Migrate `/api/v1/marketingAnalytics`.
+- [x] Migrate `/api/v1/marketing`.
+- [x] Migrate `/api/v1/instructorProfits`.
+- [x] Migrate `/api/v1/marketingInvoices`.
+- [x] Migrate `/api/v1/marketerRating`.
+- [x] Migrate `/api/v1/leaderBoard`.
+- [x] Migrate deferred user-marketing routes from Task 3.
+- [x] Convert validators into DTOs and pipes.
+- [x] Convert monthly reset cron logic to `@nestjs/schedule`.
+- [x] Preserve current commission and profit calculations unless tests support refactoring.
+- [x] Fix monthly reset async/default-percentage bugs during migration.
+- [x] Fix wallet invoice status update to mutate `walletInvoices`.
+- [x] Add smoke tests for invitation tracking, invoice generation, profit reset, ratings, leaderboard, deferred user marketing, and analytics totals.
+- [x] Update `FRONT_CHANGES.md` only for frontend-impacting API changes.
+- [x] Run tests, TypeScript build, email check, review diff, and commit.
+
+Progress:
+- [x] Marketing analytics.
+- [x] Marketing core.
+- [x] Instructor profits.
+- [x] Marketing invoices.
+- [x] Marketer rating.
+- [x] Leaderboard.
 
 ## Task 7: Community, Chat, And Realtime
 

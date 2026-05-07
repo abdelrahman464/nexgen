@@ -53,6 +53,6 @@ leaderBoardSchema.pre(/^find/, function (next) {
   next();
 });
 
-const LeaderBoard = mongoose.model("LeaderBoard", leaderBoardSchema);
+const LeaderBoard = mongoose.models.LeaderBoard || mongoose.model("LeaderBoard", leaderBoardSchema);
 
 module.exports = LeaderBoard;

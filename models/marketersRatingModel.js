@@ -73,7 +73,7 @@ marketersRatingSchema.pre(/^find/, function (next) {
 //   await this.constructor.calcAverageRatingsAndQuantity(this.course._id);
 // });
 
-const MarketerRatingModel = mongoose.model(
+const MarketerRatingModel = mongoose.models.MarketerRating || mongoose.model(
   "MarketerRating",
   marketersRatingSchema
 );

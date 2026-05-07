@@ -18,7 +18,7 @@ const invitationLinkAnalyticsSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const InvitationLinkAnalytics = mongoose.model(
+const InvitationLinkAnalytics = mongoose.models.InvitationLinkAnalytics || mongoose.model(
   "InvitationLinkAnalytics",
   invitationLinkAnalyticsSchema
 );

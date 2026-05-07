@@ -182,6 +182,6 @@ MarketingLogsSchema.pre("save", function (next) {
   next();
 });
 
-const MarketingLog = mongoose.model("MarketingLogs", MarketingLogsSchema);
+const MarketingLog = mongoose.models.MarketingLogs || mongoose.model("MarketingLogs", MarketingLogsSchema);
 
 module.exports = MarketingLog;

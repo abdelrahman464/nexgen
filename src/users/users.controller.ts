@@ -9,6 +9,7 @@ import { TokenService } from '../common/services/token.service';
 import { createMulterOptions } from '../common/upload/upload.helper';
 import { ChangePasswordDto, CreateUserDto, UpdateMeDto, UpdateUserDto } from './dto/user.dto';
 import { UserUploadFiles, UsersService } from './users.service';
+import { EmailMarketingQueryDto } from '../marketing-revenue/dto/marketing-revenue.dto';
 
 const userUploadFields = [
   { name: 'profileImg', maxCount: 1 },
@@ -65,8 +66,24 @@ export class UsersController {
   }
 
   @Put('moveOneUserToAnother')
-  passMoveOneUserToAnotherToLegacy(@Next() next: Function) {
-    return next();
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  moveOneUserToAnother(@Body() body: Record<string, any>) {
+    return this.users.moveOneUserToAnother(body);
+  }
+
+  @Post('email-marketing/query')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  queryEmailMarketingUsers(@Body() body: EmailMarketingQueryDto) {
+    return this.users.queryEmailMarketingUsers(body);
+  }
+
+  @Get('instructors/withBelongings')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  getAllInstructorsWithBelongings() {
+    return this.users.getAllInstructorsWithBelongings();
   }
 
   @Put('push-notifications')

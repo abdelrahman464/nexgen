@@ -79,7 +79,7 @@ InstructorProfitsSchema.pre(/^find/, function(next){
     this.populate({ path: "commissions.marketer", select: "name email profileImg" })
   next();
 });
-const InstructorProfit = mongoose.model(
+const InstructorProfit = mongoose.models.InstructorProfits || mongoose.model(
   "InstructorProfits",
   InstructorProfitsSchema
 );
