@@ -11,17 +11,22 @@ import { createMulterOptions } from '../common/upload/upload.helper';
 import {
   CreateCourseDto,
   CreateCoursePackageDto,
+  CreateAnalyticDto,
+  CreateExamDto,
   CreateLessonDto,
   CreatePackageDto,
   CreateSectionDto,
   ReorderItemsDto,
+  SubmitAnswersDto,
+  UpdateAnalyticDto,
   UpdateCourseDto,
   UpdateCoursePackageDto,
+  UpdateExamDto,
   UpdateLessonDto,
   UpdatePackageDto,
   UpdateSectionDto,
 } from './dto/learning-catalog.dto';
-import { LearningCatalogService, LessonUploadFiles } from './learning-catalog.service';
+import { AnalyticsUploadFiles, ExamUploadFiles, LearningCatalogService, LessonUploadFiles } from './learning-catalog.service';
 
 @Controller('packages')
 export class PackagesController {
@@ -352,5 +357,192 @@ export class LessonsController {
   @UseGuards(JwtAuthGuard)
   delete(@Param('id', ParseObjectIdPipe) id: string, @CurrentUser() user: any) {
     return this.catalog.deleteLesson(id, user);
+  }
+}
+
+@Controller('exams')
+export class ExamsController {
+  constructor(private readonly catalog: LearningCatalogService) {}
+
+  @Get('courseProgress/:courseId/:userId')
+  @UseGuards(JwtAuthGuard)
+  getCourseProgress(@Param('courseId', ParseObjectIdPipe) courseId: string, @Param('userId', ParseObjectIdPipe) userId: string) {
+    return this.catalog.getProgressPerformance(courseId, userId);
+  }
+
+  @Get('getLessonPerformance/:lessonId/:userId')
+  @UseGuards(JwtAuthGuard)
+  getLessonPerformance(@Param('lessonId', ParseObjectIdPipe) lessonId: string, @Param('userId', ParseObjectIdPipe) userId: string) {
+    return this.catalog.getLessonPerformance(lessonId, userId);
+  }
+
+  @Get('getCoursePerformance/:courseId/:userId')
+  @UseGuards(JwtAuthGuard)
+  getCoursePerformance(@Param('courseId', ParseObjectIdPipe) courseId: string, @Param('userId', ParseObjectIdPipe) userId: string) {
+    return this.catalog.getProgressPerformance(courseId, userId);
+  }
+
+  @Put(':examId/questions/:questionId')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileFieldsInterceptor([{ name: 'questionImage', maxCount: 1 }, { name: 'options', maxCount: 10 }], createMulterOptions()))
+  updateQuestion(@Param('examId', ParseObjectIdPipe) examId: string, @Param('questionId', ParseObjectIdPipe) questionId: string, @Body() body: Record<string, any>, @CurrentUser() user: any, @UploadedFiles() files?: ExamUploadFiles) {
+    return this.catalog.updateQuestionInExam(examId, questionId, body, user, files);
+  }
+
+  @Delete(':examId/questions/:questionId')
+  @UseGuards(JwtAuthGuard)
+  removeQuestion(@Param('examId', ParseObjectIdPipe) examId: string, @Param('questionId', ParseObjectIdPipe) questionId: string, @CurrentUser() user: any) {
+    return this.catalog.removeQuestionFromExam(examId, questionId, user);
+  }
+
+  @Get('userScore/:courseId/:userId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'user')
+  userScores(@Param('courseId', ParseObjectIdPipe) courseId: string, @Param('userId', ParseObjectIdPipe) userId: string) {
+    return this.catalog.userScores(courseId, userId);
+  }
+
+  @Get('courses/:courseId')
+  @UseGuards(JwtAuthGuard)
+  getCourseExams(@Param('courseId', ParseObjectIdPipe) courseId: string, @Query() query: Record<string, any>) {
+    return this.catalog.getExams(query, { course: courseId, type: 'course' });
+  }
+
+  @Get('placements/:courseId')
+  @UseGuards(JwtAuthGuard)
+  getPlacementExams(@Param('courseId', ParseObjectIdPipe) courseId: string, @Query() query: Record<string, any>) {
+    return this.catalog.getExams(query, { course: courseId, type: 'placement' });
+  }
+
+  @Get('lessons/:lessonId')
+  @UseGuards(JwtAuthGuard)
+  getLessonExams(@Param('lessonId', ParseObjectIdPipe) lessonId: string, @Query() query: Record<string, any>) {
+    return this.catalog.getExams(query, { lesson: lessonId, type: 'lesson' });
+  }
+
+  @Post()
+  @UseGuards(JwtAuthGuard)
+  create(@Body() body: CreateExamDto, @CurrentUser() user: any) {
+    return this.catalog.createExam(body, user);
+  }
+
+  @Put(':examId/questions')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileFieldsInterceptor([{ name: 'questionImage', maxCount: 1 }, { name: 'options', maxCount: 10 }], createMulterOptions()))
+  addQuestion(@Param('examId', ParseObjectIdPipe) examId: string, @Body() body: Record<string, any>, @CurrentUser() user: any, @UploadedFiles() files?: ExamUploadFiles) {
+    return this.catalog.addQuestionToExam(examId, body, user, files);
+  }
+
+  @Get('lesson/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('user', 'admin')
+  lessonExam(@Param('id', ParseObjectIdPipe) id: string, @CurrentUser() user: any) {
+    return this.catalog.getStudentExam('lesson', id, user);
+  }
+
+  @Post('lesson/:id/submit')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('user', 'admin')
+  submitLesson(@Param('id', ParseObjectIdPipe) id: string, @Body() body: SubmitAnswersDto, @CurrentUser() user: any) {
+    return this.catalog.submitExam('lesson', id, user, body.answers);
+  }
+
+  @Get('course/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('user', 'admin')
+  courseExam(@Param('id', ParseObjectIdPipe) id: string, @CurrentUser() user: any) {
+    return this.catalog.getStudentExam('course', id, user);
+  }
+
+  @Post('course/:id/submit')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('user', 'admin')
+  submitCourse(@Param('id', ParseObjectIdPipe) id: string, @Body() body: SubmitAnswersDto, @CurrentUser() user: any) {
+    return this.catalog.submitExam('course', id, user, body.answers);
+  }
+
+  @Get('placement/:id')
+  @UseGuards(JwtAuthGuard)
+  placementExam(@Param('id', ParseObjectIdPipe) id: string, @CurrentUser() user: any) {
+    return this.catalog.getStudentExam('placement', id, user);
+  }
+
+  @Post('placement/:id/submit')
+  @UseGuards(JwtAuthGuard)
+  submitPlacement(@Param('id', ParseObjectIdPipe) id: string, @Body() body: SubmitAnswersDto, @CurrentUser() user: any) {
+    return this.catalog.submitExam('placement', id, user, body.answers);
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  getOne(@Param('id', ParseObjectIdPipe) id: string, @CurrentUser() user: any) {
+    return this.catalog.getExam(id, user);
+  }
+
+  @Put(':id')
+  @UseGuards(JwtAuthGuard)
+  update(@Param('id', ParseObjectIdPipe) id: string, @Body() body: UpdateExamDto, @CurrentUser() user: any) {
+    return this.catalog.updateExam(id, body, user);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  delete(@Param('id', ParseObjectIdPipe) id: string, @CurrentUser() user: any) {
+    return this.catalog.deleteExam(id, user);
+  }
+}
+
+@Controller('analytics')
+export class AnalyticsController {
+  constructor(private readonly catalog: LearningCatalogService) {}
+
+  @Get('user-analytic')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('user', 'admin')
+  getUserAnalytics(@Query() query: Record<string, any>, @CurrentUser() user: any) {
+    return this.catalog.getAnalytics(query, user, true);
+  }
+
+  @Get('user-analytic-performance/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('user', 'admin')
+  getPerformance(@Param('id', ParseObjectIdPipe) id: string, @CurrentUser() user: any) {
+    return this.catalog.getAnalyticsPerformance(id, user);
+  }
+
+  @Get()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  getAll(@Query() query: Record<string, any>, @CurrentUser() user: any) {
+    return this.catalog.getAnalytics(query, user);
+  }
+
+  @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'user')
+  @UseInterceptors(FileFieldsInterceptor([{ name: 'imageCover', maxCount: 1 }, { name: 'media', maxCount: 10 }], createMulterOptions()))
+  create(@Body() body: CreateAnalyticDto, @CurrentUser() user: any, @UploadedFiles() files?: AnalyticsUploadFiles) {
+    return this.catalog.createAnalytic(body, user, files);
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('user', 'admin')
+  getOne(@Param('id', ParseObjectIdPipe) id: string, @CurrentUser() user: any) {
+    return this.catalog.getAnalytic(id, user);
+  }
+
+  @Put(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'user')
+  update(@Param('id', ParseObjectIdPipe) id: string, @Body() body: UpdateAnalyticDto, @CurrentUser() user: any) {
+    return this.catalog.updateAnalytic(id, body, user);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  delete(@Param('id', ParseObjectIdPipe) id: string, @CurrentUser() user: any) {
+    return this.catalog.deleteAnalytic(id, user);
   }
 }

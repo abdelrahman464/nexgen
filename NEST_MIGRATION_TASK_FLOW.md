@@ -230,8 +230,8 @@ Progress:
 - [x] Courses.
 - [x] Sections.
 - [x] Lessons.
-- [ ] Exams.
-- [ ] Analytics.
+- [x] Exams.
+- [x] Analytics.
 
 ## Task 5: Commerce And Subscriptions
 

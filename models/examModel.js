@@ -79,4 +79,4 @@ examSchema.post("init", (doc) => {
 examSchema.post("save", (doc) => {
   setQuestionImageURLs(doc);
 });
-module.exports = mongoose.model("Exam", examSchema);
+module.exports = mongoose.models.Exam || mongoose.model("Exam", examSchema);

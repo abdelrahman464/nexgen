@@ -19,6 +19,8 @@ export class LearningCatalogService {
     @InjectModel('Section') private readonly sectionModel: Model<any>,
     @InjectModel('Lesson') private readonly lessonModel: Model<any>,
     @InjectModel('CourseProgress') private readonly courseProgressModel: Model<any>,
+    @InjectModel('Exam') private readonly examModel: Model<any>,
+    @InjectModel('Analytics') private readonly analyticsModel: Model<any>,
     private readonly query: CatalogQueryService,
     private readonly reorder: CatalogReorderService,
     private readonly access: CatalogAccessService,
@@ -350,6 +352,161 @@ export class LearningCatalogService {
     return undefined;
   }
 
+  async createExam(body: any, user: any) {
+    await this.access.assertExamInstructor(user, body);
+    return { data: await this.examModel.create(body) };
+  }
+
+  async getExams(query: Record<string, any>, filter: Record<string, any>) {
+    return this.query.list(this.examModel, query, 'Exam', filter);
+  }
+
+  async getExam(id: string, user: any) {
+    await this.access.assertExamInstructor(user, id);
+    const exam = await this.examModel.findById(id);
+    if (!exam) throw new NotFoundException('No document found');
+    return { data: exam };
+  }
+
+  async updateExam(id: string, body: any, user: any) {
+    await this.access.assertExamInstructor(user, id);
+    const exam = await this.examModel.findByIdAndUpdate(id, body, { new: true, runValidators: true });
+    if (!exam) throw new NotFoundException(`No document For this id ${id}`);
+    return { data: exam };
+  }
+
+  async deleteExam(id: string, user: any) {
+    await this.access.assertExamInstructor(user, id);
+    const exam = await this.examModel.findByIdAndDelete(id);
+    if (!exam) throw new NotFoundException(`No document for this id ${id}`);
+    return undefined;
+  }
+
+  async addQuestionToExam(examId: string, body: any, user: any, files?: ExamUploadFiles) {
+    await this.access.assertExamInstructor(user, examId);
+    const question = await this.prepareQuestionPayload(body, files);
+    const exam = await this.examModel.findByIdAndUpdate(examId, { $push: { questions: question } }, { new: true });
+    if (!exam) throw new NotFoundException('Exam not found');
+    return { data: exam };
+  }
+
+  async updateQuestionInExam(examId: string, questionId: string, body: any, user: any, files?: ExamUploadFiles) {
+    await this.access.assertExamInstructor(user, examId);
+    const question = await this.prepareQuestionPayload(body, files);
+    const exam = await this.examModel.findOneAndUpdate(
+      { _id: examId, 'questions._id': questionId },
+      { $set: Object.fromEntries(Object.entries(question).map(([key, value]) => [`questions.$.${key}`, value])) },
+      { new: true },
+    );
+    if (!exam) throw new NotFoundException('Question not found');
+    return { data: exam };
+  }
+
+  async removeQuestionFromExam(examId: string, questionId: string, user: any) {
+    await this.access.assertExamInstructor(user, examId);
+    const exam = await this.examModel.findByIdAndUpdate(examId, { $pull: { questions: { _id: questionId } } }, { new: true });
+    if (!exam) throw new NotFoundException('Exam not found');
+    return { data: exam };
+  }
+
+  async getStudentExam(type: 'lesson' | 'course' | 'placement', id: string, user: any) {
+    if (type === 'lesson') await this.access.assertLessonAccess(user, id);
+    if (type === 'course') await this.access.assertCourseAccess(user, id);
+    const filter = type === 'lesson' ? { type, lesson: id } : { type, course: id };
+    const exam = await this.examModel.findOne(filter);
+    if (!exam) throw new NotFoundException('Exam not found');
+    return { data: exam };
+  }
+
+  async submitExam(type: 'lesson' | 'course' | 'placement', id: string, user: any, answers: any[]) {
+    const exam = await this.examModel.findOne(type === 'lesson' ? { type, lesson: id } : { type, course: id });
+    if (!exam) throw new NotFoundException('Exam not found');
+    const totalGrade = exam.questions.reduce((sum: number, question: any) => sum + (question.grade || 1), 0) || exam.questions.length || 1;
+    let earned = 0;
+    const wrongAnswers: any[] = [];
+    for (const question of exam.questions) {
+      const answer = answers.find((item) => item.question?.toString() === question._id.toString());
+      if (answer && Number(answer.answer) === Number(question.correctOption)) {
+        earned += question.grade || 1;
+      } else {
+        wrongAnswers.push({ question: question._id, answer: answer?.answer });
+      }
+    }
+    const score = Math.round((earned / totalGrade) * 100);
+    const status = score >= exam.passingScore ? 'Completed' : 'failed';
+    const courseId = type === 'lesson' ? (await this.lessonModel.findById(id))?.course : id;
+    if (courseId) {
+      const update =
+        type === 'lesson'
+          ? {
+              $setOnInsert: { user: user._id, course: courseId },
+              $push: { progress: { lesson: id, status, examScore: score, wrongAnswers } },
+            }
+          : {
+              $set: { score, status, wrongAnswers, attemptDate: new Date() },
+              $setOnInsert: { user: user._id, course: courseId },
+            };
+      await this.courseProgressModel.findOneAndUpdate({ user: user._id, course: courseId }, update, { upsert: true, new: true });
+    }
+    return { status: 'success', data: { score, status, wrongAnswers } };
+  }
+
+  async userScores(courseId: string, userId: string) {
+    const progress = await this.courseProgressModel.findOne({ course: courseId, user: userId });
+    return { data: progress };
+  }
+
+  async getProgressPerformance(courseId: string, userId: string) {
+    const progress = await this.courseProgressModel.findOne({ course: courseId, user: userId });
+    return { data: progress };
+  }
+
+  async getLessonPerformance(lessonId: string, userId: string) {
+    const progress = await this.courseProgressModel.findOne({ user: userId, 'progress.lesson': lessonId });
+    return { data: progress };
+  }
+
+  async getAnalytics(query: Record<string, any>, user: any, userOnly = false) {
+    let filter: Record<string, any> = {};
+    if (userOnly || user.role !== 'admin') filter.user = user._id;
+    return this.query.list(this.analyticsModel, query, 'Analytic', filter);
+  }
+
+  async createAnalytic(body: any, user: any, files?: AnalyticsUploadFiles) {
+    await this.assertUserSubscription(user._id, body.course);
+    const payload = await this.prepareAnalyticsPayload({ ...body, user: user._id, marketer: user.invitor }, files);
+    return { data: await this.analyticsModel.create(payload) };
+  }
+
+  async getAnalytic(id: string, user: any) {
+    const analytic = await this.analyticsModel.findById(id);
+    if (!analytic) throw new NotFoundException('No document found');
+    await this.access.assertAnalyticOwnerOrAdmin(user, analytic);
+    return { data: analytic };
+  }
+
+  async updateAnalytic(id: string, body: any, user: any) {
+    const analytic = await this.analyticsModel.findById(id);
+    if (!analytic) throw new NotFoundException('No document found');
+    await this.access.assertAnalyticOwnerOrAdmin(user, analytic);
+    const updated = await this.analyticsModel.findByIdAndUpdate(id, body, { new: true });
+    return { data: updated };
+  }
+
+  async deleteAnalytic(id: string, user: any) {
+    const analytic = await this.analyticsModel.findById(id);
+    if (!analytic) throw new NotFoundException('No document found');
+    await this.access.assertAnalyticOwnerOrAdmin(user, analytic);
+    await this.analyticsModel.findByIdAndDelete(id);
+    return undefined;
+  }
+
+  async getAnalyticsPerformance(userId: string, user: any) {
+    if (user.role !== 'admin' && user._id.toString() !== userId) throw new BadRequestException('Not authorized');
+    const analytics = await this.analyticsModel.find({ user: userId });
+    return { results: analytics.length, data: analytics };
+  }
+
   private async prepareCatalogPayload(
     model: Model<any>,
     body: Record<string, any>,
@@ -414,10 +571,57 @@ export class LearningCatalogService {
     await fs.writeFile(filePath, file.buffer);
     return filename;
   }
+
+  private async prepareQuestionPayload(body: Record<string, any>, files?: ExamUploadFiles) {
+    const payload = { ...body };
+    if (files?.questionImage?.[0]) {
+      payload.questionImage = await this.images.saveImageAsWebp(files.questionImage[0], 'questions', 'question', 95);
+    }
+    if (files?.options?.length) {
+      payload.options = await Promise.all(files.options.map((file, index) => this.images.saveImageAsWebp(file, 'questions/options', `option-${index + 1}`, 95)));
+    }
+    return payload;
+  }
+
+  private async prepareAnalyticsPayload(body: Record<string, any>, files?: AnalyticsUploadFiles) {
+    const payload = { ...body };
+    if (files?.imageCover?.[0]) payload.imageCover = await this.images.saveImageAsWebp(files.imageCover[0], 'analytics', 'analytic-cover', 95);
+    if (files?.media?.length) payload.media = await Promise.all(files.media.map((file, index) => this.saveAnalyticsMedia(file, index)));
+    return payload;
+  }
+
+  private async saveAnalyticsMedia(file: Express.Multer.File, index: number) {
+    if (file.mimetype.startsWith('image/')) {
+      return this.images.saveImageAsWebp(file, 'analytics', `analytic-media-${index + 1}`, 95);
+    }
+    if (file.mimetype !== 'application/pdf') throw new BadRequestException(`media ${index + 1} is not an image or PDF file.`);
+    const filename = `analytic-media-${uuidv4()}-${Date.now()}-${index + 1}.pdf`;
+    const filePath = path.join('uploads', 'analytics', filename);
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.writeFile(filePath, file.buffer);
+    return filename;
+  }
+
+  private async assertUserSubscription(userId: string, courseId?: string) {
+    if (!courseId) return;
+    const UserSubscription = require('../../models/userSubscriptionModel');
+    const subscription = await UserSubscription.findOne({ user: userId, course: courseId });
+    if (!subscription) throw new BadRequestException('You do not have an active subscription');
+  }
 }
 
 export type LessonUploadFiles = {
   image?: Express.Multer.File[];
   attachments?: Express.Multer.File[];
   assignmentFile?: Express.Multer.File[];
+};
+
+export type ExamUploadFiles = {
+  questionImage?: Express.Multer.File[];
+  options?: Express.Multer.File[];
+};
+
+export type AnalyticsUploadFiles = {
+  imageCover?: Express.Multer.File[];
+  media?: Express.Multer.File[];
 };

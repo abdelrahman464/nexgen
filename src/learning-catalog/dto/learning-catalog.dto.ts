@@ -218,3 +218,73 @@ export class UpdateLessonDto extends CreateLessonDto {
   @IsOptional()
   lessonDuration!: number;
 }
+
+export class CreateExamDto {
+  @IsOptional()
+  @IsObject()
+  title?: Record<string, string>;
+
+  @IsOptional()
+  @IsMongoId()
+  course?: string;
+
+  @IsOptional()
+  @IsMongoId()
+  lesson?: string;
+
+  @IsIn(['course', 'lesson', 'placement'])
+  type!: string;
+
+  @IsOptional()
+  @IsIn(['A', 'B'])
+  model?: string;
+
+  @IsOptional()
+  @IsNumber()
+  passingScore?: number;
+
+  @IsOptional()
+  @IsArray()
+  questions?: Record<string, unknown>[];
+}
+
+export class UpdateExamDto extends CreateExamDto {
+  @IsOptional()
+  type!: string;
+}
+
+export class SubmitAnswersDto {
+  @IsArray()
+  answers!: { question: string; answer: string | number }[];
+}
+
+export class CreateAnalyticDto {
+  @IsString()
+  content!: string;
+
+  @IsOptional()
+  @IsMongoId()
+  course?: string;
+
+  @IsOptional()
+  @IsMongoId()
+  lesson?: string;
+}
+
+export class UpdateAnalyticDto {
+  @IsOptional()
+  @IsString()
+  content?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isPassed?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isSeen?: boolean;
+
+  @IsOptional()
+  @IsString()
+  marketerComment?: string;
+}

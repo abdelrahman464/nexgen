@@ -9,6 +9,7 @@ export class CatalogAccessService {
     @InjectModel('Lesson') private readonly lessonModel: Model<any>,
     @InjectModel('Section') private readonly sectionModel: Model<any>,
     @InjectModel('CourseProgress') private readonly courseProgressModel: Model<any>,
+    @InjectModel('Exam') private readonly examModel: Model<any>,
   ) {}
 
   async assertAdminOrCourseInstructor(user: any, courseId: string) {
@@ -49,5 +50,27 @@ export class CatalogAccessService {
     if (!lesson) throw new ForbiddenException('Lesson Not Found');
     const courseProgress = await this.courseProgressModel.findOne({ user: user._id, course: lesson.course });
     if (!courseProgress) throw new ForbiddenException("You don't have access to this course");
+  }
+
+  async assertExamInstructor(user: any, examIdOrBody: string | Record<string, any>) {
+    if (user.role === 'admin') return;
+    let examData: any = examIdOrBody;
+    if (typeof examIdOrBody === 'string') {
+      examData = await this.examModel.findById(examIdOrBody);
+      if (!examData) throw new NotFoundException('Exam not found');
+    }
+    if (examData.type === 'lesson') {
+      const lesson = await this.lessonModel.findById(examData.lesson);
+      if (!lesson) throw new NotFoundException('Associated course not found');
+      await this.assertAdminOrCourseInstructor(user, lesson.course.toString());
+      return;
+    }
+    await this.assertAdminOrCourseInstructor(user, examData.course?.toString());
+  }
+
+  async assertAnalyticOwnerOrAdmin(user: any, analytic: any) {
+    if (user.role === 'admin') return;
+    if (analytic.user?._id?.toString() === user._id.toString() || analytic.user?.toString() === user._id.toString()) return;
+    throw new ForbiddenException('You are not authorized to access this analytic');
   }
 }

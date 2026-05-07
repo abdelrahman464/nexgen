@@ -259,3 +259,66 @@ CourseProgressSchema.pre(/^find/, function (next) {
 });
 CourseProgressSchema.post('init', (doc) => setImageUrl(doc?.certificate, 'certificate', 'file'));
 CourseProgressSchema.post('save', (doc) => setImageUrl(doc?.certificate, 'certificate', 'file'));
+
+export const ExamSchema = new Schema<any>(
+  {
+    title: { type: Object, i18n: true },
+    course: { type: Schema.Types.ObjectId, ref: 'Course' },
+    lesson: { type: Schema.Types.ObjectId, ref: 'Lesson' },
+    type: { type: String, enum: ['course', 'lesson', 'placement'], required: true },
+    model: { type: String, enum: ['A', 'B'], default: 'A' },
+    passingScore: { type: Number, required: true, default: 70 },
+    questions: [
+      {
+        question: String,
+        questionImage: String,
+        options: [String],
+        correctOption: Number,
+        grade: Number,
+      },
+    ],
+  },
+  { timestamps: true },
+);
+const setQuestionImageUrls = (doc: any) => {
+  if (!Array.isArray(doc?.questions)) return;
+  doc.questions.forEach((question: any) => {
+    question.questionImage = addFileUrl(question.questionImage, 'questions');
+    if (Array.isArray(question.options)) {
+      question.options = question.options.map((option: string) => {
+        if (!option || option.startsWith('http')) return option;
+        return /\.(jpg|jpeg|png|webp)$/i.test(option) ? addFileUrl(option, 'questions/options') : option;
+      });
+    }
+  });
+};
+ExamSchema.post('init', (doc) => setQuestionImageUrls(doc));
+ExamSchema.post('save', (doc) => setQuestionImageUrls(doc));
+
+export const AnalyticsSchema = new Schema<any>(
+  {
+    user: { type: Schema.Types.ObjectId, ref: 'User' },
+    marketer: { type: Schema.Types.ObjectId, ref: 'User' },
+    course: { type: Schema.Types.ObjectId, ref: 'Course' },
+    lesson: { type: Schema.Types.ObjectId, ref: 'Lesson' },
+    content: { type: String, required: true },
+    isPassed: { type: Boolean, default: false },
+    isSeen: { type: Boolean, default: false },
+    marketerComment: String,
+    imageCover: String,
+    media: [String],
+  },
+  { timestamps: true },
+);
+AnalyticsSchema.pre(/^find/, function (next) {
+  this.populate({ path: 'user', select: 'name profileImg' });
+  return next();
+});
+AnalyticsSchema.post('init', (doc) => {
+  setImageUrl(doc, 'analytics', 'imageCover');
+  if (Array.isArray(doc?.media)) doc.media = doc.media.map((file: string) => addFileUrl(file, 'analytics'));
+});
+AnalyticsSchema.post('save', (doc) => {
+  setImageUrl(doc, 'analytics', 'imageCover');
+  if (Array.isArray(doc?.media)) doc.media = doc.media.map((file: string) => addFileUrl(file, 'analytics'));
+});

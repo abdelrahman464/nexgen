@@ -76,5 +76,6 @@ AnalyticSchema.post("init", (doc) => {
 AnalyticSchema.post("save", (doc) => {
   setImageURL(doc);
 });
-const Analytic = mongoose.model("Analytics", AnalyticSchema);
+const Analytic =
+  mongoose.models.Analytics || mongoose.model("Analytics", AnalyticSchema);
 module.exports = Analytic;

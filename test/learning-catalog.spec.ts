@@ -82,6 +82,8 @@ describe('Learning catalog package migration smoke', () => {
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
+      {} as any,
     );
 
     await service.getCertificateLink('66447ad7a7957a07c0ae9e69', { _id: '66447ad7a7957a07c0ae9e70' });
@@ -97,7 +99,7 @@ describe('Learning catalog package migration smoke', () => {
     const courseModel = {
       findById: jest.fn().mockResolvedValue({ instructor: '66447ad7a7957a07c0ae9e71' }),
     };
-    const access = new CatalogAccessService(courseModel as any, {} as any, {} as any, {} as any);
+    const access = new CatalogAccessService(courseModel as any, {} as any, {} as any, {} as any, {} as any);
 
     await expect(
       access.assertAdminOrCourseInstructor(
@@ -114,5 +116,64 @@ describe('Learning catalog package migration smoke', () => {
     options.fileFilter({}, { mimetype: 'application/javascript' }, callback);
 
     expect(callback).toHaveBeenCalledWith(expect.any(Error), false);
+  });
+
+  it('scores lesson exam submissions and updates course progress', async () => {
+    const lessonId = new Types.ObjectId().toString();
+    const courseId = new Types.ObjectId();
+    const questionId = new Types.ObjectId();
+    const examModel = {
+      findOne: jest.fn().mockResolvedValue({
+        passingScore: 70,
+        questions: [{ _id: questionId, correctOption: 1, grade: 1 }],
+      }),
+    };
+    const lessonModel = { findById: jest.fn().mockResolvedValue({ course: courseId }) };
+    const courseProgressModel = { findOneAndUpdate: jest.fn().mockResolvedValue({}) };
+    const service = new LearningCatalogService(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      lessonModel as any,
+      courseProgressModel as any,
+      examModel as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    await expect(
+      service.submitExam('lesson', lessonId, { _id: '66447ad7a7957a07c0ae9e70' }, [
+        { question: questionId.toString(), answer: 1 },
+      ]),
+    ).resolves.toMatchObject({ status: 'success', data: { score: 100, status: 'Completed' } });
+    expect(courseProgressModel.findOneAndUpdate).toHaveBeenCalled();
+  });
+
+  it('blocks analytics performance reads for unrelated users', async () => {
+    const service = new LearningCatalogService(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    await expect(
+      service.getAnalyticsPerformance('66447ad7a7957a07c0ae9e69', {
+        _id: '66447ad7a7957a07c0ae9e70',
+        role: 'user',
+      }),
+    ).rejects.toThrow('Not authorized');
   });
 });
