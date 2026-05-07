@@ -159,3 +159,103 @@ CoursePackageSchema.pre(/^find/, function (next) {
 });
 CoursePackageSchema.post('init', (doc) => setImageUrl(doc, 'coursePackages'));
 CoursePackageSchema.post('save', (doc) => setImageUrl(doc, 'coursePackages'));
+
+export const SectionSchema = new Schema<any>(
+  {
+    title: { type: String, required: [true, 'section title required'], minlength: [3, 'too short category title'], i18n: true },
+    course: { type: Schema.Types.ObjectId, ref: 'Course', required: true },
+    order: { type: Number },
+  },
+  { timestamps: true },
+);
+
+export const LessonSchema = new Schema<any>(
+  {
+    section: { type: Schema.Types.ObjectId, ref: 'Section', required: true },
+    course: { type: Schema.Types.ObjectId, ref: 'Course' },
+    title: { type: String, required: true, i18n: true },
+    description: { type: String, i18n: true },
+    type: { type: String, enum: ['live', 'recorded'], default: 'recorded' },
+    image: String,
+    videoUrl: { type: String, required: true },
+    attachments: [String],
+    order: { type: Number },
+    lessonDuration: { type: Number, required: true },
+    assignmentTitle: { type: String, i18n: true },
+    assignmentDescription: { type: String, i18n: true },
+    quizTitle: String,
+    hasQuiz: { type: Boolean, default: false },
+    assignmentFile: String,
+    isRequireAnalytic: { type: Boolean, default: false },
+    examQuestionsNumber: { type: Number, default: 0 },
+    examTitle: String,
+  },
+  { timestamps: true },
+);
+LessonSchema.index({ course: 1, order: 1 });
+LessonSchema.pre(/^find/, function (next) {
+  this.populate({ path: 'course', select: '_id title -category' });
+  return next();
+});
+LessonSchema.post('init', (doc) => {
+  setImageUrl(doc, 'lessons/images', 'image');
+  setImageUrl(doc, 'lessons/assignments', 'assignmentFile');
+  if (Array.isArray(doc.attachments)) {
+    doc.attachments = doc.attachments.map((file: string) => addFileUrl(file, 'lessons/attachments'));
+  }
+});
+LessonSchema.post('save', (doc) => {
+  setImageUrl(doc, 'lessons/images', 'image');
+  setImageUrl(doc, 'lessons/assignments', 'assignmentFile');
+  if (Array.isArray(doc.attachments)) {
+    doc.attachments = doc.attachments.map((file: string) => addFileUrl(file, 'lessons/attachments'));
+  }
+});
+
+export const CourseProgressSchema = new Schema<any>(
+  {
+    user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    course: { type: Schema.Types.ObjectId, ref: 'Course', required: true },
+    modelExam: String,
+    score: Number,
+    status: { type: String, enum: ['notTaken', 'failed', 'Completed'], default: 'notTaken' },
+    wrongAnswers: [
+      {
+        question: { type: Schema.Types.ObjectId },
+        answer: String,
+      },
+    ],
+    progress: [
+      {
+        lesson: { type: Schema.Types.ObjectId, ref: 'Lesson' },
+        modelExam: String,
+        status: { type: String, enum: ['failed', 'Completed'], default: 'Completed' },
+        passAnalytics: Boolean,
+        examScore: { type: Number, default: 0 },
+        attemptDate: { type: Date, default: Date.now },
+        wrongAnswers: [
+          {
+            question: { type: Schema.Types.ObjectId },
+            answer: String,
+          },
+        ],
+      },
+    ],
+    certificate: {
+      _id: Schema.Types.ObjectId,
+      file: String,
+    },
+    attemptDate: Date,
+  },
+  { timestamps: true },
+);
+CourseProgressSchema.index({ user: 1, course: 1 }, { unique: true });
+CourseProgressSchema.index({ user: 1 });
+CourseProgressSchema.index({ course: 1 });
+CourseProgressSchema.index({ 'progress.lesson': 1 });
+CourseProgressSchema.pre(/^find/, function (next) {
+  this.populate({ path: 'progress.lesson', select: 'title order' });
+  return next();
+});
+CourseProgressSchema.post('init', (doc) => setImageUrl(doc?.certificate, 'certificate', 'file'));
+CourseProgressSchema.post('save', (doc) => setImageUrl(doc?.certificate, 'certificate', 'file'));

@@ -113,5 +113,5 @@ lessonSchema.post('save', (doc) => {
 //   next();
 // });
 
-const Lesson = mongoose.model('Lesson', lessonSchema);
+const Lesson = mongoose.models.Lesson || mongoose.model('Lesson', lessonSchema);
 module.exports = Lesson;

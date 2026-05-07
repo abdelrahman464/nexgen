@@ -2,7 +2,10 @@ import { validate } from 'class-validator';
 import { Types } from 'mongoose';
 import { CatalogQueryService } from '../src/learning-catalog/catalog-query.service';
 import { CatalogReorderService } from '../src/learning-catalog/catalog-reorder.service';
+import { CatalogAccessService } from '../src/learning-catalog/catalog-access.service';
 import { CreatePackageDto, ReorderItemsDto } from '../src/learning-catalog/dto/learning-catalog.dto';
+import { LearningCatalogService } from '../src/learning-catalog/learning-catalog.service';
+import { createMulterOptions } from '../src/common/upload/upload.helper';
 
 describe('Learning catalog package migration smoke', () => {
   it('rejects invalid package create DTO input', async () => {
@@ -62,5 +65,54 @@ describe('Learning catalog package migration smoke', () => {
     const dto = Object.assign(new ReorderItemsDto(), { items: [] });
 
     await expect(validate(dto)).resolves.toHaveLength(1);
+  });
+
+  it('uses the current authenticated user when resolving certificate links', async () => {
+    const courseProgressModel = {
+      findOne: jest.fn().mockResolvedValue(null),
+    };
+    const service = new LearningCatalogService(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      courseProgressModel as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    await service.getCertificateLink('66447ad7a7957a07c0ae9e69', { _id: '66447ad7a7957a07c0ae9e70' });
+
+    expect(courseProgressModel.findOne).toHaveBeenCalledWith({
+      user: '66447ad7a7957a07c0ae9e70',
+      course: '66447ad7a7957a07c0ae9e69',
+      'certificate.file': { $exists: true, $ne: null },
+    });
+  });
+
+  it('blocks non-owner instructors from course mutations', async () => {
+    const courseModel = {
+      findById: jest.fn().mockResolvedValue({ instructor: '66447ad7a7957a07c0ae9e71' }),
+    };
+    const access = new CatalogAccessService(courseModel as any, {} as any, {} as any, {} as any);
+
+    await expect(
+      access.assertAdminOrCourseInstructor(
+        { _id: '66447ad7a7957a07c0ae9e70', role: 'user', isInstructor: true },
+        '66447ad7a7957a07c0ae9e69',
+      ),
+    ).rejects.toThrow('You are not the instructor of this course');
+  });
+
+  it('rejects unsupported lesson upload MIME types through the shared upload guard', () => {
+    const options = createMulterOptions();
+    const callback = jest.fn();
+
+    options.fileFilter({}, { mimetype: 'application/javascript' }, callback);
+
+    expect(callback).toHaveBeenCalledWith(expect.any(Error), false);
   });
 });

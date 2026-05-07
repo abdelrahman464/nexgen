@@ -134,3 +134,87 @@ export class CreateCourseDto extends CatalogBaseDto {
 }
 
 export class UpdateCourseDto extends CreateCourseDto {}
+
+export class CreateSectionDto {
+  @IsObject()
+  @ValidateNested()
+  @Type(() => LocalizedStringDto)
+  title!: LocalizedStringDto;
+
+  @IsMongoId()
+  course!: string;
+
+  @IsOptional()
+  @IsNumber()
+  order?: number;
+}
+
+export class UpdateSectionDto {
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => LocalizedStringDto)
+  title?: LocalizedStringDto;
+
+  @IsOptional()
+  @IsMongoId()
+  course?: string;
+
+  @IsOptional()
+  @IsNumber()
+  order?: number;
+}
+
+export class CreateLessonDto {
+  @IsMongoId()
+  section!: string;
+
+  @IsOptional()
+  @IsMongoId()
+  course?: string;
+
+  @IsObject()
+  @ValidateNested()
+  @Type(() => LocalizedStringDto)
+  title!: LocalizedStringDto;
+
+  @IsObject()
+  @ValidateNested()
+  @Type(() => LocalizedStringDto)
+  description!: LocalizedStringDto;
+
+  @IsString()
+  videoUrl!: string;
+
+  @IsNumber()
+  lessonDuration!: number;
+
+  @IsOptional()
+  @IsIn(['live', 'recorded'])
+  type?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isRequireAnalytic?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  order?: number;
+}
+
+export class UpdateLessonDto extends CreateLessonDto {
+  @IsOptional()
+  section!: string;
+
+  @IsOptional()
+  title!: LocalizedStringDto;
+
+  @IsOptional()
+  description!: LocalizedStringDto;
+
+  @IsOptional()
+  videoUrl!: string;
+
+  @IsOptional()
+  lessonDuration!: number;
+}

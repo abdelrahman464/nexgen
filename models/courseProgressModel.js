@@ -80,4 +80,6 @@ courseProgressSchema.pre(/^find/, function (next) {
   next();
 });
 
-module.exports = mongoose.model('CourseProgress', courseProgressSchema);
+module.exports =
+  mongoose.models.CourseProgress ||
+  mongoose.model('CourseProgress', courseProgressSchema);

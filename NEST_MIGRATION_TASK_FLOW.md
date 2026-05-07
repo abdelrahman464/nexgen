@@ -227,9 +227,9 @@ Per-module checklist:
 Progress:
 - [x] Packages.
 - [x] Course packages.
-- [ ] Courses.
-- [ ] Sections.
-- [ ] Lessons.
+- [x] Courses.
+- [x] Sections.
+- [x] Lessons.
 - [ ] Exams.
 - [ ] Analytics.
 
