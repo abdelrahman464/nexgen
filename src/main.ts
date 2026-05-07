@@ -7,7 +7,6 @@ import { ExpressAdapter } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { setupNestApp } from './app.setup';
-import { configureLegacySupport } from './legacy/legacy-support';
 import { captureRawBody, isWebhookPath } from './common/middleware/raw-body.middleware';
 
 async function bootstrap() {
@@ -46,7 +45,6 @@ async function bootstrap() {
   expressApp.get('/api-docs.json', (_req, res) => res.json(swaggerDocument));
 
   await app.init();
-  configureLegacySupport(expressApp);
 
   const port = process.env.PORT || 8000;
   await app.listen(port);

@@ -6,7 +6,6 @@
   "scripts": {
     "start:dev": "nest start --watch",
     "start": "node dist/main.js",
-    "start:legacy": "node server.js",
     "build": "nest build",
     "test": "jest --runInBand",
     "backfill:item-order": "node scripts/backfillItemOrder.js",
