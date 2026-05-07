@@ -1,9 +1,7 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ApiQueryHelper } from '../common/pagination/api-query.helper';
-
-const { checkCourseAccess } = require('../../utils/validators/courseValidator');
 
 @Injectable()
 export class CommerceAccessService {
@@ -13,6 +11,7 @@ export class CommerceAccessService {
     @InjectModel('Package') private readonly packageModel: Model<any>,
     @InjectModel('CoursePackage') private readonly coursePackageModel: Model<any>,
     @InjectModel('User') private readonly userModel: Model<any>,
+    @InjectModel('CourseProgress') private readonly courseProgressModel: Model<any>,
   ) {}
 
   async listOrders(query: Record<string, any>, user: any) {
@@ -62,7 +61,7 @@ export class CommerceAccessService {
   }
 
   async assertCourseCanBePurchased(user: any, courseId: string) {
-    await checkCourseAccess(user, courseId);
+    await this.assertPurchaseCourseAccess(user, courseId);
     const existOrder = await this.orderModel.findOne({ user: user._id, course: courseId });
     if (existOrder) throw new ForbiddenException('You already bought this course');
   }
@@ -97,5 +96,36 @@ export class CommerceAccessService {
     }
 
     return { filter, cleanedQuery };
+  }
+
+  private async assertPurchaseCourseAccess(user: any, courseId: string) {
+    const course = await this.courseModel.findById(courseId);
+    if (!course) throw new NotFoundException('course Not Found');
+
+    const accessibleCourses = course.accessibleCourses || [];
+    if (!course.needAccessibleCourse || accessibleCourses.length === 0) return true;
+
+    const placementCourseId = user?.placementExam?.course;
+    if (placementCourseId) {
+      const userPlacementCourse = await this.courseModel.findOne({ _id: placementCourseId });
+      if (userPlacementCourse && this.includesCourseId(userPlacementCourse.accessibleCourses || [], courseId)) return true;
+    }
+
+    const userCourses = await this.courseProgressModel.find({ user: user._id, status: 'Completed' });
+    if (this.hasAccessibleCourse(accessibleCourses, userCourses.map((progress: any) => progress.course))) return true;
+
+    throw new ForbiddenException('Access Denied: You may need to complete the basics or succeed in placement exam');
+  }
+
+  private hasAccessibleCourse(accessibleCourses: any[], userCourseIds: any[]) {
+    return userCourseIds.some((userCourseId) => this.includesCourseId(accessibleCourses, userCourseId));
+  }
+
+  private includesCourseId(courseIds: any[], courseId: any) {
+    return courseIds.some((candidate) => {
+      if (candidate?.equals) return candidate.equals(courseId);
+      if (courseId?.equals) return courseId.equals(candidate);
+      return String(candidate) === String(courseId);
+    });
   }
 }

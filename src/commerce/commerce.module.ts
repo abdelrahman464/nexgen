@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { CommonModule } from '../common/common.module';
 import { ChatSchema } from '../community-realtime/community-realtime.schemas';
 import { NotificationSchema } from '../foundation-data/foundation-data.schemas';
+import { CourseProgressSchema } from '../learning-catalog/catalog.schemas';
 import { LearningCatalogModule } from '../learning-catalog/learning-catalog.module';
 import { UserSchema } from '../users/user.schema';
 import { CommerceAccessService } from './commerce-access.service';
@@ -24,6 +25,7 @@ import { WebhookEventService } from './webhook-event.service';
       { name: 'User', schema: UserSchema, collection: 'users' },
       { name: 'Chat', schema: ChatSchema, collection: 'chats' },
       { name: 'Notification', schema: NotificationSchema, collection: 'notifications' },
+      { name: 'CourseProgress', schema: CourseProgressSchema, collection: 'courseprogresses' },
     ]),
   ],
   controllers: [UserSubscriptionsController, OrdersController],

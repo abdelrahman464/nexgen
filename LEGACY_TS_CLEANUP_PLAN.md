@@ -15,7 +15,6 @@ Default strategy:
 
 Direct imports currently exist in:
 - `src/auth/auth.service.ts`
-- `src/commerce/commerce-access.service.ts`
 - `src/commerce/order-fulfillment.service.ts`
 - `src/commerce/payment-provider.service.ts`
 - `src/foundation-data/foundation-data.schemas.ts`
@@ -37,13 +36,13 @@ Use this section as the working tracker for the full legacy cleanup. Do not mark
 - [x] Task 1: Inventory and guardrails.
 - [x] Task 2: Replace legacy model imports with injected Mongoose models.
 - [x] Task 3: Port shared utils and helpers into `src/common`.
-- [ ] Task 4: Replace legacy validator dependencies.
+- [x] Task 4: Replace legacy validator dependencies.
 - [ ] Task 5: Port legacy service helpers still called by Nest.
 - [ ] Task 6: Replace socket compatibility bridge.
 - [ ] Task 7: Move cron and scripted runtime code.
 - [ ] Task 8: Delete remaining legacy folders and dependencies.
 
-Current direct legacy import count from `src/**`: **8**.
+Current direct legacy import count from `src/**`: **7**.
 
 Guardrail command for every cleanup PR:
 
@@ -63,7 +62,7 @@ Rule: the count must only go down, unless the PR explains a temporary move and i
 ### Commerce
 
 - [x] `src/commerce/commerce-access.service.ts`: `models/userModel`.
-- [ ] `src/commerce/commerce-access.service.ts`: `utils/validators/courseValidator`.
+- [x] `src/commerce/commerce-access.service.ts`: `utils/validators/courseValidator`.
 - [x] `src/commerce/order-fulfillment.service.ts`: `models/userModel`.
 - [x] `src/commerce/order-fulfillment.service.ts`: `models/ChatModel`.
 - [x] `src/commerce/order-fulfillment.service.ts`: `models/notificationModel`.
@@ -223,10 +222,12 @@ Delete only when safe:
 - Remove `express-validator` only after no retained file imports it.
 
 Verification:
-- validation failure tests for commerce/catalog/user flows that previously depended on validators.
-- `npm run build`
-- `npm test`
-- `npm run email:check`
+- [x] commerce course-purchase access tests for open, missing, placement-gated, progress-gated, denied, and duplicate-order cases.
+- [x] no `courseValidator` import remains inside `src/**`.
+- [x] root legacy validator files remain because retained JS payment provider files still import them.
+- [x] `npm run build`
+- [x] `npm test`
+- [x] `npm run email:check`
 
 Commit:
 - `refactor: remove legacy express validators from nest runtime`

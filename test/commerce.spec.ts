@@ -95,7 +95,7 @@ describe('Commerce migration smoke', () => {
     const orderModel = {
       find: jest.fn().mockResolvedValue([{ createdAt: new Date() }]),
     };
-    const service = new CommerceAccessService(orderModel as any, {} as any, {} as any, {} as any, {} as any);
+    const service = new CommerceAccessService(orderModel as any, {} as any, {} as any, {} as any, {} as any, {} as any);
 
     await expect(service.assertNoRecentPaidOrder('66447ad7a7957a07c0ae9e69')).rejects.toThrow(
       'You have already placed an order within the past hour',
@@ -105,7 +105,7 @@ describe('Commerce migration smoke', () => {
   it('uses injected User model when checking marketer order visibility', async () => {
     const orderModel = { countDocuments: jest.fn(), find: jest.fn() };
     const userModel = { exists: jest.fn().mockResolvedValue(null) };
-    const service = new CommerceAccessService(orderModel as any, {} as any, {} as any, {} as any, userModel as any);
+    const service = new CommerceAccessService(orderModel as any, {} as any, {} as any, {} as any, userModel as any, {} as any);
 
     await expect(
       service.listOrders({ userId: '66447ad7a7957a07c0ae9e69' }, { _id: '66447ad7a7957a07c0ae9e70', role: 'marketer' }),
@@ -115,6 +115,86 @@ describe('Commerce migration smoke', () => {
       invitor: '66447ad7a7957a07c0ae9e70',
     });
     expect(orderModel.countDocuments).not.toHaveBeenCalled();
+  });
+
+  it('allows open courses to be purchased when no existing order exists', async () => {
+    const courseId = new Types.ObjectId().toString();
+    const orderModel = { findOne: jest.fn().mockResolvedValue(null) };
+    const courseModel = { findById: jest.fn().mockResolvedValue({ needAccessibleCourse: false, accessibleCourses: [] }) };
+    const courseProgressModel = { find: jest.fn() };
+    const service = new CommerceAccessService(orderModel as any, courseModel as any, {} as any, {} as any, {} as any, courseProgressModel as any);
+
+    await expect(service.assertCourseCanBePurchased({ _id: 'user-id' }, courseId)).resolves.toBeUndefined();
+
+    expect(courseModel.findById).toHaveBeenCalledWith(courseId);
+    expect(courseProgressModel.find).not.toHaveBeenCalled();
+    expect(orderModel.findOne).toHaveBeenCalledWith({ user: 'user-id', course: courseId });
+  });
+
+  it('rejects missing courses with the legacy course not found message', async () => {
+    const courseModel = { findById: jest.fn().mockResolvedValue(null) };
+    const service = new CommerceAccessService({} as any, courseModel as any, {} as any, {} as any, {} as any, {} as any);
+
+    await expect(service.assertCourseCanBePurchased({ _id: 'user-id' }, 'missing-course')).rejects.toThrow('course Not Found');
+  });
+
+  it('allows locked courses when placement course grants access', async () => {
+    const courseId = new Types.ObjectId().toString();
+    const placementCourseId = new Types.ObjectId().toString();
+    const orderModel = { findOne: jest.fn().mockResolvedValue(null) };
+    const courseModel = {
+      findById: jest.fn().mockResolvedValue({ needAccessibleCourse: true, accessibleCourses: [new Types.ObjectId()] }),
+      findOne: jest.fn().mockResolvedValue({ accessibleCourses: [courseId] }),
+    };
+    const courseProgressModel = { find: jest.fn() };
+    const service = new CommerceAccessService(orderModel as any, courseModel as any, {} as any, {} as any, {} as any, courseProgressModel as any);
+
+    await expect(
+      service.assertCourseCanBePurchased({ _id: 'user-id', placementExam: { course: placementCourseId } }, courseId),
+    ).resolves.toBeUndefined();
+
+    expect(courseModel.findOne).toHaveBeenCalledWith({ _id: placementCourseId });
+    expect(courseProgressModel.find).not.toHaveBeenCalled();
+  });
+
+  it('allows locked courses when completed prerequisite progress grants access', async () => {
+    const courseId = new Types.ObjectId().toString();
+    const prerequisiteId = new Types.ObjectId();
+    const orderModel = { findOne: jest.fn().mockResolvedValue(null) };
+    const courseModel = {
+      findById: jest.fn().mockResolvedValue({ needAccessibleCourse: true, accessibleCourses: [prerequisiteId] }),
+      findOne: jest.fn().mockResolvedValue(null),
+    };
+    const courseProgressModel = { find: jest.fn().mockResolvedValue([{ course: prerequisiteId.toString() }]) };
+    const service = new CommerceAccessService(orderModel as any, courseModel as any, {} as any, {} as any, {} as any, courseProgressModel as any);
+
+    await expect(service.assertCourseCanBePurchased({ _id: 'user-id' }, courseId)).resolves.toBeUndefined();
+
+    expect(courseProgressModel.find).toHaveBeenCalledWith({ user: 'user-id', status: 'Completed' });
+  });
+
+  it('rejects locked courses when no placement or progress grants access', async () => {
+    const courseId = new Types.ObjectId().toString();
+    const prerequisiteId = new Types.ObjectId();
+    const courseModel = {
+      findById: jest.fn().mockResolvedValue({ needAccessibleCourse: true, accessibleCourses: [prerequisiteId] }),
+      findOne: jest.fn().mockResolvedValue(null),
+    };
+    const courseProgressModel = { find: jest.fn().mockResolvedValue([]) };
+    const service = new CommerceAccessService({} as any, courseModel as any, {} as any, {} as any, {} as any, courseProgressModel as any);
+
+    await expect(service.assertCourseCanBePurchased({ _id: 'user-id' }, courseId)).rejects.toThrow(
+      'Access Denied: You may need to complete the basics or succeed in placement exam',
+    );
+  });
+
+  it('keeps duplicate order blocking after course access passes', async () => {
+    const courseId = new Types.ObjectId().toString();
+    const orderModel = { findOne: jest.fn().mockResolvedValue({ _id: 'existing-order' }) };
+    const courseModel = { findById: jest.fn().mockResolvedValue({ needAccessibleCourse: false, accessibleCourses: [] }) };
+    const service = new CommerceAccessService(orderModel as any, courseModel as any, {} as any, {} as any, {} as any, {} as any);
+
+    await expect(service.assertCourseCanBePurchased({ _id: 'user-id' }, courseId)).rejects.toThrow('You already bought this course');
   });
 
   it('uses injected chat and notification models when enrolling users into group chats', async () => {
