@@ -416,6 +416,7 @@ Task 9 notes:
 - [x] No frontend path or response-shape changes were intended.
 - [x] Full JS service/model/helper purge is deferred to a later hardening task after remaining TypeScript services no longer import legacy JS.
 - [x] Production audit still reports vulnerabilities whose available fixes require breaking upgrades (`Nest 11`, `@nestjs/swagger 11`, `multer 2.1.1`, `nodemailer 8`, and related transitive packages). Defer those to an explicit dependency-upgrade task.
+- [x] Added `STAGING_SMOKE_CHECKLIST.md`; run it before staging/prod cutover validation.
 
 ## Definition Of Done For Each Task
 
