@@ -1,12 +1,10 @@
 const express = require("express");
 
 const {
-  hasInvitor,
   isAuthorized,
   analyticPerformanceValidator,
   isRequestFromHisTrainer,
 } = require("../utils/validators/analyticValidator");
-const { isUserSubscribed } = require("../utils/public/publicValidator");
 const authServices = require("../services/authServices");
 const {
   uploadMedia,
@@ -22,19 +20,15 @@ const {
   deleteOne,
   getAnalyticsPerformance,
 } = require("../services/analyticService");
-const {
-  checkMongoId,
-  isIdParamForSender,
-} = require("../utils/public/publicValidator");
+const { checkMongoId } = require("../utils/public/publicValidator");
 //create router
 const router = express.Router();
 //configure router
 //1
 router.get(
-  "/user-analytic/:id", //id is the user id
+  "/user-analytic",
   authServices.protect,
   authServices.allowedTo("user", "admin"),
-  isIdParamForSender,
   filterOnUserRole,
   filterStatus,
   getAll
