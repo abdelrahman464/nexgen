@@ -2,9 +2,14 @@ import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { validate } from 'class-validator';
 import { Types } from 'mongoose';
 import { CommunityRealtimeService } from '../src/community-realtime/community-realtime.service';
+import { RealtimeNotificationService } from '../src/community-realtime/realtime-notification.service';
 import { RealtimeGateway } from '../src/community-realtime/realtime.gateway';
 import { RealtimePresenceService } from '../src/community-realtime/realtime-presence.service';
 import { CreateCommentDto, CreatePostDto, CreateReactionDto } from '../src/community-realtime/dto/community-realtime.dto';
+import {
+  emitRealtimeNotification,
+  registerRealtimeNotificationListener,
+} from '../src/common/utils/realtime-notification-bus.util';
 import { FcmTokenDto, PushNotificationsDto } from '../src/users/dto/user.dto';
 import { UsersService } from '../src/users/users.service';
 
@@ -159,6 +164,48 @@ describe('Community realtime migration smoke', () => {
     gateway.sendMessage({ senderId: 'sender', receiverId: 'offline', text: 'hello' }, socket);
 
     expect(socket.emit).toHaveBeenCalledWith('errorMessage', 'User not found or offline.');
+  });
+
+  it('emits realtime notification bus events and unregisters listeners', () => {
+    const listener = jest.fn();
+    const unregister = registerRealtimeNotificationListener(listener);
+
+    emitRealtimeNotification('user-id', { message: 'hello' });
+    unregister();
+    emitRealtimeNotification('user-id', { message: 'ignored' });
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener).toHaveBeenCalledWith({ userId: 'user-id', payload: { message: 'hello' } });
+  });
+
+  it('does not throw when realtime notification bus has no listeners', () => {
+    expect(() => emitRealtimeNotification('offline-user', { message: 'hello' })).not.toThrow();
+  });
+
+  it('forwards bus notifications through the Nest realtime notification service', () => {
+    const gateway = { sendNotification: jest.fn() };
+    const service = new RealtimeNotificationService(gateway as any);
+
+    service.onModuleInit();
+    emitRealtimeNotification('user-id', { type: 'system' });
+    service.onModuleDestroy();
+    emitRealtimeNotification('user-id', { type: 'ignored' });
+
+    expect(gateway.sendNotification).toHaveBeenCalledTimes(1);
+    expect(gateway.sendNotification).toHaveBeenCalledWith('user-id', { type: 'system' });
+  });
+
+  it('emits notification events through the gateway for online users', () => {
+    const presence = new RealtimePresenceService({} as any);
+    presence.addUser('user-id', 'socket-id');
+    const gateway = new RealtimeGateway(presence);
+    const emit = jest.fn();
+    gateway.server = { to: jest.fn().mockReturnValue({ emit }) } as any;
+
+    gateway.sendNotification('user-id', { message: 'hello' });
+
+    expect(gateway.server.to).toHaveBeenCalledWith('socket-id');
+    expect(emit).toHaveBeenCalledWith('notification', { message: 'hello' });
   });
 
   it('records disconnect time spent and removes online users', async () => {

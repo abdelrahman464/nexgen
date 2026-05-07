@@ -14,11 +14,7 @@ Default strategy:
 ## Current Remaining Legacy Imports From `src/**`
 
 Direct imports currently exist in:
-- `src/auth/auth.service.ts`
-- `src/commerce/order-fulfillment.service.ts`
-- `src/commerce/payment-provider.service.ts`
-- `src/foundation-data/foundation-data.schemas.ts`
-- `src/marketing-revenue/marketing.service.ts`
+- None.
 
 Legacy areas still retained:
 - `models/`
@@ -38,11 +34,11 @@ Use this section as the working tracker for the full legacy cleanup. Do not mark
 - [x] Task 3: Port shared utils and helpers into `src/common`.
 - [x] Task 4: Replace legacy validator dependencies.
 - [x] Task 5: Port legacy service helpers still called by Nest.
-- [ ] Task 6: Replace socket compatibility bridge.
+- [x] Task 6: Replace socket compatibility bridge.
 - [ ] Task 7: Move cron and scripted runtime code.
 - [ ] Task 8: Delete remaining legacy folders and dependencies.
 
-Current direct legacy import count from `src/**`: **1**.
+Current direct legacy import count from `src/**`: **0**.
 
 Guardrail command for every cleanup PR:
 
@@ -82,7 +78,7 @@ Rule: the count must only go down, unless the PR explains a temporary move and i
 
 - [x] `src/foundation-data/foundation-data.schemas.ts`: `models/courseModel`.
 - [x] `src/foundation-data/foundation-data.schemas.ts`: `models/userModel`.
-- [ ] `src/foundation-data/foundation-data.schemas.ts`: `socket/index`.
+- [x] `src/foundation-data/foundation-data.schemas.ts`: `socket/index`.
 - [x] `src/foundation-data/foundation-data.schemas.ts`: `utils/pushNotification`.
 - [x] `src/foundation-data/foundation-data.service.ts`: `models/courseModel`.
 - [x] `src/foundation-data/foundation-data.service.ts`: `models/courseProgressModel`.
@@ -277,7 +273,7 @@ Commit:
 
 ## Task 6: Replace Socket Compatibility Bridge
 
-Remove `socket/index.js` by moving notification emission fully into Nest.
+Remove `socket/index.js` from Nest runtime by moving notification emission onto a typed in-process bus.
 
 Targets:
 - `socket/index.js`
@@ -294,15 +290,19 @@ Rules:
   - `errorMessage`
 
 Delete only when safe:
-- Delete `socket/index.js` after no schema/service imports it.
+- Keep root `socket/index.js` until Task 8 because retained root `models/notificationModel.js` still imports it.
+- Delete `socket/index.js` after no retained root model/service imports it.
 
 Verification:
-- notification creation emits to online user.
-- offline user path does not throw.
-- realtime gateway tests still pass.
-- `npm run build`
-- `npm test`
-- `npm run email:check`
+- [x] notification bus emits to registered listeners.
+- [x] unregister/no-listener path does not throw.
+- [x] realtime notification service forwards bus events through the Nest gateway.
+- [x] gateway emits `notification` to online users.
+- [x] no `require('../../socket` remains inside `src/**`.
+- [x] full legacy import count confirms `0` direct root legacy imports inside `src/**`.
+- [x] `npm run build`
+- [x] `npm test`
+- [x] `npm run email:check`
 
 Commit:
 - `refactor: replace legacy socket bridge with nest emitter`

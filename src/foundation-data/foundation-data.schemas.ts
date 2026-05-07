@@ -1,7 +1,6 @@
 import { Schema, Types } from 'mongoose';
 import { sendPushNotificationToMultiple } from '../common/services/push-notification.service';
-
-const { sendNotification } = require('../../socket/index');
+import { emitRealtimeNotification } from '../common/utils/realtime-notification-bus.util';
 
 const setFileUrl = (doc: any, folder: string, field = 'image') => {
   if (doc?.[field] && !String(doc[field]).startsWith('http')) {
@@ -170,7 +169,7 @@ NotificationSchema.post('save', async (doc: any) => {
     if (!user) return;
     const messageObject: any = doc.toObject().message;
     const notificationTitle = user.lang === 'ar' ? messageObject.ar : messageObject.en;
-    sendNotification(doc.user.toString(), { ...doc.toObject(), message: notificationTitle });
+    emitRealtimeNotification(doc.user.toString(), { ...doc.toObject(), message: notificationTitle });
     if (user.fcmTokens?.length > 0 && user.pushNotificationsEnabled !== false) {
       await sendPushNotificationToMultiple(user.fcmTokens, { title: 'Nexgen Academy', body: notificationTitle }, {
         notificationId: doc._id.toString(),
