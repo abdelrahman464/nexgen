@@ -15,6 +15,7 @@ import { CommerceService } from './commerce.service';
 import { OrderCommissionService } from './order-commission.service';
 import { OrderFulfillmentService } from './order-fulfillment.service';
 import { PaymentProviderService } from './payment-provider.service';
+import { SubscriptionMaintenanceService } from './subscription-maintenance.service';
 import { WebhookEventService } from './webhook-event.service';
 
 @Module({
@@ -41,6 +42,7 @@ import { WebhookEventService } from './webhook-event.service';
     OrderFulfillmentService,
     OrderCommissionService,
     PaymentProviderService,
+    SubscriptionMaintenanceService,
     WebhookEventService,
   ],
   exports: [
@@ -49,6 +51,7 @@ import { WebhookEventService } from './webhook-event.service';
     OrderFulfillmentService,
     OrderCommissionService,
     PaymentProviderService,
+    SubscriptionMaintenanceService,
     WebhookEventService,
     MongooseModule,
   ],

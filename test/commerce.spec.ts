@@ -5,6 +5,7 @@ import { CheckoutCouponDto, PurchaseForUserDto } from '../src/commerce/dto/comme
 import { OrderCommissionService } from '../src/commerce/order-commission.service';
 import { OrderFulfillmentService } from '../src/commerce/order-fulfillment.service';
 import { PaymentProviderService } from '../src/commerce/payment-provider.service';
+import { SubscriptionMaintenanceService } from '../src/commerce/subscription-maintenance.service';
 import { WebhookEventService } from '../src/commerce/webhook-event.service';
 import { CouponRulesService } from '../src/foundation-data/coupon-rules.service';
 
@@ -372,6 +373,109 @@ describe('Commerce migration smoke', () => {
       { new: true },
     );
     expect(notificationModel.create).toHaveBeenCalledWith(expect.objectContaining({ user: 'buyer-id', type: 'chat' }));
+  });
+
+  it('removes expired non-admin subscribers from matching chats and creates notifications', async () => {
+    const userId = new Types.ObjectId();
+    const courseId = new Types.ObjectId();
+    const subscription = {
+      _id: 'subscription-id',
+      user: { _id: userId, invitor: 'marketer-id' },
+      package: { course: { _id: courseId } },
+    };
+    const subscriptionModel = {
+      find: jest.fn().mockReturnValue({
+        sort: jest.fn().mockReturnThis(),
+        populate: jest.fn().mockResolvedValue([subscription]),
+      }),
+    };
+    const chatModel = {
+      find: jest.fn().mockResolvedValue([
+        { _id: 'chat-id', groupName: 'Course group', participants: [{ user: userId, isAdmin: false }] },
+      ]),
+      updateOne: jest.fn().mockResolvedValue({ modifiedCount: 1 }),
+    };
+    const notificationModel = { create: jest.fn().mockResolvedValue({}) };
+    const service = new SubscriptionMaintenanceService(subscriptionModel as any, chatModel as any, notificationModel as any);
+
+    await expect(service.kickUnsubscribedUsersJob(new Date('2026-05-07'))).resolves.toEqual({ success: true, processedCount: 1 });
+
+    expect(subscriptionModel.find).toHaveBeenCalledWith({ endDate: { $lt: new Date('2026-05-07') } });
+    expect(chatModel.find).toHaveBeenCalledWith({
+      $or: [{ course: courseId }, { creator: 'marketer-id' }],
+      'participants.user': userId,
+    });
+    expect(chatModel.updateOne).toHaveBeenCalledWith({ _id: 'chat-id' }, { $pull: { participants: { user: userId } } });
+    expect(notificationModel.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user: userId,
+        type: 'system',
+        message: expect.objectContaining({ en: 'You have been removed from the group Course group' }),
+      }),
+    );
+  });
+
+  it('skips admin participants when expired subscriptions are cleaned up', async () => {
+    const userId = new Types.ObjectId();
+    const subscriptionModel = {
+      find: jest.fn().mockReturnValue({
+        sort: jest.fn().mockReturnThis(),
+        populate: jest.fn().mockResolvedValue([{ _id: 'sub', user: { _id: userId }, package: { course: { _id: new Types.ObjectId() } } }]),
+      }),
+    };
+    const chatModel = {
+      find: jest.fn().mockResolvedValue([{ _id: 'chat', participants: [{ user: userId, isAdmin: true }] }]),
+      updateOne: jest.fn(),
+    };
+    const notificationModel = { create: jest.fn() };
+    const service = new SubscriptionMaintenanceService(subscriptionModel as any, chatModel as any, notificationModel as any);
+
+    await expect(service.kickUnsubscribedUsersJob()).resolves.toEqual({ success: true, processedCount: 0 });
+
+    expect(chatModel.updateOne).not.toHaveBeenCalled();
+    expect(notificationModel.create).not.toHaveBeenCalled();
+  });
+
+  it('skips expired subscriptions with missing user or package course', async () => {
+    const subscriptionModel = {
+      find: jest.fn().mockReturnValue({
+        sort: jest.fn().mockReturnThis(),
+        populate: jest.fn().mockResolvedValue([
+          { _id: 'missing-user', user: null, package: { course: { _id: 'course' } } },
+          { _id: 'missing-course', user: { _id: 'user' }, package: {} },
+        ]),
+      }),
+    };
+    const chatModel = { find: jest.fn(), updateOne: jest.fn() };
+    const notificationModel = { create: jest.fn() };
+    const service = new SubscriptionMaintenanceService(subscriptionModel as any, chatModel as any, notificationModel as any);
+
+    await expect(service.kickUnsubscribedUsersJob()).resolves.toEqual({ success: true, processedCount: 0 });
+
+    expect(chatModel.find).not.toHaveBeenCalled();
+    expect(notificationModel.create).not.toHaveBeenCalled();
+  });
+
+  it('returns success when expired subscriptions have no matching chats', async () => {
+    const subscriptionModel = {
+      find: jest.fn().mockReturnValue({
+        sort: jest.fn().mockReturnThis(),
+        populate: jest.fn().mockResolvedValue([{ _id: 'sub', user: { _id: 'user' }, package: { course: { _id: 'course' } } }]),
+      }),
+    };
+    const chatModel = { find: jest.fn().mockResolvedValue([]), updateOne: jest.fn() };
+    const notificationModel = { create: jest.fn() };
+    const service = new SubscriptionMaintenanceService(subscriptionModel as any, chatModel as any, notificationModel as any);
+
+    await expect(service.kickUnsubscribedUsersJob()).resolves.toEqual({ success: true, processedCount: 0 });
+  });
+
+  it('runs the scheduled subscription cleanup through the shared typed job', async () => {
+    const service = new SubscriptionMaintenanceService({} as any, {} as any, {} as any);
+    const spy = jest.spyOn(service, 'kickUnsubscribedUsersJob').mockResolvedValue({ success: true, processedCount: 2 });
+
+    await expect(service.kickUnsubscribedUsersCron()).resolves.toEqual({ success: true, processedCount: 2 });
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 
   it('processes webhook event only once', async () => {

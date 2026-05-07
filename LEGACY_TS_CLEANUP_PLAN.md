@@ -35,7 +35,7 @@ Use this section as the working tracker for the full legacy cleanup. Do not mark
 - [x] Task 4: Replace legacy validator dependencies.
 - [x] Task 5: Port legacy service helpers still called by Nest.
 - [x] Task 6: Replace socket compatibility bridge.
-- [ ] Task 7: Move cron and scripted runtime code.
+- [x] Task 7: Move cron and scripted runtime code.
 - [ ] Task 8: Delete remaining legacy folders and dependencies.
 
 Current direct legacy import count from `src/**`: **0**.
@@ -321,11 +321,14 @@ Rules:
 - Remove `node-cron` only after no retained runtime file imports it.
 
 Verification:
-- cron registration boot test or documented manual boot check.
-- monthly marketing reset tests remain green.
-- `npm run build`
-- `npm test`
-- `npm run email:check`
+- [x] monthly marketing reset remains in `MarketingService` with `@Cron('0 0 0 1 * *')`.
+- [x] hourly expired-subscription chat cleanup moved to `SubscriptionMaintenanceService`.
+- [x] `utils/cronJob/automatedTasks.js` deleted because no imports remain.
+- [x] `node-cron` removed because no imports remain.
+- [x] subscription cleanup tests cover removal, admin skip, missing data skip, no matching chats, and scheduled method delegation.
+- [x] `npm run build`
+- [x] `npm test`
+- [x] `npm run email:check`
 
 Commit:
 - `refactor: move remaining cron runtime into nest schedule`

@@ -57,7 +57,6 @@
     "mongoose": "^6.0.13",
     "mongoose-i18n-localize": "^0.3.0",
     "multer": "^1.4.5-lts.1",
-    "node-cron": "^3.0.3",
     "nodemailer": "^7.0.9",
     "openai": "^6.16.0",
     "passport": "^0.7.0",
