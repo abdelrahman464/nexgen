@@ -3,7 +3,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ApiQueryHelper } from '../common/pagination/api-query.helper';
 
-const User = require('../../models/userModel');
 const { checkCourseAccess } = require('../../utils/validators/courseValidator');
 
 @Injectable()
@@ -13,12 +12,13 @@ export class CommerceAccessService {
     @InjectModel('Course') private readonly courseModel: Model<any>,
     @InjectModel('Package') private readonly packageModel: Model<any>,
     @InjectModel('CoursePackage') private readonly coursePackageModel: Model<any>,
+    @InjectModel('User') private readonly userModel: Model<any>,
   ) {}
 
   async listOrders(query: Record<string, any>, user: any) {
     const { filter, cleanedQuery } = this.buildOrderFilter(query, user);
     if (query.userId && user.role !== 'admin') {
-      const isUserExist = await User.exists({ _id: query.userId, invitor: user._id });
+      const isUserExist = await this.userModel.exists({ _id: query.userId, invitor: user._id });
       if (!isUserExist) throw new ForbiddenException("You are not authorized to view this user's orders");
     }
 

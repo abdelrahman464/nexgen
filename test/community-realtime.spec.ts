@@ -184,7 +184,23 @@ describe('Community realtime migration smoke', () => {
       findOne: jest.fn().mockResolvedValue(null),
       findByIdAndUpdate: jest.fn().mockResolvedValue({ pushNotificationsEnabled: false }),
     };
-    const service = new UsersService(userModel as any, {} as any);
+    const service = new UsersService(
+      userModel as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
 
     await expect(service.togglePushNotifications(false, { _id: 'user' })).resolves.toMatchObject({
       data: { pushNotificationsEnabled: false },

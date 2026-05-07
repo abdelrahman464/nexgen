@@ -9,6 +9,7 @@ import { JwtAuthGuard } from '../src/common/guards/jwt-auth.guard';
 import { RolesGuard } from '../src/common/guards/roles.guard';
 import { NotificationsController } from '../src/foundation-data/foundation-data.controller';
 import { CreateContactUsDto } from '../src/foundation-data/dto/foundation-data.dto';
+import { ReviewSchema } from '../src/foundation-data/foundation-data.schemas';
 import { FoundationDataService } from '../src/foundation-data/foundation-data.service';
 
 describe('Foundation data migration smoke', () => {
@@ -84,5 +85,40 @@ describe('Foundation data migration smoke', () => {
 
     expect(service.getUnreadNotificationCount).toHaveBeenCalled();
     await app.close();
+  });
+
+  it('uses injected course progress model when enforcing system review access', async () => {
+    const courseProgressModel = { findOne: jest.fn().mockResolvedValue(null) };
+    const service = new FoundationDataService(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      courseProgressModel as any,
+      {} as any,
+      {} as any,
+    );
+
+    await expect(service.createSystemReview({ ratings: 5 }, { _id: 'user-id' })).rejects.toThrow('You are not allowed to review');
+    expect(courseProgressModel.findOne).toHaveBeenCalledWith({ user: 'user-id' });
+  });
+
+  it('uses the active schema connection model when recalculating review ratings', async () => {
+    const updateCourse = jest.fn().mockResolvedValue({});
+    const fakeReviewModel = {
+      aggregate: jest.fn().mockResolvedValue([{ _id: 'course-id', ratingsQuantity: 2, avgRatings: 4.5 }]),
+      db: { model: jest.fn().mockReturnValue({ findByIdAndUpdate: updateCourse }) },
+    };
+
+    await (ReviewSchema.statics as any).calcAverageRatingsAndQuantity.call(fakeReviewModel, 'course-id');
+
+    expect(fakeReviewModel.db.model).toHaveBeenCalledWith('Course');
+    expect(updateCourse).toHaveBeenCalledWith('course-id', { ratingsAverage: 4.5, ratingsQuantity: 2 });
   });
 });

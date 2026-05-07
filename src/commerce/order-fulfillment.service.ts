@@ -3,9 +3,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { OrderItemType, PaymentDetails } from './dto/commerce.dto';
 
-const User = require('../../models/userModel');
-const Chat = require('../../models/ChatModel');
-const Notification = require('../../models/notificationModel');
 const { PDFGenerator } = require('../../utils/generatePdf');
 const { sendEmail } = require('../../utils/sendEmail');
 const { incrementCouponUsedTimes } = require('../../services/couponService');
@@ -44,6 +41,9 @@ export class OrderFulfillmentService {
     @InjectModel('CoursePackage') private readonly coursePackageModel: Model<any>,
     @InjectModel('CourseProgress') private readonly courseProgressModel: Model<any>,
     @InjectModel('UserSubscription') private readonly userSubscriptionModel: Model<any>,
+    @InjectModel('User') private readonly userModel: Model<any>,
+    @InjectModel('Chat') private readonly chatModel: Model<any>,
+    @InjectModel('Notification') private readonly notificationModel: Model<any>,
   ) {}
 
   async fulfillPaidOrder(type: OrderItemType, details: PaymentDetails) {
@@ -130,13 +130,13 @@ export class OrderFulfillmentService {
   }
 
   private async addUserToGroupChatAndNotify(userId: string, courseId: string) {
-    const chat = await Chat.findOneAndUpdate(
+    const chat = await this.chatModel.findOneAndUpdate(
       { course: courseId, isGroupChat: true },
       { $addToSet: { participants: { user: userId, isAdmin: false } } },
       { new: true },
     );
     if (!chat) return;
-    await Notification.create({
+    await this.notificationModel.create({
       user: userId,
       message: {
         en: `You have been added to the group ${chat.groupName}`,
@@ -150,7 +150,7 @@ export class OrderFulfillmentService {
   private async fulfillPaidCourse(details: PaymentDetails) {
     const [course, user, packageDoc] = await Promise.all([
       this.courseModel.findById(details.id),
-      User.findOne({ email: details.email }),
+      this.userModel.findOne({ email: details.email }),
       this.packageModel.findOne({ course: details.id }),
     ]);
     if (!course || !user) throw new Error('Course or user not found');
@@ -192,7 +192,7 @@ export class OrderFulfillmentService {
   }
 
   private async fulfillPaidPackage(details: PaymentDetails) {
-    const [packageDoc, user] = await Promise.all([this.packageModel.findById(details.id), User.findOne({ email: details.email })]);
+    const [packageDoc, user] = await Promise.all([this.packageModel.findById(details.id), this.userModel.findOne({ email: details.email })]);
     if (!packageDoc || !user) throw new Error('Package or user not found');
     let order = await this.createPaidOrder({
       userId: user._id,
@@ -226,7 +226,7 @@ export class OrderFulfillmentService {
   }
 
   private async fulfillPaidCoursePackage(details: PaymentDetails) {
-    const [coursePackage, user] = await Promise.all([this.coursePackageModel.findById(details.id), User.findOne({ email: details.email })]);
+    const [coursePackage, user] = await Promise.all([this.coursePackageModel.findById(details.id), this.userModel.findOne({ email: details.email })]);
     if (!coursePackage || !user) throw new Error('CoursePackage or user not found');
     let order = await this.createPaidOrder({
       userId: user._id,
@@ -269,7 +269,7 @@ export class OrderFulfillmentService {
   private async createOrderNotification(user: any, item: any, order: any, label: 'course' | 'service' | 'Package') {
     let pdfPath = await PDFGenerator.generateOrderPDF(order);
     pdfPath = pdfPath.replace('uploads/orders/', '');
-    await Notification.create({
+    await this.notificationModel.create({
       user: user._id,
       message: {
         en: `You have successfully purchased the ${label} ${item.title?.en} click here to download the invoice`,
@@ -281,7 +281,7 @@ export class OrderFulfillmentService {
   }
 
   private async createManualCourseOrder(id: string, userId: string, isPaid: boolean) {
-    const [course, user, packageDoc] = await Promise.all([this.courseModel.findById(id), User.findById(userId), this.packageModel.findOne({ course: id })]);
+    const [course, user, packageDoc] = await Promise.all([this.courseModel.findById(id), this.userModel.findById(userId), this.packageModel.findOne({ course: id })]);
     if (!course) throw new Error('Course not found');
     if (!user) throw new Error('User not found');
     const coursePrice = course.priceAfterDiscount || course.price || 0;
@@ -318,7 +318,7 @@ export class OrderFulfillmentService {
   }
 
   private async createManualPackageOrder(id: string, userId: string, isPaid: boolean) {
-    const [packageDoc, user] = await Promise.all([this.packageModel.findById(id), User.findById(userId)]);
+    const [packageDoc, user] = await Promise.all([this.packageModel.findById(id), this.userModel.findById(userId)]);
     if (!packageDoc) throw new Error('Package not found');
     if (!user) throw new Error('User not found');
     const packagePrice = packageDoc.priceAfterDiscount || packageDoc.price || 0;
@@ -347,7 +347,7 @@ export class OrderFulfillmentService {
   }
 
   private async createManualCoursePackageOrder(id: string, userId: string, isPaid: boolean) {
-    const [coursePackage, user] = await Promise.all([this.coursePackageModel.findById(id), User.findById(userId)]);
+    const [coursePackage, user] = await Promise.all([this.coursePackageModel.findById(id), this.userModel.findById(userId)]);
     if (!coursePackage) throw new Error('CoursePackage not found');
     if (!user) throw new Error('User not found');
     const coursePackagePrice = coursePackage.priceAfterDiscount || coursePackage.price || 0;

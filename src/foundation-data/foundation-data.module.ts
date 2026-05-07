@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { CommonModule } from '../common/common.module';
+import { CourseProgressSchema, CourseSchema } from '../learning-catalog/catalog.schemas';
+import { UserSchema } from '../users/user.schema';
 import {
   ArticalSchema,
   CategorySchema,
@@ -39,6 +41,9 @@ import { FoundationDataService } from './foundation-data.service';
       { name: 'Coupon', schema: CouponSchema, collection: 'coupons' },
       { name: 'Event', schema: EventSchema, collection: 'events' },
       { name: 'Notification', schema: NotificationSchema, collection: 'notifications' },
+      { name: 'Course', schema: CourseSchema, collection: 'courses' },
+      { name: 'CourseProgress', schema: CourseProgressSchema, collection: 'courseprogresses' },
+      { name: 'User', schema: UserSchema, collection: 'users' },
     ]),
   ],
   controllers: [

@@ -192,7 +192,23 @@ describe('Marketing revenue migration smoke', () => {
 
   it('email marketing query enforces max depth before aggregating', async () => {
     const userModel = { aggregate: jest.fn() };
-    const service = new UsersService(userModel as any, {} as any);
+    const service = new UsersService(
+      userModel as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
     const deepQuery = {
       type: 'not',
       child: { type: 'not', child: { type: 'not', child: { type: 'not', child: { type: 'not', child: { type: 'not', child: { type: 'group', operator: 'AND', children: [] } } } } } },
@@ -207,14 +223,33 @@ describe('Marketing revenue migration smoke', () => {
     const exporterLog = { sales: [{ purchaser: { toString: () => 'user' }, amount: 20 }], save: jest.fn().mockResolvedValue({}) };
     const importerLog = { role: 'marketer', sales: [], totalSalesMoney: 0, save: jest.fn().mockResolvedValue({}) };
     const userModel = { findById: jest.fn().mockResolvedValue(user) };
-    const originalFindOne = (require('../models/MarketingModel') as any).findOne;
-    (require('../models/MarketingModel') as any).findOne = jest.fn().mockResolvedValueOnce(exporterLog).mockResolvedValueOnce(importerLog);
-    const service = new UsersService(userModel as any, {} as any);
+    const marketingLogModel = { findOne: jest.fn().mockResolvedValueOnce(exporterLog).mockResolvedValueOnce(importerLog) };
+    const service = new UsersService(
+      userModel as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      marketingLogModel as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
 
     await service.moveOneUserToAnother({ user: 'user', newInvitor: 'new' });
 
     expect(importerLog.sales).toHaveLength(1);
     expect(user.invitor).toBe('new');
-    (require('../models/MarketingModel') as any).findOne = originalFindOne;
+    expect(marketingLogModel.findOne).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ marketer: 'old' }),
+    );
+    expect(marketingLogModel.findOne).toHaveBeenNthCalledWith(2, { marketer: 'new' });
   });
 });

@@ -21,10 +21,8 @@ Direct imports currently exist in:
 - `src/community-realtime/community-realtime.service.ts`
 - `src/foundation-data/foundation-data.schemas.ts`
 - `src/foundation-data/foundation-data.service.ts`
-- `src/learning-catalog/learning-catalog.service.ts`
 - `src/marketing-revenue/marketing.service.ts`
 - `src/marketing-revenue/rating-leaderboard.service.ts`
-- `src/users/users.service.ts`
 
 Legacy areas still retained:
 - `models/`
@@ -40,7 +38,7 @@ Legacy areas still retained:
 Use this section as the working tracker for the full legacy cleanup. Do not mark a task complete until its verification commands pass and the commit is created.
 
 - [x] Task 1: Inventory and guardrails.
-- [ ] Task 2: Replace legacy model imports with injected Mongoose models.
+- [x] Task 2: Replace legacy model imports with injected Mongoose models.
 - [ ] Task 3: Port shared utils and helpers into `src/common`.
 - [ ] Task 4: Replace legacy validator dependencies.
 - [ ] Task 5: Port legacy service helpers still called by Nest.
@@ -48,7 +46,7 @@ Use this section as the working tracker for the full legacy cleanup. Do not mark
 - [ ] Task 7: Move cron and scripted runtime code.
 - [ ] Task 8: Delete remaining legacy folders and dependencies.
 
-Current direct legacy import count from `src/**`: **38**.
+Current direct legacy import count from `src/**`: **15**.
 
 Guardrail command for every cleanup PR:
 
@@ -67,11 +65,11 @@ Rule: the count must only go down, unless the PR explains a temporary move and i
 
 ### Commerce
 
-- [ ] `src/commerce/commerce-access.service.ts`: `models/userModel`.
+- [x] `src/commerce/commerce-access.service.ts`: `models/userModel`.
 - [ ] `src/commerce/commerce-access.service.ts`: `utils/validators/courseValidator`.
-- [ ] `src/commerce/order-fulfillment.service.ts`: `models/userModel`.
-- [ ] `src/commerce/order-fulfillment.service.ts`: `models/ChatModel`.
-- [ ] `src/commerce/order-fulfillment.service.ts`: `models/notificationModel`.
+- [x] `src/commerce/order-fulfillment.service.ts`: `models/userModel`.
+- [x] `src/commerce/order-fulfillment.service.ts`: `models/ChatModel`.
+- [x] `src/commerce/order-fulfillment.service.ts`: `models/notificationModel`.
 - [ ] `src/commerce/order-fulfillment.service.ts`: `utils/generatePdf`.
 - [ ] `src/commerce/order-fulfillment.service.ts`: `utils/sendEmail`.
 - [ ] `src/commerce/order-fulfillment.service.ts`: `services/couponService`.
@@ -86,18 +84,18 @@ Rule: the count must only go down, unless the PR explains a temporary move and i
 
 ### Foundation Data
 
-- [ ] `src/foundation-data/foundation-data.schemas.ts`: `models/courseModel`.
-- [ ] `src/foundation-data/foundation-data.schemas.ts`: `models/userModel`.
+- [x] `src/foundation-data/foundation-data.schemas.ts`: `models/courseModel`.
+- [x] `src/foundation-data/foundation-data.schemas.ts`: `models/userModel`.
 - [ ] `src/foundation-data/foundation-data.schemas.ts`: `socket/index`.
 - [ ] `src/foundation-data/foundation-data.schemas.ts`: `utils/pushNotification`.
-- [ ] `src/foundation-data/foundation-data.service.ts`: `models/courseModel`.
-- [ ] `src/foundation-data/foundation-data.service.ts`: `models/courseProgressModel`.
-- [ ] `src/foundation-data/foundation-data.service.ts`: `models/userModel`.
+- [x] `src/foundation-data/foundation-data.service.ts`: `models/courseModel`.
+- [x] `src/foundation-data/foundation-data.service.ts`: `models/courseProgressModel`.
+- [x] `src/foundation-data/foundation-data.service.ts`: `models/userModel`.
 - [ ] `src/foundation-data/foundation-data.service.ts`: `utils/pushNotification`.
 
 ### Learning Catalog
 
-- [ ] `src/learning-catalog/learning-catalog.service.ts`: `models/userSubscriptionModel`.
+- [x] `src/learning-catalog/learning-catalog.service.ts`: `models/userSubscriptionModel`.
 
 ### Marketing Revenue
 
@@ -106,19 +104,19 @@ Rule: the count must only go down, unless the PR explains a temporary move and i
 
 ### Users
 
-- [ ] `src/users/users.service.ts`: `models/orderModel`.
-- [ ] `src/users/users.service.ts`: `models/MessageModel`.
-- [ ] `src/users/users.service.ts`: `models/ChatModel`.
-- [ ] `src/users/users.service.ts`: `models/notificationModel`.
-- [ ] `src/users/users.service.ts`: `models/reactionModel`.
-- [ ] `src/users/users.service.ts`: `models/commentModel`.
-- [ ] `src/users/users.service.ts`: `models/courseProgressModel`.
-- [ ] `src/users/users.service.ts`: `models/MarketingModel`.
-- [ ] `src/users/users.service.ts`: `models/courseModel`.
-- [ ] `src/users/users.service.ts`: `models/articalModel`.
-- [ ] `src/users/users.service.ts`: `models/packageModel`.
-- [ ] `src/users/users.service.ts`: `models/coursePackageModel`.
-- [ ] `src/users/users.service.ts`: `models/liveModel`.
+- [x] `src/users/users.service.ts`: `models/orderModel`.
+- [x] `src/users/users.service.ts`: `models/MessageModel`.
+- [x] `src/users/users.service.ts`: `models/ChatModel`.
+- [x] `src/users/users.service.ts`: `models/notificationModel`.
+- [x] `src/users/users.service.ts`: `models/reactionModel`.
+- [x] `src/users/users.service.ts`: `models/commentModel`.
+- [x] `src/users/users.service.ts`: `models/courseProgressModel`.
+- [x] `src/users/users.service.ts`: `models/MarketingModel`.
+- [x] `src/users/users.service.ts`: `models/courseModel`.
+- [x] `src/users/users.service.ts`: `models/articalModel`.
+- [x] `src/users/users.service.ts`: `models/packageModel`.
+- [x] `src/users/users.service.ts`: `models/coursePackageModel`.
+- [x] `src/users/users.service.ts`: `models/liveModel`.
 
 ## Task 1: Inventory And Guardrails
 
@@ -160,11 +158,12 @@ Delete only when safe:
 - Otherwise leave the file for a later task and mark it as still retained.
 
 Verification:
-- model injection unit tests for affected services.
-- existing smoke suite.
-- `npm run build`
-- `npm test`
-- `npm run email:check`
+- [x] model injection unit tests for affected services.
+- [x] existing smoke suite.
+- [x] no `require('../../models` remains inside `src/**`.
+- [x] `npm run build`
+- [x] `npm test`
+- [x] `npm run email:check`
 
 Commit:
 - `refactor: replace legacy model imports with nest models`

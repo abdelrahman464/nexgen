@@ -6,24 +6,23 @@ import { ApiException } from '../common/exceptions/api.exception';
 import { ApiQueryHelper } from '../common/pagination/api-query.helper';
 import { ImageProcessingService } from '../common/upload/image-processing.service';
 
-const Order = require('../../models/orderModel');
-const Message = require('../../models/MessageModel');
-const Chat = require('../../models/ChatModel');
-const Notification = require('../../models/notificationModel');
-const ReactModel = require('../../models/reactionModel');
-const Comment = require('../../models/commentModel');
-const CourseProgress = require('../../models/courseProgressModel');
-const MarketLog = require('../../models/MarketingModel');
-const Course = require('../../models/courseModel');
-const Article = require('../../models/articalModel');
-const Package = require('../../models/packageModel');
-const CoursePackage = require('../../models/coursePackageModel');
-const Live = require('../../models/liveModel');
-
 @Injectable()
 export class UsersService {
   constructor(
     @InjectModel('User') private readonly userModel: Model<any>,
+    @InjectModel('Order') private readonly orderModel: Model<any>,
+    @InjectModel('Message') private readonly messageModel: Model<any>,
+    @InjectModel('Chat') private readonly chatModel: Model<any>,
+    @InjectModel('Notification') private readonly notificationModel: Model<any>,
+    @InjectModel('Reaction') private readonly reactionModel: Model<any>,
+    @InjectModel('Comment') private readonly commentModel: Model<any>,
+    @InjectModel('CourseProgress') private readonly courseProgressModel: Model<any>,
+    @InjectModel('MarketingLogs') private readonly marketingLogModel: Model<any>,
+    @InjectModel('Course') private readonly courseModel: Model<any>,
+    @InjectModel('Artical') private readonly articalModel: Model<any>,
+    @InjectModel('Package') private readonly packageModel: Model<any>,
+    @InjectModel('CoursePackage') private readonly coursePackageModel: Model<any>,
+    @InjectModel('Live') private readonly liveModel: Model<any>,
     private readonly images: ImageProcessingService,
   ) {}
 
@@ -86,18 +85,18 @@ export class UsersService {
         const user = await this.userModel.findByIdAndDelete(id).session(session);
         if (!user) throw new NotFoundException(`User not found for this id ${id}`);
         await Promise.all([
-          Order.deleteMany({ user: user._id }).session(session),
-          Message.deleteMany({ sender: user._id }).session(session),
-          Notification.deleteMany({ user: user._id }).session(session),
-          ReactModel.deleteMany({ user: user._id }).session(session),
-          Comment.deleteMany({ user: user._id }).session(session),
-          CourseProgress.deleteMany({ user: user._id }).session(session),
-          MarketLog.deleteOne({ marketer: user._id }).session(session),
-          Chat.updateMany(
+          this.orderModel.deleteMany({ user: user._id }).session(session),
+          this.messageModel.deleteMany({ sender: user._id }).session(session),
+          this.notificationModel.deleteMany({ user: user._id }).session(session),
+          this.reactionModel.deleteMany({ user: user._id }).session(session),
+          this.commentModel.deleteMany({ user: user._id }).session(session),
+          this.courseProgressModel.deleteMany({ user: user._id }).session(session),
+          this.marketingLogModel.deleteOne({ marketer: user._id }).session(session),
+          this.chatModel.updateMany(
             { 'participants.user': user._id, isGroupChat: true },
             { $pull: { participants: { user: user._id } } },
           ).session(session),
-          Chat.deleteMany({ 'participants.user': user._id, isGroupChat: false }).session(session),
+          this.chatModel.deleteMany({ 'participants.user': user._id, isGroupChat: false }).session(session),
         ]);
       })
       .catch((error: unknown) => {
@@ -225,15 +224,15 @@ export class UsersService {
     const instructors = await this.userModel.find({ isInstructor: true }).select('name email profileImg bio');
     const instructorsWithBelongings = await Promise.all(
       instructors.map(async (instructor: any) => {
-        const courses = await Course.find({ instructor: instructor._id });
+        const courses = await this.courseModel.find({ instructor: instructor._id });
         const activeCoursesCount = courses.filter((course: any) => course.status === 'active').length;
         const courseIds = courses.map((course: any) => course._id);
         const [packages, coursePackages, orders, articles, liveSessions] = await Promise.all([
-          Package.find({ course: { $in: courseIds } }),
-          CoursePackage.find({ courses: { $in: courseIds } }),
-          Order.find({ course: { $in: courseIds } }),
-          Article.find({ author: instructor._id }),
-          Live.find({ instructor: instructor._id }),
+          this.packageModel.find({ course: { $in: courseIds } }),
+          this.coursePackageModel.find({ courses: { $in: courseIds } }),
+          this.orderModel.find({ course: { $in: courseIds } }),
+          this.articalModel.find({ author: instructor._id }),
+          this.liveModel.find({ instructor: instructor._id }),
         ]);
         return {
           instructor: {
@@ -268,7 +267,7 @@ export class UsersService {
     if (alreadyFollowing) throw new ApiException('You are already following this user', 400);
     await this.userModel.findByIdAndUpdate(user._id, { $addToSet: { following: { user: id, notificationBell: false } } });
     await this.userModel.findByIdAndUpdate(id, { $addToSet: { followers: user._id } });
-    await Notification.create({
+    await this.notificationModel.create({
       user: id,
       message: { ar: ` ${user.name} قام بمتابعتك`, en: `${user.name} followed you` },
       type: 'follow',
@@ -389,9 +388,9 @@ export class UsersService {
   }
 
   private async moveOrdersFromOneToOne(exporter: string, importer: string, userId: string) {
-    const exporterLog = await MarketLog.findOne({ marketer: exporter, sales: { $exists: true, $not: { $size: 0 } } });
+    const exporterLog = await this.marketingLogModel.findOne({ marketer: exporter, sales: { $exists: true, $not: { $size: 0 } } });
     if (!exporterLog) return 'No orders found';
-    const importerLog = await MarketLog.findOne({ marketer: importer });
+    const importerLog = await this.marketingLogModel.findOne({ marketer: importer });
     if (!importerLog) return 'No importer found';
     const userOrders = exporterLog.sales.filter((sale: any) => sale.purchaser.toString() === userId.toString());
     exporterLog.sales = exporterLog.sales.filter((sale: any) => sale.purchaser.toString() !== userId.toString());

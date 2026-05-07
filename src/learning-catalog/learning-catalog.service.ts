@@ -21,6 +21,7 @@ export class LearningCatalogService {
     @InjectModel('CourseProgress') private readonly courseProgressModel: Model<any>,
     @InjectModel('Exam') private readonly examModel: Model<any>,
     @InjectModel('Analytics') private readonly analyticsModel: Model<any>,
+    @InjectModel('UserSubscription') private readonly userSubscriptionModel: Model<any>,
     private readonly query: CatalogQueryService,
     private readonly reorder: CatalogReorderService,
     private readonly access: CatalogAccessService,
@@ -604,8 +605,7 @@ export class LearningCatalogService {
 
   private async assertUserSubscription(userId: string, courseId?: string) {
     if (!courseId) return;
-    const UserSubscription = require('../../models/userSubscriptionModel');
-    const subscription = await UserSubscription.findOne({ user: userId, course: courseId });
+    const subscription = await this.userSubscriptionModel.findOne({ user: userId, course: courseId });
     if (!subscription) throw new BadRequestException('You do not have an active subscription');
   }
 }

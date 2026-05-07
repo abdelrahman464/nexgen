@@ -80,6 +80,9 @@ describe('Commerce migration smoke', () => {
       {} as any,
       {} as any,
       userSubscriptionModel as any,
+      {} as any,
+      {} as any,
+      {} as any,
     );
 
     await expect(service.addSubscriberToPackage(packageId, userId)).resolves.toEqual({ subscription: { _id: 'sub' } });
@@ -90,11 +93,53 @@ describe('Commerce migration smoke', () => {
     const orderModel = {
       find: jest.fn().mockResolvedValue([{ createdAt: new Date() }]),
     };
-    const service = new CommerceAccessService(orderModel as any, {} as any, {} as any, {} as any);
+    const service = new CommerceAccessService(orderModel as any, {} as any, {} as any, {} as any, {} as any);
 
     await expect(service.assertNoRecentPaidOrder('66447ad7a7957a07c0ae9e69')).rejects.toThrow(
       'You have already placed an order within the past hour',
     );
+  });
+
+  it('uses injected User model when checking marketer order visibility', async () => {
+    const orderModel = { countDocuments: jest.fn(), find: jest.fn() };
+    const userModel = { exists: jest.fn().mockResolvedValue(null) };
+    const service = new CommerceAccessService(orderModel as any, {} as any, {} as any, {} as any, userModel as any);
+
+    await expect(
+      service.listOrders({ userId: '66447ad7a7957a07c0ae9e69' }, { _id: '66447ad7a7957a07c0ae9e70', role: 'marketer' }),
+    ).rejects.toThrow("You are not authorized to view this user's orders");
+    expect(userModel.exists).toHaveBeenCalledWith({
+      _id: '66447ad7a7957a07c0ae9e69',
+      invitor: '66447ad7a7957a07c0ae9e70',
+    });
+    expect(orderModel.countDocuments).not.toHaveBeenCalled();
+  });
+
+  it('uses injected chat and notification models when enrolling users into group chats', async () => {
+    const chatModel = {
+      findOneAndUpdate: jest.fn().mockResolvedValue({ groupName: 'Course group' }),
+    };
+    const notificationModel = { create: jest.fn().mockResolvedValue({}) };
+    const service = new OrderFulfillmentService(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      chatModel as any,
+      notificationModel as any,
+    );
+
+    await (service as any).addUserToGroupChatAndNotify('user-id', 'course-id');
+
+    expect(chatModel.findOneAndUpdate).toHaveBeenCalledWith(
+      { course: 'course-id', isGroupChat: true },
+      { $addToSet: { participants: { user: 'user-id', isAdmin: false } } },
+      { new: true },
+    );
+    expect(notificationModel.create).toHaveBeenCalledWith(expect.objectContaining({ user: 'user-id', type: 'chat' }));
   });
 
   it('processes webhook event only once', async () => {

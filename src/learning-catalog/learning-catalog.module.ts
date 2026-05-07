@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { CommonModule } from '../common/common.module';
+import { UserSubscriptionSchema } from '../commerce/commerce.schemas';
 import { CatalogAccessService } from './catalog-access.service';
 import { CatalogQueryService } from './catalog-query.service';
 import { CatalogReorderService } from './catalog-reorder.service';
@@ -20,6 +21,7 @@ import { LearningCatalogService } from './learning-catalog.service';
       { name: 'CourseProgress', schema: CourseProgressSchema, collection: 'courseprogresses' },
       { name: 'Exam', schema: ExamSchema, collection: 'exams' },
       { name: 'Analytics', schema: AnalyticsSchema, collection: 'analytics' },
+      { name: 'UserSubscription', schema: UserSubscriptionSchema, collection: 'usersubscriptions' },
     ]),
   ],
   controllers: [

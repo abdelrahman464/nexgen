@@ -5,9 +5,6 @@ import slugify from 'slugify';
 import { ApiQueryHelper } from '../common/pagination/api-query.helper';
 import { ImageProcessingService } from '../common/upload/image-processing.service';
 
-const Course = require('../../models/courseModel');
-const CourseProgress = require('../../models/courseProgressModel');
-const User = require('../../models/userModel');
 const { sendPushNotificationToTopic, sendPushNotificationToMultiple } = require('../../utils/pushNotification');
 
 @Injectable()
@@ -22,6 +19,9 @@ export class FoundationDataService {
     @InjectModel('Coupon') private readonly couponModel: Model<any>,
     @InjectModel('Event') private readonly eventModel: Model<any>,
     @InjectModel('Notification') private readonly notificationModel: Model<any>,
+    @InjectModel('Course') private readonly courseModel: Model<any>,
+    @InjectModel('CourseProgress') private readonly courseProgressModel: Model<any>,
+    @InjectModel('User') private readonly userModel: Model<any>,
     private readonly images: ImageProcessingService,
   ) {}
 
@@ -62,7 +62,7 @@ export class FoundationDataService {
   }
 
   async createSystemReview(body: any, user: any) {
-    const userProgress = await CourseProgress.findOne({ user: user._id });
+    const userProgress = await this.courseProgressModel.findOne({ user: user._id });
     if (!userProgress) throw new ForbiddenException('You are not allowed to review');
     const existing = await this.systemReviewModel.findOne({ user: user._id });
     if (existing) throw new ForbiddenException('you already have a review');
@@ -98,10 +98,10 @@ export class FoundationDataService {
   async createReview(body: any, user: any, courseId?: string) {
     const course = body.course || courseId;
     if (!course) throw new NotFoundException('course required');
-    const courseDoc = await Course.findById(course);
+    const courseDoc = await this.courseModel.findById(course);
     if (!courseDoc) throw new NotFoundException(`There are no course for this id ${course}`);
     if (user.role !== 'admin') {
-      const progress = await CourseProgress.findOne({ user: user._id, course });
+      const progress = await this.courseProgressModel.findOne({ user: user._id, course });
       if (!progress) throw new ForbiddenException('You are not allowed to review this course');
     }
     const existing = await this.reviewModel.findOne({ user: user._id, course });
@@ -128,19 +128,19 @@ export class FoundationDataService {
 
   async addWishlistCourse(courseId: string, user: any) {
     await this.assertCourseExists(courseId);
-    const updatedUser = await User.findByIdAndUpdate(user._id, { $addToSet: { wishlist: courseId } }, { new: true });
+    const updatedUser = await this.userModel.findByIdAndUpdate(user._id, { $addToSet: { wishlist: courseId } }, { new: true });
     if (!updatedUser) throw new NotFoundException('no user found');
     return { status: 'success', message: 'course added successfully to your wishlist', data: updatedUser.wishlist };
   }
 
   async removeWishlistCourse(courseId: string, user: any) {
     await this.assertCourseExists(courseId);
-    const updatedUser = await User.findByIdAndUpdate(user._id, { $pull: { wishlist: courseId } }, { new: true });
+    const updatedUser = await this.userModel.findByIdAndUpdate(user._id, { $pull: { wishlist: courseId } }, { new: true });
     return { status: 'success', message: 'course removed successfully from your wishlist', data: updatedUser.wishlist };
   }
 
   async getWishlist(user: any) {
-    const currentUser = await User.findById(user._id).populate({ path: 'wishlist' });
+    const currentUser = await this.userModel.findById(user._id).populate({ path: 'wishlist' });
     return { status: 'success', result: currentUser.wishlist.length, data: currentUser.wishlist };
   }
 
@@ -148,7 +148,7 @@ export class FoundationDataService {
     const response = await this.listDocuments(this.categoryModel, query, 'Category');
     const data = await Promise.all(response.data.map(async (category: any) => ({
       ...(category.toObject ? category.toObject() : category),
-      courseCount: await Course.countDocuments({ category: category._id, status: 'active' }),
+      courseCount: await this.courseModel.countDocuments({ category: category._id, status: 'active' }),
     })));
     return { ...response, data };
   }
@@ -289,7 +289,7 @@ export class FoundationDataService {
   }
 
   async sendSystemNotificationToAll(body: any) {
-    const users = await User.find({ role: 'user' });
+    const users = await this.userModel.find({ role: 'user' });
     await Promise.all(users.map((user: any) => this.notificationModel.create({ user: user._id, message: body.message, type: 'system' })));
     return { status: 'success', message: 'Notifications sent successfully' };
   }
@@ -300,12 +300,12 @@ export class FoundationDataService {
     if (body.topic) {
       result = await sendPushNotificationToTopic(body.topic, notification);
     } else if (body.sendToAll) {
-      const users = await User.find({ role: 'user', pushNotificationsEnabled: { $ne: false }, fcmTokens: { $exists: true, $ne: [] } }).select('fcmTokens');
+      const users = await this.userModel.find({ role: 'user', pushNotificationsEnabled: { $ne: false }, fcmTokens: { $exists: true, $ne: [] } }).select('fcmTokens');
       const tokens = users.flatMap((user: any) => user.fcmTokens);
       if (!tokens.length) throw new ForbiddenException('No FCM tokens found for users');
       result = await sendPushNotificationToMultiple(tokens, notification);
     } else if (body.userIds?.length) {
-      const users = await User.find({ _id: { $in: body.userIds }, pushNotificationsEnabled: { $ne: false }, fcmTokens: { $exists: true, $ne: [] } }).select('fcmTokens');
+      const users = await this.userModel.find({ _id: { $in: body.userIds }, pushNotificationsEnabled: { $ne: false }, fcmTokens: { $exists: true, $ne: [] } }).select('fcmTokens');
       const tokens = users.flatMap((user: any) => user.fcmTokens);
       if (!tokens.length) throw new ForbiddenException('No FCM tokens found for specified users');
       result = await sendPushNotificationToMultiple(tokens, notification);
@@ -373,7 +373,7 @@ export class FoundationDataService {
   }
 
   private async assertCourseExists(courseId: string) {
-    const course = await Course.findById(courseId);
+    const course = await this.courseModel.findById(courseId);
     if (!course) throw new NotFoundException(`No course for this id : ${courseId}`);
   }
 

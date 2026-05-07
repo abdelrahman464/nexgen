@@ -84,6 +84,7 @@ describe('Learning catalog package migration smoke', () => {
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
     );
 
     await service.getCertificateLink('66447ad7a7957a07c0ae9e69', { _id: '66447ad7a7957a07c0ae9e70' });
@@ -143,6 +144,7 @@ describe('Learning catalog package migration smoke', () => {
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
     );
 
     await expect(
@@ -155,6 +157,7 @@ describe('Learning catalog package migration smoke', () => {
 
   it('blocks analytics performance reads for unrelated users', async () => {
     const service = new LearningCatalogService(
+      {} as any,
       {} as any,
       {} as any,
       {} as any,

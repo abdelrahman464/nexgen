@@ -1,7 +1,5 @@
 import { Schema, Types } from 'mongoose';
 
-const Course = require('../../models/courseModel');
-const User = require('../../models/userModel');
 const { sendNotification } = require('../../socket/index');
 const { sendPushNotificationToMultiple } = require('../../utils/pushNotification');
 
@@ -63,6 +61,7 @@ ReviewSchema.statics.calcAverageRatingsAndQuantity = async function (courseId: T
     { $match: { course: courseId } },
     { $group: { _id: '$course', avgRatings: { $avg: '$ratings' }, ratingsQuantity: { $sum: 1 } } },
   ]);
+  const Course = (this as any).db.model('Course');
   await Course.findByIdAndUpdate(courseId, {
     ratingsAverage: result.length ? Number(result[0].avgRatings.toFixed(1)) : 0,
     ratingsQuantity: result.length ? result[0].ratingsQuantity : 0,
@@ -166,6 +165,7 @@ NotificationSchema.post('init', (doc) => setFileUrl(doc, doc.type === 'order' ? 
 NotificationSchema.post('save', (doc) => setFileUrl(doc, doc.type === 'order' ? 'orders' : 'certificate', 'file'));
 NotificationSchema.post('save', async (doc: any) => {
   try {
+    const User = doc.constructor.db.model('User');
     const user = await User.findById(doc.user).select('lang fcmTokens pushNotificationsEnabled');
     if (!user) return;
     const messageObject: any = doc.toObject().message;
