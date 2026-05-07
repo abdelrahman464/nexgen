@@ -19,7 +19,7 @@ export class OrderPdfService {
       try {
         const {
           outputDirectory = './uploads/orders',
-          logoPath = path.join(process.cwd(), 'utils', 'iconicLogo.png'),
+          logoPath = path.join(process.cwd(), 'assets', 'iconicLogo.png'),
           primaryColor = '#2C3E50',
           secondaryColor = '#1ABC9C',
         } = options;

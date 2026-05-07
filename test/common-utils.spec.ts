@@ -5,6 +5,10 @@ import { OrderPdfService } from '../src/common/services/order-pdf.service';
 import { PushNotificationService } from '../src/common/services/push-notification.service';
 import { filterOffensiveWords } from '../src/common/utils/offensive-words.util';
 import { wrapUserImageWithServer } from '../src/common/utils/image-url.util';
+import { GlobalExceptionFilter } from '../src/common/filters/global-exception.filter';
+import * as runtimeModels from '../src/common/utils/runtime-models.util';
+import { backfillModelOrder } from '../scripts/backfillItemOrder';
+import fs from 'fs';
 
 jest.mock('nodemailer', () => ({
   createTransport: jest.fn(() => ({ sendMail: jest.fn().mockResolvedValue({}) })),
@@ -69,6 +73,27 @@ describe('Common utility ports', () => {
     jest.restoreAllMocks();
   });
 
+  it('uses the moved assets logo as the default order PDF logo path', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(12345);
+    const existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(false);
+    const outputDirectory = path.join(os.tmpdir(), `nexgen-order-pdfs-${Date.now()}`);
+    const service = new OrderPdfService();
+
+    await service.generateOrderPDF(
+      {
+        _id: 'order-id',
+        user: { name: 'Buyer', email: 'buyer@example.com' },
+        totalOrderPrice: 10,
+        paymentMethodType: 'stripe',
+        isPaid: true,
+      },
+      { outputDirectory },
+    );
+
+    expect(existsSpy).toHaveBeenCalledWith(path.join(process.cwd(), 'assets', 'iconicLogo.png'));
+    jest.restoreAllMocks();
+  });
+
   it('sends emails with the existing SMTP env and html mail shape', async () => {
     process.env.EMAIL_HOST = 'smtp.example.test';
     process.env.EMAIL_PORT = '465';
@@ -126,5 +151,84 @@ describe('Common utility ports', () => {
     expect(filterOffensiveWords('b4dword clean', ['b4dword'])).toBe('*** clean');
     expect(filterOffensiveWords(42 as any)).toBe(42);
     expect(wrapUserImageWithServer('avatar.webp')).toBe('https://api.example.test/users/avatar.webp');
+  });
+
+  it('logs global exceptions through the typed runtime error model helper', async () => {
+    process.env.SKIP_DB_CONNECTION = 'false';
+    process.env.NODE_ENV = 'development';
+    const logSpy = jest.spyOn(runtimeModels, 'logRuntimeErrorToDatabase').mockResolvedValue(undefined);
+    const response = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const host: any = {
+      switchToHttp: () => ({
+        getRequest: () => ({ method: 'GET', originalUrl: '/api/v1/test' }),
+        getResponse: () => response,
+      }),
+    };
+
+    await new GlobalExceptionFilter().catch(new Error('boom'), host);
+
+    expect(logSpy).toHaveBeenCalledWith(expect.any(Error), 'GET /api/v1/test');
+    expect(response.status).toHaveBeenCalledWith(500);
+    delete process.env.SKIP_DB_CONNECTION;
+  });
+
+  it('skips global exception DB logging when database connections are disabled', async () => {
+    process.env.SKIP_DB_CONNECTION = 'true';
+    const logSpy = jest.spyOn(runtimeModels, 'logRuntimeErrorToDatabase').mockResolvedValue(undefined);
+    const response = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const host: any = {
+      switchToHttp: () => ({
+        getRequest: () => ({ method: 'GET', originalUrl: '/api/v1/test' }),
+        getResponse: () => response,
+      }),
+    };
+
+    await new GlobalExceptionFilter().catch(new Error('boom'), host);
+
+    expect(logSpy).not.toHaveBeenCalled();
+    delete process.env.SKIP_DB_CONNECTION;
+  });
+
+  it('backfills item order with the existing ordering behavior', async () => {
+    const chain = (result: any) => ({
+      sort: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      setOptions: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockResolvedValue(result),
+    });
+    const Model = {
+      findOne: jest.fn().mockReturnValue(chain({ order: 5 })),
+      find: jest.fn().mockReturnValue(chain([{ _id: 'a' }, { _id: 'b' }])),
+      bulkWrite: jest.fn().mockResolvedValue({}),
+    };
+
+    await expect(backfillModelOrder({ name: 'Course', Model })).resolves.toEqual({
+      name: 'Course',
+      backfilledCount: 2,
+    });
+    expect(Model.bulkWrite).toHaveBeenCalledWith([
+      { updateOne: { filter: { _id: 'a' }, update: { $set: { order: 6 } } } },
+      { updateOne: { filter: { _id: 'b' }, update: { $set: { order: 7 } } } },
+    ]);
+  });
+
+  it('supports dry-run item order backfill without writing updates', async () => {
+    const chain = (result: any) => ({
+      sort: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      setOptions: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockResolvedValue(result),
+    });
+    const Model = {
+      findOne: jest.fn().mockReturnValue(chain(null)),
+      find: jest.fn().mockReturnValue(chain([{ _id: 'a' }])),
+      bulkWrite: jest.fn(),
+    };
+
+    await expect(backfillModelOrder({ name: 'Package', Model }, true)).resolves.toEqual({
+      name: 'Package',
+      backfilledCount: 1,
+    });
+    expect(Model.bulkWrite).not.toHaveBeenCalled();
   });
 });

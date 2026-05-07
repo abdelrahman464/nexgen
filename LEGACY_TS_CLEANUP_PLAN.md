@@ -17,13 +17,7 @@ Direct imports currently exist in:
 - None.
 
 Legacy areas still retained:
-- `models/`
-- `services/`
-- `utils/`
-- `helpers/`
-- `middlewares/validatorMiddleware.js`
-- `middlewares/uploadImageMiddleware.js`
-- `socket/index.js`
+- None.
 
 ## Execution Tracker
 
@@ -36,15 +30,15 @@ Use this section as the working tracker for the full legacy cleanup. Do not mark
 - [x] Task 5: Port legacy service helpers still called by Nest.
 - [x] Task 6: Replace socket compatibility bridge.
 - [x] Task 7: Move cron and scripted runtime code.
-- [ ] Task 8: Delete remaining legacy folders and dependencies.
+- [x] Task 8: Delete remaining legacy folders and dependencies.
 
 Current direct legacy import count from `src/**`: **0**.
 
 Guardrail command for every cleanup PR:
 
 ```powershell
-Get-ChildItem -Recurse -File src |
-  Select-String -Pattern "require\\('../../models|require\\('../../services|require\\('../../helpers|require\\('../../utils|require\\('../../middlewares|require\\('../../socket"
+Get-ChildItem -Path .\src,.\scripts,.\test,.\emails -Recurse -File -Include *.ts,*.tsx,*.js,*.json |
+  Select-String -Pattern "require\(['`"](\.\./)+(models|services|helpers|utils|middlewares|socket)"
 ```
 
 Rule: the count must only go down, unless the PR explains a temporary move and includes a follow-up removal item in this file.
@@ -54,6 +48,14 @@ Rule: the count must only go down, unless the PR explains a temporary move and i
 ### Auth
 
 - [x] `src/auth/auth.service.ts`: `services/marketing/marketingAnalyticsService` for `getMarketerFromInvitationKey`.
+- [x] `src/common/guards/jwt-auth.guard.ts`: `models/userModel`.
+- [x] `src/common/guards/jwt-auth.guard.ts`: `models/courseProgressModel`.
+- [x] `src/common/guards/jwt-auth.guard.ts`: `models/lessonModel`.
+- [x] `src/common/guards/optional-jwt-auth.guard.ts`: `models/userModel`.
+
+### Common
+
+- [x] `src/common/filters/global-exception.filter.ts`: `utils/errorLogs`.
 
 ### Commerce
 
@@ -338,35 +340,35 @@ Commit:
 After Tasks 1-7, remove legacy folders that have zero imports.
 
 Delete candidates:
-- `models/`
-- `services/`
-- `utils/validators/`
-- unused `utils/`
-- unused `helpers/`
-- `middlewares/`
-- `socket/`
+- [x] `models/`
+- [x] `services/`
+- [x] `utils/validators/`
+- [x] unused `utils/`
+- [x] unused `helpers/`
+- [x] `middlewares/`
+- [x] `socket/`
 
 Dependency cleanup candidates:
-- `express-async-handler`
-- `express-validator`
-- `node-cron`
+- [x] `express-async-handler`
+- [x] `express-validator`
+- [x] `node-cron`
 - any package only used by deleted legacy code.
 
 Rules:
-- Before deletion, run a repo-wide import search across `src/`, `test/`, `emails/`, `scripts/`, and retained config files.
-- Keep static assets like `utils/iconicLogo.png` only if still used by PDF/certificate generation.
-- Update `NEST_MIGRATION_TASK_FLOW.md` and `FRONT_CHANGES.md` only if behavior changes.
+- [x] Before deletion, run a repo-wide import search across `src/`, `test/`, `emails/`, `scripts/`, and retained config files.
+- [x] Move static assets still used by PDF generation to `assets/`.
+- [x] Update `NEST_MIGRATION_TASK_FLOW.md` and `FRONT_CHANGES.md` only if behavior changes.
 
 Verification:
-- `npm run build`
-- `npm test`
-- `npm run email:check`
-- `npm audit --omit=dev`
-- staging checklist from `STAGING_SMOKE_CHECKLIST.md`
-- final search must return no direct `require('../../models|../../services|../../helpers|../../utils|../../middlewares|../../socket')` inside `src/**`.
+- [x] `npm run build`
+- [x] `npm test`
+- [x] `npm run email:check`
+- [x] `npm audit --omit=dev` ran; residual production vulnerabilities require breaking upgrades and remain deferred.
+- [ ] staging checklist from `STAGING_SMOKE_CHECKLIST.md`
+- [x] final search returns no direct root legacy imports inside `src/**`, `scripts/**`, `test/**`, or `emails/**`.
 
 Commit:
-- `chore: remove remaining legacy js runtime`
+- `chore: complete legacy typescript cleanup`
 
 ## Done Criteria
 

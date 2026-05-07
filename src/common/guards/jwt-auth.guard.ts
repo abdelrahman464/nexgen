@@ -1,10 +1,11 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import jwt from 'jsonwebtoken';
 import { ApiException } from '../exceptions/api.exception';
-
-const User = require('../../../models/userModel');
-const CourseProgress = require('../../../models/courseProgressModel');
-const Lesson = require('../../../models/lessonModel');
+import {
+  getRuntimeCourseProgressModel,
+  getRuntimeLessonModel,
+  getRuntimeUserModel,
+} from '../utils/runtime-models.util';
 
 const idVerificationCourseId = () =>
   process.env.ID_VERIFICATION_COURSE_ID || '664697c2ecf273280314ecab';
@@ -13,6 +14,8 @@ async function needsIdVerification(user: any) {
   if (user.role === 'admin' || user.idVerification === 'verified') return false;
 
   try {
+    const CourseProgress = getRuntimeCourseProgressModel();
+    const Lesson = getRuntimeLessonModel();
     const courseProgress = await CourseProgress.findOne({
       user: user._id,
       course: idVerificationCourseId(),
@@ -21,7 +24,7 @@ async function needsIdVerification(user: any) {
       .lean();
 
     if (!courseProgress) return false;
-    const totalLessons = await Lesson.countDocuments({ course: courseProgress.course }).lean();
+    const totalLessons = await Lesson.countDocuments({ course: courseProgress.course });
     if (!totalLessons) return false;
     const completedLessons = courseProgress.progress.filter((lesson: any) => lesson.status === 'Completed').length;
     return completedLessons >= Math.ceil(totalLessons / 2);
@@ -47,6 +50,7 @@ export async function resolveAuthenticatedUser(request: any, enforceAccountState
   if (!secret) throw new ApiException('JWT_SECRET_KEY is required', 500);
 
   const decoded = jwt.verify(token, secret) as { userId: string; iat?: number };
+  const User = getRuntimeUserModel();
   const currentUser = await User.findById(decoded.userId);
   if (!currentUser) throw new ApiException('User no longer exists', 401);
 

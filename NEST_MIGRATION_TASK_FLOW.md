@@ -403,18 +403,18 @@ Checklist:
 - [x] Remove old `server.js` and the `start:legacy` script.
 - [x] Delete legacy `routes/`.
 - [x] Delete old Express-only middleware files that are no longer imported by retained code.
-- [x] Keep `middlewares/validatorMiddleware.js` and `middlewares/uploadImageMiddleware.js` because retained validators/services still import them.
-- [x] Keep `socket/index.js` because the Nest notification schema still uses it as the emitter bridge.
+- [x] Removed retained middleware files after the full TypeScript cleanup removed their last live imports.
+- [x] Removed `socket/index.js` after the Nest realtime notification bus replaced the emitter bridge.
 - [x] Delete stale Swagger YAML docs and rely on Nest Swagger at `/api-docs` and `/api-docs.json`.
 - [x] Remove unused packages with no retained references: `express-rate-limit`, `morgan`, `swagger-jsdoc`, `swagger-ui-express`, and `nodemon`.
-- [x] Keep `express-validator`, `express-async-handler`, and `node-cron` because retained validators/services/cron utilities still reference them.
+- [x] Removed `express-validator`, `express-async-handler`, and `node-cron` after retained validators/services/cron utilities were ported or deleted.
 - [x] Review `FRONT_CHANGES.md`; all entries are `done` or `deferred`.
 - [x] Run `npm run build`, `npm test`, `npm run email:check`, `npm audit --omit=dev`, and syntax checks for touched JS files.
 - [x] Review final diff and commit.
 
 Task 9 notes:
 - [x] No frontend path or response-shape changes were intended.
-- [x] Full JS service/model/helper purge is deferred to a later hardening task after remaining TypeScript services no longer import legacy JS.
+- [x] Full JS service/model/helper purge completed in `LEGACY_TS_CLEANUP_PLAN.md` Task 8.
 - [x] Production audit still reports vulnerabilities whose available fixes require breaking upgrades (`Nest 11`, `@nestjs/swagger 11`, `multer 2.1.1`, `nodemailer 8`, and related transitive packages). Defer those to an explicit dependency-upgrade task.
 - [x] Added `STAGING_SMOKE_CHECKLIST.md`; run it before staging/prod cutover validation.
 - [x] Added `LEGACY_TS_CLEANUP_PLAN.md` for the follow-up full TypeScript cleanup and legacy JS purge.

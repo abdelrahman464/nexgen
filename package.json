@@ -8,7 +8,7 @@
     "start": "node dist/main.js",
     "build": "nest build",
     "test": "jest --runInBand",
-    "backfill:item-order": "node scripts/backfillItemOrder.js",
+    "backfill:item-order": "tsx --tsconfig tsconfig.json scripts/backfillItemOrder.ts",
     "email:dev": "npx react-email dev --dir ./emails",
     "email:check": "tsc -p tsconfig.emails.json --noEmit",
     "email:generate": "tsx --tsconfig tsconfig.emails.json ./emails/scripts/generateEmails.ts"
@@ -43,8 +43,6 @@
     "cross-env": "^7.0.3",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
-    "express-async-handler": "^1.2.0",
-    "express-validator": "^7.2.0",
     "fs-extra": "^11.3.0",
     "google-auth-library": "^10.3.0",
     "i18n": "^0.15.1",

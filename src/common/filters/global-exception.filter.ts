@@ -5,8 +5,7 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-
-const { logErrorToDatabase } = require('../../../utils/errorLogs');
+import { logRuntimeErrorToDatabase } from '../utils/runtime-models.util';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -30,7 +29,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     if (process.env.SKIP_DB_CONNECTION !== 'true' && process.env.NODE_ENV !== 'test') {
       try {
         const url = request ? `${request.method} ${request.originalUrl || request.url}` : null;
-        await logErrorToDatabase(exception, url);
+        await logRuntimeErrorToDatabase(exception, url);
       } catch (logError) {
         console.error('Failed to log error to database:', logError);
       }

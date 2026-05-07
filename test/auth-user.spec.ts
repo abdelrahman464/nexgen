@@ -7,8 +7,11 @@ import { AuthService } from '../src/auth/auth.service';
 import { LoginDto, SignupDto } from '../src/auth/dto/auth.dto';
 import { RolesGuard } from '../src/common/guards/roles.guard';
 import { JwtAuthGuard } from '../src/common/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../src/common/guards/optional-jwt-auth.guard';
 import { ImageProcessingService } from '../src/common/upload/image-processing.service';
 import { UserSchema } from '../src/users/user.schema';
+import * as runtimeModels from '../src/common/utils/runtime-models.util';
+import jwt from 'jsonwebtoken';
 
 const createContext = (request: any): ExecutionContext =>
   ({
@@ -28,6 +31,7 @@ describe('Auth and user core migration smoke', () => {
   };
 
   beforeEach(() => {
+    jest.restoreAllMocks();
     jest.clearAllMocks();
     process.env.JWT_SECRET_KEY = 'test-secret';
   });
@@ -61,6 +65,74 @@ describe('Auth and user core migration smoke', () => {
     await expect(new JwtAuthGuard().canActivate(createContext({ headers: {} }))).rejects.toThrow(
       'you are not login,please login first',
     );
+  });
+
+  it('resolves protected users through typed runtime models', async () => {
+    const user = {
+      _id: 'user-id',
+      role: 'user',
+      emailVerified: true,
+      active: true,
+      idVerification: 'verified',
+    };
+    jest.spyOn(runtimeModels, 'getRuntimeUserModel').mockReturnValue({
+      findById: jest.fn().mockResolvedValue(user),
+    } as any);
+    const token = jwt.sign({ userId: 'user-id' }, 'test-secret');
+    const request = { headers: { authorization: `Bearer ${token}` } };
+
+    await expect(new JwtAuthGuard().canActivate(createContext(request))).resolves.toBe(true);
+    expect(request).toHaveProperty('user', user);
+  });
+
+  it('keeps the ID verification gate behavior with typed runtime models', async () => {
+    const user = {
+      _id: 'user-id',
+      role: 'user',
+      emailVerified: true,
+      active: true,
+      idVerification: 'pending',
+    };
+    jest.spyOn(runtimeModels, 'getRuntimeUserModel').mockReturnValue({
+      findById: jest.fn().mockResolvedValue(user),
+    } as any);
+    jest.spyOn(runtimeModels, 'getRuntimeCourseProgressModel').mockReturnValue({
+      findOne: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue({
+            course: 'course-id',
+            progress: [{ status: 'Completed' }],
+          }),
+        }),
+      }),
+    } as any);
+    jest.spyOn(runtimeModels, 'getRuntimeLessonModel').mockReturnValue({
+      countDocuments: jest.fn().mockResolvedValue(2),
+    } as any);
+    const token = jwt.sign({ userId: 'user-id' }, 'test-secret');
+
+    await expect(
+      new JwtAuthGuard().canActivate(createContext({ headers: { authorization: `Bearer ${token}` } })),
+    ).rejects.toThrow('You Are Not Verified Your ID Document');
+  });
+
+  it('sets optional auth users to null for missing or invalid tokens', async () => {
+    const request = { headers: {} };
+
+    await expect(new OptionalJwtAuthGuard().canActivate(createContext(request))).resolves.toBe(true);
+    expect(request).toHaveProperty('user', null);
+  });
+
+  it('resolves optional auth users through typed runtime models', async () => {
+    const user = { _id: 'user-id' };
+    jest.spyOn(runtimeModels, 'getRuntimeUserModel').mockReturnValue({
+      findById: jest.fn().mockResolvedValue(user),
+    } as any);
+    const token = jwt.sign({ userId: 'user-id' }, 'test-secret');
+    const request = { headers: { authorization: `Bearer ${token}` } };
+
+    await expect(new OptionalJwtAuthGuard().canActivate(createContext(request))).resolves.toBe(true);
+    expect(request).toHaveProperty('user', user);
   });
 
   it('blocks non-admin users through the role guard', () => {
