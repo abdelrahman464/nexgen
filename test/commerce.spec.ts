@@ -83,6 +83,8 @@ describe('Commerce migration smoke', () => {
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
+      {} as any,
     );
 
     await expect(service.addSubscriberToPackage(packageId, userId)).resolves.toEqual({ subscription: { _id: 'sub' } });
@@ -130,6 +132,8 @@ describe('Commerce migration smoke', () => {
       {} as any,
       chatModel as any,
       notificationModel as any,
+      {} as any,
+      {} as any,
     );
 
     await (service as any).addUserToGroupChatAndNotify('user-id', 'course-id');

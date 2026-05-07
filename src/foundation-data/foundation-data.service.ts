@@ -3,9 +3,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import slugify from 'slugify';
 import { ApiQueryHelper } from '../common/pagination/api-query.helper';
+import { PushNotificationService } from '../common/services/push-notification.service';
 import { ImageProcessingService } from '../common/upload/image-processing.service';
-
-const { sendPushNotificationToTopic, sendPushNotificationToMultiple } = require('../../utils/pushNotification');
 
 @Injectable()
 export class FoundationDataService {
@@ -23,6 +22,7 @@ export class FoundationDataService {
     @InjectModel('CourseProgress') private readonly courseProgressModel: Model<any>,
     @InjectModel('User') private readonly userModel: Model<any>,
     private readonly images: ImageProcessingService,
+    private readonly pushNotifications: PushNotificationService,
   ) {}
 
   list(model: Model<any>, query: Record<string, any>, modelName = '', filter: Record<string, any> = {}) {
@@ -298,17 +298,17 @@ export class FoundationDataService {
     const notification = { title: body.title, body: body.body };
     let result;
     if (body.topic) {
-      result = await sendPushNotificationToTopic(body.topic, notification);
+      result = await this.pushNotifications.sendToTopic(body.topic, notification);
     } else if (body.sendToAll) {
       const users = await this.userModel.find({ role: 'user', pushNotificationsEnabled: { $ne: false }, fcmTokens: { $exists: true, $ne: [] } }).select('fcmTokens');
       const tokens = users.flatMap((user: any) => user.fcmTokens);
       if (!tokens.length) throw new ForbiddenException('No FCM tokens found for users');
-      result = await sendPushNotificationToMultiple(tokens, notification);
+      result = await this.pushNotifications.sendToMultiple(tokens, notification);
     } else if (body.userIds?.length) {
       const users = await this.userModel.find({ _id: { $in: body.userIds }, pushNotificationsEnabled: { $ne: false }, fcmTokens: { $exists: true, $ne: [] } }).select('fcmTokens');
       const tokens = users.flatMap((user: any) => user.fcmTokens);
       if (!tokens.length) throw new ForbiddenException('No FCM tokens found for specified users');
-      result = await sendPushNotificationToMultiple(tokens, notification);
+      result = await this.pushNotifications.sendToMultiple(tokens, notification);
     } else {
       throw new ForbiddenException('Please specify userIds, sendToAll, or topic');
     }

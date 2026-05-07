@@ -1,10 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { EmailService } from '../common/services/email.service';
+import { OrderPdfService } from '../common/services/order-pdf.service';
 import { OrderItemType, PaymentDetails } from './dto/commerce.dto';
 
-const { PDFGenerator } = require('../../utils/generatePdf');
-const { sendEmail } = require('../../utils/sendEmail');
 const { incrementCouponUsedTimes } = require('../../services/couponService');
 
 const availUserToReview = async (userId: string) => {
@@ -44,6 +44,8 @@ export class OrderFulfillmentService {
     @InjectModel('User') private readonly userModel: Model<any>,
     @InjectModel('Chat') private readonly chatModel: Model<any>,
     @InjectModel('Notification') private readonly notificationModel: Model<any>,
+    private readonly orderPdfs: OrderPdfService,
+    private readonly emails: EmailService,
   ) {}
 
   async fulfillPaidOrder(type: OrderItemType, details: PaymentDetails) {
@@ -221,7 +223,7 @@ export class OrderFulfillmentService {
       item: packageDoc.title,
     });
     await this.createOrderNotification(user, packageDoc, order, 'service');
-    await sendEmail({ to: user.email, subject: 'Order Confirmation', html: htmlEmail({ order }) });
+    await this.emails.send({ to: user.email, subject: 'Order Confirmation', html: htmlEmail({ order }) });
     return order;
   }
 
@@ -267,7 +269,7 @@ export class OrderFulfillmentService {
   }
 
   private async createOrderNotification(user: any, item: any, order: any, label: 'course' | 'service' | 'Package') {
-    let pdfPath = await PDFGenerator.generateOrderPDF(order);
+    let pdfPath = await this.orderPdfs.generateOrderPDF(order);
     pdfPath = pdfPath.replace('uploads/orders/', '');
     await this.notificationModel.create({
       user: user._id,

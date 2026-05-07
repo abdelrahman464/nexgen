@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { EmailService } from './services/email.service';
+import { OrderPdfService } from './services/order-pdf.service';
 import { PushNotificationService } from './services/push-notification.service';
 import { TokenService } from './services/token.service';
 import { ImageProcessingService } from './upload/image-processing.service';
@@ -11,6 +12,7 @@ import { RolesGuard } from './guards/roles.guard';
 @Module({
   providers: [
     EmailService,
+    OrderPdfService,
     PushNotificationService,
     TokenService,
     ImageProcessingService,
@@ -21,6 +23,7 @@ import { RolesGuard } from './guards/roles.guard';
   ],
   exports: [
     EmailService,
+    OrderPdfService,
     PushNotificationService,
     TokenService,
     ImageProcessingService,

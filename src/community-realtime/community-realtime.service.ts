@@ -5,10 +5,9 @@ import { extname, join } from 'path';
 import { Model, Types } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 import { ApiQueryHelper } from '../common/pagination/api-query.helper';
+import { EmailService } from '../common/services/email.service';
 import { ImageProcessingService } from '../common/upload/image-processing.service';
-
-const { filterOffensiveWords } = require('../../utils/filterOffensiveWords');
-const sendEmail = require('../../utils/sendEmail');
+import { filterOffensiveWords } from '../common/utils/offensive-words.util';
 
 const toObjectId = (id: string | Types.ObjectId) => new Types.ObjectId(String(id));
 const idString = (value: any) => String(value?._id || value);
@@ -29,6 +28,7 @@ export class CommunityRealtimeService {
     @InjectModel('UserSubscription') private readonly userSubscriptionModel: Model<any>,
     @InjectModel('CourseProgress') private readonly courseProgressModel: Model<any>,
     private readonly images: ImageProcessingService,
+    private readonly emails: EmailService,
   ) {}
 
   async getTopProfilePosters() {
@@ -521,7 +521,7 @@ export class CommunityRealtimeService {
     const users = await this.userModel.find({ _id: { $in: subscribers.map((subscriber: any) => subscriber.user) } });
     await Promise.all(
       users.map((follower: any) =>
-        sendEmail({
+        this.emails.send({
           to: follower.email,
           subject: `Remember the live ${live.title?.en || live.title}`,
           html: this.getLiveEmailTemplate(follower, live, body.info || 'The live session will start soon, be ready', locale),

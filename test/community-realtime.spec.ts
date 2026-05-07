@@ -52,6 +52,7 @@ describe('Community realtime migration smoke', () => {
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
     );
 
     await expect(service.addReaction(objectId(), 'like', { _id: 'user' })).resolves.toEqual({ message: 'deleted' });
@@ -65,6 +66,7 @@ describe('Community realtime migration smoke', () => {
       {} as any,
       {} as any,
       chatModel as any,
+      {} as any,
       {} as any,
       {} as any,
       {} as any,
@@ -89,6 +91,7 @@ describe('Community realtime migration smoke', () => {
       {} as any,
       chatModel as any,
       { create: jest.fn() } as any,
+      {} as any,
       {} as any,
       {} as any,
       {} as any,
@@ -123,6 +126,7 @@ describe('Community realtime migration smoke', () => {
       {} as any,
       {} as any,
       userModel as any,
+      {} as any,
       {} as any,
       {} as any,
       {} as any,

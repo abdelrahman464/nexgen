@@ -103,6 +103,7 @@ describe('Foundation data migration smoke', () => {
       courseProgressModel as any,
       {} as any,
       {} as any,
+      {} as any,
     );
 
     await expect(service.createSystemReview({ ratings: 5 }, { _id: 'user-id' })).rejects.toThrow('You are not allowed to review');

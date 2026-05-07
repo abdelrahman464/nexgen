@@ -1,7 +1,7 @@
 import { Schema, Types } from 'mongoose';
+import { sendPushNotificationToMultiple } from '../common/services/push-notification.service';
 
 const { sendNotification } = require('../../socket/index');
-const { sendPushNotificationToMultiple } = require('../../utils/pushNotification');
 
 const setFileUrl = (doc: any, folder: string, field = 'image') => {
   if (doc?.[field] && !String(doc[field]).startsWith('http')) {

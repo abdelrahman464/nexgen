@@ -18,11 +18,8 @@ Direct imports currently exist in:
 - `src/commerce/commerce-access.service.ts`
 - `src/commerce/order-fulfillment.service.ts`
 - `src/commerce/payment-provider.service.ts`
-- `src/community-realtime/community-realtime.service.ts`
 - `src/foundation-data/foundation-data.schemas.ts`
-- `src/foundation-data/foundation-data.service.ts`
 - `src/marketing-revenue/marketing.service.ts`
-- `src/marketing-revenue/rating-leaderboard.service.ts`
 
 Legacy areas still retained:
 - `models/`
@@ -39,14 +36,14 @@ Use this section as the working tracker for the full legacy cleanup. Do not mark
 
 - [x] Task 1: Inventory and guardrails.
 - [x] Task 2: Replace legacy model imports with injected Mongoose models.
-- [ ] Task 3: Port shared utils and helpers into `src/common`.
+- [x] Task 3: Port shared utils and helpers into `src/common`.
 - [ ] Task 4: Replace legacy validator dependencies.
 - [ ] Task 5: Port legacy service helpers still called by Nest.
 - [ ] Task 6: Replace socket compatibility bridge.
 - [ ] Task 7: Move cron and scripted runtime code.
 - [ ] Task 8: Delete remaining legacy folders and dependencies.
 
-Current direct legacy import count from `src/**`: **15**.
+Current direct legacy import count from `src/**`: **8**.
 
 Guardrail command for every cleanup PR:
 
@@ -70,8 +67,8 @@ Rule: the count must only go down, unless the PR explains a temporary move and i
 - [x] `src/commerce/order-fulfillment.service.ts`: `models/userModel`.
 - [x] `src/commerce/order-fulfillment.service.ts`: `models/ChatModel`.
 - [x] `src/commerce/order-fulfillment.service.ts`: `models/notificationModel`.
-- [ ] `src/commerce/order-fulfillment.service.ts`: `utils/generatePdf`.
-- [ ] `src/commerce/order-fulfillment.service.ts`: `utils/sendEmail`.
+- [x] `src/commerce/order-fulfillment.service.ts`: `utils/generatePdf`.
+- [x] `src/commerce/order-fulfillment.service.ts`: `utils/sendEmail`.
 - [ ] `src/commerce/order-fulfillment.service.ts`: `services/couponService`.
 - [ ] `src/commerce/order-fulfillment.service.ts`: `services/userService`.
 - [ ] `src/commerce/order-fulfillment.service.ts`: `helpers/marketingHelper`.
@@ -79,19 +76,19 @@ Rule: the count must only go down, unless the PR explains a temporary move and i
 
 ### Community Realtime
 
-- [ ] `src/community-realtime/community-realtime.service.ts`: `utils/filterOffensiveWords`.
-- [ ] `src/community-realtime/community-realtime.service.ts`: `utils/sendEmail`.
+- [x] `src/community-realtime/community-realtime.service.ts`: `utils/filterOffensiveWords`.
+- [x] `src/community-realtime/community-realtime.service.ts`: `utils/sendEmail`.
 
 ### Foundation Data
 
 - [x] `src/foundation-data/foundation-data.schemas.ts`: `models/courseModel`.
 - [x] `src/foundation-data/foundation-data.schemas.ts`: `models/userModel`.
 - [ ] `src/foundation-data/foundation-data.schemas.ts`: `socket/index`.
-- [ ] `src/foundation-data/foundation-data.schemas.ts`: `utils/pushNotification`.
+- [x] `src/foundation-data/foundation-data.schemas.ts`: `utils/pushNotification`.
 - [x] `src/foundation-data/foundation-data.service.ts`: `models/courseModel`.
 - [x] `src/foundation-data/foundation-data.service.ts`: `models/courseProgressModel`.
 - [x] `src/foundation-data/foundation-data.service.ts`: `models/userModel`.
-- [ ] `src/foundation-data/foundation-data.service.ts`: `utils/pushNotification`.
+- [x] `src/foundation-data/foundation-data.service.ts`: `utils/pushNotification`.
 
 ### Learning Catalog
 
@@ -100,7 +97,7 @@ Rule: the count must only go down, unless the PR explains a temporary move and i
 ### Marketing Revenue
 
 - [ ] `src/marketing-revenue/marketing.service.ts`: `services/ChatServices`.
-- [ ] `src/marketing-revenue/rating-leaderboard.service.ts`: `helpers/generalHelper`.
+- [x] `src/marketing-revenue/rating-leaderboard.service.ts`: `helpers/generalHelper`.
 
 ### Users
 
@@ -194,11 +191,13 @@ Delete only when safe:
 - Remove legacy helper/util files after no `src/**`, retained JS service, script, or email code imports them.
 
 Verification:
-- focused tests for PDF filename/output metadata where practical.
-- mocked email/push tests.
-- `npm run build`
-- `npm test`
-- `npm run email:check`
+- [x] focused tests for PDF filename/output metadata where practical.
+- [x] mocked email/push tests.
+- [x] active Nest utility imports for `generatePdf`, `sendEmail`, `pushNotification`, `filterOffensiveWords`, and `generalHelper` removed from `src/**`.
+- [x] dormant utilities such as certificate/invoice generators remain deferred because no active Nest import needed them in Task 3.
+- [x] `npm run build`
+- [x] `npm test`
+- [x] `npm run email:check`
 
 Commit:
 - `refactor: port shared legacy utilities to typescript`
