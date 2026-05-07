@@ -190,7 +190,7 @@ courseSchema.pre(/^find/, function (next) {
   if (this.getOptions && this.getOptions().skipPopulate) return next();
   
   this.populate({ path: 'category', select: 'title' })
-  .populate({ path: 'instructor', select: 'name email profileImg' })
+  .populate({ path: 'instructor', select: 'name email profileImg signatureImage' })
   .populate({ 
       path: 'accessibleCourses',
       select: 'title image price priceAfterDiscount status slug',
