@@ -9,11 +9,12 @@ import { FoundationDataModule } from './foundation-data/foundation-data.module';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { LearningCatalogModule } from './learning-catalog/learning-catalog.module';
 
 const databaseImports =
   process.env.SKIP_DB_CONNECTION === 'true' || process.env.NODE_ENV === 'test'
     ? []
-    : [DatabaseModule, UsersModule, AuthModule, FoundationDataModule];
+    : [DatabaseModule, UsersModule, AuthModule, LearningCatalogModule, FoundationDataModule];
 
 @Module({
   imports: [

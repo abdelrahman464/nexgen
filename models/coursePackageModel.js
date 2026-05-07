@@ -139,4 +139,6 @@ coursePackageSchema.post("init", (doc) => {
 coursePackageSchema.post("save", (doc) => {
   setCourseImageURL(doc);
 });
-module.exports = mongoose.model("CoursePackage", coursePackageSchema);
+module.exports =
+  mongoose.models.CoursePackage ||
+  mongoose.model("CoursePackage", coursePackageSchema);

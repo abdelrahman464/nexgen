@@ -139,4 +139,4 @@ packageSchema.post("init", (doc) => {
 packageSchema.post("save", (doc) => {
   setImageURL(doc);
 });
-module.exports = mongoose.model("Package", packageSchema);
+module.exports = mongoose.models.Package || mongoose.model("Package", packageSchema);

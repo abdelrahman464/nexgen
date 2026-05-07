@@ -210,15 +210,28 @@ Order:
 6. Exams.
 7. Analytics.
 
-For each module:
-1. Read old route, service, model, validator, helper imports, and related nested routes.
-2. Create Nest module, controller, service, DTOs, schema registration, and smoke tests.
-3. Preserve i18n localized fields and image URL transforms.
-4. Move reorder behavior into a shared Nest reorder service.
-5. Fix hardcoded user/course IDs found during migration.
-6. Add smoke tests for list/detail/create/update/access checks where applicable.
-7. Update `FRONT_CHANGES.md` for API cleanup.
-8. Run tests, TypeScript build, review diff, and commit.
+Per-module checklist:
+- [ ] Read old route, service, model, validator, helper imports, and related nested routes.
+- [ ] Confirm route paths, auth rules, response shape, collection name, upload folders, and model hooks.
+- [ ] Add Nest schema registration with explicit collection name.
+- [ ] Add DTOs and validation.
+- [ ] Add service logic without Express `req/res`.
+- [ ] Add controller routes with guards/interceptors.
+- [ ] Preserve i18n localized fields and image/file URL transforms.
+- [ ] Move reorder behavior into the shared Nest catalog reorder service where applicable.
+- [ ] Fix hardcoded user/course IDs found during migration.
+- [ ] Add smoke tests for list/detail/create/update/access checks where applicable.
+- [ ] Update `FRONT_CHANGES.md` only for frontend-impacting behavior changes.
+- [ ] Run tests, TypeScript build, email check, review diff, and commit.
+
+Progress:
+- [x] Packages.
+- [x] Course packages.
+- [ ] Courses.
+- [ ] Sections.
+- [ ] Lessons.
+- [ ] Exams.
+- [ ] Analytics.
 
 ## Task 5: Commerce And Subscriptions
 

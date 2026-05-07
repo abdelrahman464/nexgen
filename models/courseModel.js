@@ -217,6 +217,6 @@ courseSchema.post('save', (doc) => {
   setCourseImageURL(doc);
 });
 
-const Course = mongoose.model('Course', courseSchema);
+const Course = mongoose.models.Course || mongoose.model('Course', courseSchema);
 
 module.exports = Course;
