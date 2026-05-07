@@ -2,9 +2,11 @@ import { validate } from 'class-validator';
 import { Types } from 'mongoose';
 import { CommerceAccessService } from '../src/commerce/commerce-access.service';
 import { CheckoutCouponDto, PurchaseForUserDto } from '../src/commerce/dto/commerce.dto';
+import { OrderCommissionService } from '../src/commerce/order-commission.service';
 import { OrderFulfillmentService } from '../src/commerce/order-fulfillment.service';
 import { PaymentProviderService } from '../src/commerce/payment-provider.service';
 import { WebhookEventService } from '../src/commerce/webhook-event.service';
+import { CouponRulesService } from '../src/foundation-data/coupon-rules.service';
 
 const createResponse = () => {
   const res: any = {
@@ -80,6 +82,8 @@ describe('Commerce migration smoke', () => {
       {} as any,
       {} as any,
       userSubscriptionModel as any,
+      {} as any,
+      {} as any,
       {} as any,
       {} as any,
       {} as any,
@@ -214,6 +218,8 @@ describe('Commerce migration smoke', () => {
       notificationModel as any,
       {} as any,
       {} as any,
+      {} as any,
+      {} as any,
     );
 
     await (service as any).addUserToGroupChatAndNotify('user-id', 'course-id');
@@ -224,6 +230,148 @@ describe('Commerce migration smoke', () => {
       { new: true },
     );
     expect(notificationModel.create).toHaveBeenCalledWith(expect.objectContaining({ user: 'user-id', type: 'chat' }));
+  });
+
+  it('validates coupon rules with legacy strings and item scopes', async () => {
+    const coupon = {
+      couponName: 'SAVE',
+      status: 'active',
+      maxUsageTimes: 10,
+      usedTimes: 1,
+      isAdminCoupon: false,
+      marketer: { _id: 'marketer-id' },
+      courses: ['course-id'],
+      packages: [],
+      coursePackages: [],
+      discount: 20,
+    };
+    const couponModel = { findOne: jest.fn().mockResolvedValue(coupon) };
+    const service = new CouponRulesService(couponModel as any);
+
+    await expect(service.validateCoupon('SAVE', 'marketer-id')).resolves.toBe(coupon);
+    expect(service.canCouponApplyToScope(coupon, 'course', 'course-id')).toEqual({ canApply: true, errorMessage: null });
+    expect(service.canCouponApplyToScope(coupon, 'course', 'other-course')).toEqual({
+      canApply: false,
+      errorMessage: 'This coupon cannot be used for this course',
+    });
+  });
+
+  it('keeps rejected and unauthorized coupon validation messages', async () => {
+    const couponModel = {
+      findOne: jest
+        .fn()
+        .mockResolvedValueOnce({ status: 'rejected' })
+        .mockResolvedValueOnce({
+          status: 'active',
+          maxUsageTimes: 10,
+          usedTimes: 0,
+          isAdminCoupon: false,
+          marketer: { _id: 'owner-id' },
+        }),
+    };
+    const service = new CouponRulesService(couponModel as any);
+
+    await expect(service.validateCoupon('BAD', 'owner-id')).resolves.toBe('coupon-errors.unActive');
+    await expect(service.validateCoupon('SAVE', 'other-id')).resolves.toBe('coupon-errors.Un-Authorized');
+  });
+
+  it('uses typed coupon service when preparing checkout discounts', async () => {
+    const access = {
+      getModelForType: jest.fn().mockReturnValue({ findById: jest.fn().mockResolvedValue({ price: 100, title: { en: 'Course' } }) }),
+      assertCourseCanBePurchased: jest.fn().mockResolvedValue(undefined),
+    };
+    const coupons = {
+      validateCoupon: jest.fn().mockResolvedValue({ discount: 25, courses: ['course-id'] }),
+      canCouponApplyToScope: jest.fn().mockReturnValue({ canApply: true }),
+    };
+    const service = new PaymentProviderService({} as any, access as any, {} as any, {} as any, coupons as any);
+
+    await expect((service as any).prepareCheckout({ type: 'course', id: 'course-id' }, { invitor: 'marketer' }, { couponName: 'SAVE' })).resolves.toMatchObject({
+      totalOrderPrice: 75,
+    });
+  });
+
+  it('marks users as available to review through the injected User model', async () => {
+    const userModel = { findByIdAndUpdate: jest.fn().mockResolvedValue({}) };
+    const service = new OrderFulfillmentService(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      userModel as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    await (service as any).markUserAvailableToReview('user-id');
+
+    expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith({ _id: 'user-id', authToReview: false }, { authToReview: true });
+  });
+
+  it('calculates order commissions and updates instructor, seller, head, and marketing chat side effects', async () => {
+    const marketerLog: any = {
+      marketer: 'seller-id',
+      invitor: 'head-id',
+      profitableItems: [{ itemId: 'course-id', itemType: 'course', percentage: 10 }],
+    };
+    const headLog: any = {
+      marketer: 'head-id',
+      invitor: 'root-id',
+      profits: 0,
+      commissionsProfits: 0,
+      totalProfits: 0,
+      commissions: [],
+      profitableItems: [{ itemId: 'course-id', itemType: 'course', percentage: 20 }],
+      save: jest.fn(),
+    };
+    const userModel = { findOne: jest.fn().mockReturnValue({ select: jest.fn().mockResolvedValue({ _id: 'buyer-id', invitor: 'seller-id' }) }) };
+    const marketingLogModel = {
+      findOne: jest
+        .fn()
+        .mockResolvedValueOnce(marketerLog)
+        .mockResolvedValueOnce(headLog)
+        .mockReturnValueOnce({ select: jest.fn().mockResolvedValue(marketerLog) })
+        .mockResolvedValueOnce(headLog),
+      findOneAndUpdate: jest.fn().mockResolvedValue({}),
+    };
+    const instructorProfitsModel = { findOneAndUpdate: jest.fn().mockResolvedValue({}) };
+    const orderModel = { findOneAndUpdate: jest.fn().mockResolvedValue({}) };
+    const chatModel = { findOneAndUpdate: jest.fn().mockResolvedValue({ _id: 'chat-id' }) };
+    const notificationModel = { create: jest.fn().mockResolvedValue({}) };
+    const service = new OrderCommissionService(
+      userModel as any,
+      marketingLogModel as any,
+      instructorProfitsModel as any,
+      orderModel as any,
+      chatModel as any,
+      notificationModel as any,
+    );
+
+    await service.handleOrderCommissions(
+      { _id: 'course-id', instructorPercentage: 50, instructor: 'instructor-id' },
+      { email: 'buyer@example.com', invitor: 'seller-id', amount: 100, itemType: 'course', order: 'order-id', item: { en: 'Course' } },
+    );
+
+    expect(instructorProfitsModel.findOneAndUpdate).toHaveBeenCalledWith(
+      { instructor: 'instructor-id' },
+      expect.objectContaining({ $inc: expect.objectContaining({ profits: 40, totalSalesMoney: 100 }) }),
+    );
+    expect(marketingLogModel.findOneAndUpdate).toHaveBeenCalledWith(
+      { marketer: 'seller-id' },
+      expect.objectContaining({ $inc: expect.objectContaining({ totalSalesMoney: 100, profits: 5 }) }),
+    );
+    expect(chatModel.findOneAndUpdate).toHaveBeenCalledWith(
+      { creator: 'seller-id', type: 'marketingTeam' },
+      { $addToSet: { participants: { user: 'buyer-id' } } },
+      { new: true },
+    );
+    expect(notificationModel.create).toHaveBeenCalledWith(expect.objectContaining({ user: 'buyer-id', type: 'chat' }));
   });
 
   it('processes webhook event only once', async () => {
@@ -250,6 +398,7 @@ describe('Commerce migration smoke', () => {
       {} as any,
       { fulfillPaidOrder: jest.fn() } as any,
       {} as any,
+      {} as any,
     );
     const res = createResponse();
 
@@ -263,6 +412,7 @@ describe('Commerce migration smoke', () => {
       {} as any,
       {} as any,
       { fulfillPaidOrder: jest.fn() } as any,
+      {} as any,
       {} as any,
     );
     const res = createResponse();

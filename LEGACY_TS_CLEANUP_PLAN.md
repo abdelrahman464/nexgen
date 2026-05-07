@@ -37,12 +37,12 @@ Use this section as the working tracker for the full legacy cleanup. Do not mark
 - [x] Task 2: Replace legacy model imports with injected Mongoose models.
 - [x] Task 3: Port shared utils and helpers into `src/common`.
 - [x] Task 4: Replace legacy validator dependencies.
-- [ ] Task 5: Port legacy service helpers still called by Nest.
+- [x] Task 5: Port legacy service helpers still called by Nest.
 - [ ] Task 6: Replace socket compatibility bridge.
 - [ ] Task 7: Move cron and scripted runtime code.
 - [ ] Task 8: Delete remaining legacy folders and dependencies.
 
-Current direct legacy import count from `src/**`: **7**.
+Current direct legacy import count from `src/**`: **1**.
 
 Guardrail command for every cleanup PR:
 
@@ -57,7 +57,7 @@ Rule: the count must only go down, unless the PR explains a temporary move and i
 
 ### Auth
 
-- [ ] `src/auth/auth.service.ts`: `services/marketing/marketingAnalyticsService` for `getMarketerFromInvitationKey`.
+- [x] `src/auth/auth.service.ts`: `services/marketing/marketingAnalyticsService` for `getMarketerFromInvitationKey`.
 
 ### Commerce
 
@@ -68,10 +68,10 @@ Rule: the count must only go down, unless the PR explains a temporary move and i
 - [x] `src/commerce/order-fulfillment.service.ts`: `models/notificationModel`.
 - [x] `src/commerce/order-fulfillment.service.ts`: `utils/generatePdf`.
 - [x] `src/commerce/order-fulfillment.service.ts`: `utils/sendEmail`.
-- [ ] `src/commerce/order-fulfillment.service.ts`: `services/couponService`.
-- [ ] `src/commerce/order-fulfillment.service.ts`: `services/userService`.
-- [ ] `src/commerce/order-fulfillment.service.ts`: `helpers/marketingHelper`.
-- [ ] `src/commerce/payment-provider.service.ts`: `services/couponService`.
+- [x] `src/commerce/order-fulfillment.service.ts`: `services/couponService`.
+- [x] `src/commerce/order-fulfillment.service.ts`: `services/userService`.
+- [x] `src/commerce/order-fulfillment.service.ts`: `helpers/marketingHelper`.
+- [x] `src/commerce/payment-provider.service.ts`: `services/couponService`.
 
 ### Community Realtime
 
@@ -95,7 +95,7 @@ Rule: the count must only go down, unless the PR explains a temporary move and i
 
 ### Marketing Revenue
 
-- [ ] `src/marketing-revenue/marketing.service.ts`: `services/ChatServices`.
+- [x] `src/marketing-revenue/marketing.service.ts`: `services/ChatServices`.
 - [x] `src/marketing-revenue/rating-leaderboard.service.ts`: `helpers/generalHelper`.
 
 ### Users
@@ -262,13 +262,15 @@ Delete only when safe:
 - Remove `express-async-handler` only after all retained service/validator files that import it are gone.
 
 Verification:
-- auth signup invitation-key tests.
-- coupon checkout scope/usage tests.
-- order fulfillment tests.
-- marketer group chat tests.
-- `npm run build`
-- `npm test`
-- `npm run email:check`
+- [x] auth signup invitation-key tests.
+- [x] coupon checkout scope/usage tests.
+- [x] order fulfillment tests.
+- [x] marketer group chat tests.
+- [x] targeted legacy import search for `marketingAnalyticsService`, `couponService`, `userService`, `marketingHelper`, and `ChatServices`.
+- [x] full legacy import count confirms only `src/foundation-data/foundation-data.schemas.ts -> socket/index` remains.
+- [x] `npm run build`
+- [x] `npm test`
+- [x] `npm run email:check`
 
 Commit:
 - `refactor: port legacy service helpers into nest services`

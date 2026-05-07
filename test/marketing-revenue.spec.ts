@@ -64,12 +64,34 @@ describe('Marketing revenue migration smoke', () => {
       findOne: jest.fn().mockReturnValue({ select: jest.fn().mockResolvedValue({ _id: 'admin', invitor: 'head' }) }),
       findOneAndUpdate: jest.fn().mockResolvedValue({}),
     };
-    const service = new MarketingService(marketingLogModel as any, {} as any, userModel as any, {} as any, {} as any, {} as any, {} as any);
+    const chatModel = { create: jest.fn().mockResolvedValue({}) };
+    const service = new MarketingService(marketingLogModel as any, {} as any, userModel as any, {} as any, {} as any, {} as any, chatModel as any, {} as any);
 
     await expect(service.startMarketing('user-id', { role: 'marketer' }, { _id: 'admin' })).resolves.toMatchObject({
       msg: 'success',
     });
     expect(marketingLogModel.create).toHaveBeenCalledWith(expect.objectContaining({ marketer: 'user-id', role: 'marketer' }));
+    expect(chatModel.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'marketingTeam',
+        participants: [{ user: 'admin', isAdmin: true }],
+        creator: 'admin',
+      }),
+    );
+  });
+
+  it('keeps start marketing successful when group chat creation fails', async () => {
+    const marketingLogModel = { exists: jest.fn().mockResolvedValue(false), create: jest.fn().mockResolvedValue({}) };
+    const userModel = {
+      findOne: jest.fn().mockReturnValue({ select: jest.fn().mockResolvedValue({ _id: 'admin', name: 'Admin', invitor: 'head' }) }),
+      findOneAndUpdate: jest.fn().mockResolvedValue({}),
+    };
+    const chatModel = { create: jest.fn().mockRejectedValue(new Error('chat failed')) };
+    const service = new MarketingService(marketingLogModel as any, {} as any, userModel as any, {} as any, {} as any, {} as any, chatModel as any, {} as any);
+
+    await expect(service.startMarketing('user-id', { role: 'marketer' }, { _id: 'admin' })).resolves.toMatchObject({
+      msg: 'success',
+    });
   });
 
   it('rejects duplicate invitation keys before adding them', async () => {
@@ -77,7 +99,7 @@ describe('Marketing revenue migration smoke', () => {
     const marketingLogModel = {
       findOne: jest.fn().mockReturnValueOnce({ select: jest.fn().mockResolvedValue(marketLog) }).mockResolvedValueOnce({ _id: 'existing' }),
     };
-    const service = new MarketingService(marketingLogModel as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+    const service = new MarketingService(marketingLogModel as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
 
     await expect(service.modifyInvitationKeys('marketer', { option: 'add', invitationKey: 'code' })).rejects.toThrow(
       'invitationKey already exist',
@@ -86,7 +108,7 @@ describe('Marketing revenue migration smoke', () => {
 
   it('routes instructor payment details to instructor profits storage', async () => {
     const instructorProfits = { setInstructorProfitsPaymentDetails: jest.fn().mockResolvedValue(true) };
-    const service = new MarketingService({} as any, {} as any, {} as any, {} as any, {} as any, {} as any, instructorProfits as any);
+    const service = new MarketingService({} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, instructorProfits as any);
 
     await service.setPaymentDetails('instructor', { paymentMethod: 'bank', receiverAcc: '123' }, 'instructor');
 
@@ -102,7 +124,7 @@ describe('Marketing revenue migration smoke', () => {
       findOne: jest.fn().mockReturnValue({ select: jest.fn().mockResolvedValue({ marketer: 'marketer' }) }),
       findOneAndUpdate: jest.fn().mockResolvedValue({}),
     };
-    const service = new MarketingService(marketLogModel as any, {} as any, userModel as any, {} as any, {} as any, {} as any, {} as any);
+    const service = new MarketingService(marketLogModel as any, {} as any, userModel as any, {} as any, {} as any, {} as any, {} as any, {} as any);
 
     await expect(service.calculateProfitsManual({ email: 'buyer@example.com', amount: 100, sellerProfits: 15 })).resolves.toEqual({
       status: 'success',
@@ -116,7 +138,7 @@ describe('Marketing revenue migration smoke', () => {
 
   it('blocks invoice creation when available profits are not enough', async () => {
     const marketingLogModel = { findOne: jest.fn().mockResolvedValue({ profits: 20, withdrawals: 10, totalSalesMoney: 100, sales: [], profitPercentage: 10 }) };
-    const service = new MarketingService(marketingLogModel as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+    const service = new MarketingService(marketingLogModel as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
 
     await expect(service.createInvoice('marketer', { amount: 50 }, 'marketer')).rejects.toThrow('marketing-errors.balance-Not-Enough');
   });
@@ -154,7 +176,7 @@ describe('Marketing revenue migration smoke', () => {
     };
     const marketingLogModel = { find: jest.fn().mockResolvedValue([log]) };
     const orderModel = { updateMany: jest.fn().mockResolvedValue({}) };
-    const service = new MarketingService(marketingLogModel as any, orderModel as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+    const service = new MarketingService(marketingLogModel as any, orderModel as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
 
     await service.resetMarketLogs();
 

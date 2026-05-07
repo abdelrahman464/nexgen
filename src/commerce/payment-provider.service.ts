@@ -5,12 +5,11 @@ import crypto from 'crypto';
 import { Request, Response } from 'express';
 import { Model } from 'mongoose';
 import Stripe from 'stripe';
+import { CouponRulesService } from '../foundation-data/coupon-rules.service';
 import { CommerceAccessService } from './commerce-access.service';
 import { CheckoutCouponDto, OrderItemType, PaymentDetails } from './dto/commerce.dto';
 import { OrderFulfillmentService } from './order-fulfillment.service';
 import { WebhookEventService } from './webhook-event.service';
-
-const { validateCoupon, canCouponApplyToScope } = require('../../services/couponService');
 
 type CheckoutTarget = {
   type: OrderItemType;
@@ -25,6 +24,7 @@ export class PaymentProviderService {
     private readonly access: CommerceAccessService,
     private readonly fulfillment: OrderFulfillmentService,
     private readonly webhookEvents: WebhookEventService,
+    private readonly coupons: CouponRulesService,
   ) {}
 
   async createStripeCheckout(target: CheckoutTarget, user: any, body: CheckoutCouponDto, locale?: string) {
@@ -201,9 +201,9 @@ export class PaymentProviderService {
     }
     let totalOrderPrice = item.priceAfterDiscount || item.price;
     if (body.couponName) {
-      const coupon = await validateCoupon(body.couponName, user.invitor);
+      const coupon = await this.coupons.validateCoupon(body.couponName, user.invitor);
       if (typeof coupon === 'string') throw new BadRequestException(coupon);
-      const scopeValidation = canCouponApplyToScope(coupon, target.type, target.id);
+      const scopeValidation = this.coupons.canCouponApplyToScope(coupon, target.type, target.id);
       if (!scopeValidation.canApply) throw new BadRequestException(scopeValidation.errorMessage);
       totalOrderPrice -= (totalOrderPrice * coupon.discount) / 100;
     }

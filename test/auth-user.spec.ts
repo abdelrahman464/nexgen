@@ -38,7 +38,7 @@ describe('Auth and user core migration smoke', () => {
     const userModel = {
       findOne: jest.fn().mockReturnValue({ select: jest.fn().mockResolvedValue(user) }),
     };
-    const service = new AuthService(userModel as any, usersService as any, emailService as any, tokenService as any);
+    const service = new AuthService(userModel as any, {} as any, usersService as any, emailService as any, tokenService as any);
 
     await expect(service.login({ email: 'user@example.com', password: 'password123' })).resolves.toEqual({
       data: { ...user, idDocuments: undefined },
@@ -50,7 +50,7 @@ describe('Auth and user core migration smoke', () => {
     const userModel = {
       findOne: jest.fn().mockReturnValue({ select: jest.fn().mockResolvedValue(null) }),
     };
-    const service = new AuthService(userModel as any, usersService as any, emailService as any, tokenService as any);
+    const service = new AuthService(userModel as any, {} as any, usersService as any, emailService as any, tokenService as any);
 
     await expect(service.login({ email: 'user@example.com', password: 'password123' })).rejects.toThrow(
       'incorrect password or email',
@@ -76,9 +76,32 @@ describe('Auth and user core migration smoke', () => {
     const userModel = {
       findOne: jest.fn().mockResolvedValue(null),
     };
-    const service = new AuthService(userModel as any, usersService as any, emailService as any, tokenService as any);
+    const service = new AuthService(userModel as any, {} as any, usersService as any, emailService as any, tokenService as any);
 
     await expect(service.verifyEmail('123456')).rejects.toThrow('Email code invalid or expired');
+  });
+
+  it('resolves invitation keys through the typed MarketingLogs model', async () => {
+    const marketLog = { marketer: 'marketer-id', role: 'affiliate', fallBackCoach: 'coach-id' };
+    const marketingLogModel = {
+      findOne: jest.fn().mockReturnValue({ select: jest.fn().mockResolvedValue(marketLog) }),
+    };
+    const service = new AuthService({} as any, marketingLogModel as any, usersService as any, emailService as any, tokenService as any);
+
+    await expect((service as any).resolveInvitation('invite-key')).resolves.toEqual({
+      invitorId: 'marketer-id',
+      coachId: 'coach-id',
+    });
+    expect(marketingLogModel.findOne).toHaveBeenCalledWith({ invitationKeys: { $in: ['invite-key'] } });
+  });
+
+  it('rejects invalid invitation keys with the legacy message', async () => {
+    const marketingLogModel = {
+      findOne: jest.fn().mockReturnValue({ select: jest.fn().mockResolvedValue(null) }),
+    };
+    const service = new AuthService({} as any, marketingLogModel as any, usersService as any, emailService as any, tokenService as any);
+
+    await expect((service as any).resolveInvitation('bad-key')).rejects.toThrow('this link is invalid');
   });
 
   it('issues admin user tokens with the legacy response shape', async () => {
@@ -86,7 +109,7 @@ describe('Auth and user core migration smoke', () => {
     const userModel = {
       findById: jest.fn().mockResolvedValue(user),
     };
-    const service = new AuthService(userModel as any, usersService as any, emailService as any, tokenService as any);
+    const service = new AuthService(userModel as any, {} as any, usersService as any, emailService as any, tokenService as any);
 
     await expect(service.adminIssueUserToken('66447ad7a7957a07c0ae9e69')).resolves.toEqual({
       data: { ...user, idDocuments: undefined },

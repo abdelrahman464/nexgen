@@ -27,6 +27,7 @@ import {
   WishlistController,
 } from './foundation-data.controller';
 import { FoundationDataService } from './foundation-data.service';
+import { CouponRulesService } from './coupon-rules.service';
 
 @Module({
   imports: [
@@ -58,7 +59,7 @@ import { FoundationDataService } from './foundation-data.service';
     EventsController,
     NotificationsController,
   ],
-  providers: [FoundationDataService],
-  exports: [FoundationDataService, MongooseModule],
+  providers: [FoundationDataService, CouponRulesService],
+  exports: [FoundationDataService, CouponRulesService, MongooseModule],
 })
 export class FoundationDataModule {}

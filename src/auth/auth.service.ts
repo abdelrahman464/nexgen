@@ -18,6 +18,7 @@ export class AuthService {
 
   constructor(
     @InjectModel('User') private readonly userModel: Model<any>,
+    @InjectModel('MarketingLogs') private readonly marketingLogModel: Model<any>,
     private readonly users: UsersService,
     private readonly emails: EmailService,
     private readonly tokens: TokenService,
@@ -237,9 +238,8 @@ export class AuthService {
       return { invitorId: process.env.ADMIN_ID, coachId: process.env.ADMIN_ID };
     }
 
-    const { getMarketerFromInvitationKey } = require('../../services/marketing/marketingAnalyticsService');
-    const { marketerId, marketLog } = await getMarketerFromInvitationKey(invitationKey);
-    if (!marketerId) throw new BadRequestException('this link is invalid');
+    const marketLog = await this.marketingLogModel.findOne({ invitationKeys: { $in: [invitationKey] } }).select('_id marketer role fallBackCoach');
+    if (!marketLog?.marketer) throw new BadRequestException('this link is invalid');
     return {
       invitorId: marketLog.marketer,
       coachId: marketLog.role === 'affiliate' ? marketLog.fallBackCoach : marketLog.marketer,

@@ -14,6 +14,7 @@ export class MarketingService {
     @InjectModel('Course') private readonly courseModel: Model<any>,
     @InjectModel('Package') private readonly packageModel: Model<any>,
     @InjectModel('CoursePackage') private readonly coursePackageModel: Model<any>,
+    @InjectModel('Chat') private readonly chatModel: Model<any>,
     private readonly instructorProfits: InstructorProfitsService,
   ) {}
 
@@ -30,8 +31,7 @@ export class MarketingService {
     await this.marketingLogModel.create({ marketer: userId, invitor: currentUser.invitor, role, fallBackCoach: body.fallBackCoach });
     await this.userModel.findOneAndUpdate({ _id: userId }, role === 'affiliate' ? { isAffiliateMarketer: true } : { isMarketer: true });
     try {
-      const { createMarketerGroupChat } = require('../../services/ChatServices');
-      await createMarketerGroupChat(currentUser);
+      await this.createMarketerGroupChat(currentUser);
     } catch (error) {
       console.error('Failed to create marketer group chat:', error);
     }
@@ -344,5 +344,18 @@ export class MarketingService {
     if (type === 'course') return this.courseModel;
     if (type === 'package') return this.packageModel;
     return this.coursePackageModel;
+  }
+
+  private async createMarketerGroupChat(marketer: any) {
+    const groupCreatorId = marketer._id.toString();
+    await this.chatModel.create({
+      type: 'marketingTeam',
+      participants: [{ user: groupCreatorId, isAdmin: true }],
+      isGroupChat: true,
+      creator: marketer._id,
+      groupName: `${marketer.name} Group`,
+      description: `Group for ${marketer.name} , where he can communicate with his team`,
+    });
+    return true;
   }
 }

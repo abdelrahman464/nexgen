@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { CommerceModule } from '../commerce/commerce.module';
 import { CommonModule } from '../common/common.module';
+import { ChatSchema } from '../community-realtime/community-realtime.schemas';
 import { LearningCatalogModule } from '../learning-catalog/learning-catalog.module';
 import { UsersModule } from '../users/users.module';
 import { InstructorProfitsService } from './instructor-profits.service';
@@ -24,6 +25,7 @@ import { RatingLeaderboardService } from './rating-leaderboard.service';
       { name: 'InvitationLinkAnalytics', schema: InvitationLinkAnalyticsSchema, collection: 'invitationlinkanalytics' },
       { name: 'MarketerRating', schema: MarketerRatingSchema, collection: 'marketerratings' },
       { name: 'LeaderBoard', schema: LeaderBoardSchema, collection: 'leaderboards' },
+      { name: 'Chat', schema: ChatSchema, collection: 'chats' },
     ]),
   ],
   controllers: [

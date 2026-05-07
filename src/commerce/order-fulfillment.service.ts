@@ -3,19 +3,9 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { EmailService } from '../common/services/email.service';
 import { OrderPdfService } from '../common/services/order-pdf.service';
+import { CouponRulesService } from '../foundation-data/coupon-rules.service';
 import { OrderItemType, PaymentDetails } from './dto/commerce.dto';
-
-const { incrementCouponUsedTimes } = require('../../services/couponService');
-
-const availUserToReview = async (userId: string) => {
-  const userService = require('../../services/userService');
-  return userService.availUserToReview(userId);
-};
-
-const handleOrderCommissions = async (item: any, saleDetails: any) => {
-  const marketingHelper = require('../../helpers/marketingHelper');
-  return marketingHelper.handleOrderCommissions(item, saleDetails);
-};
+import { OrderCommissionService } from './order-commission.service';
 
 const htmlEmail = ({ order }: { order: any }) => {
   const packageTitle = (order.package && order.package.title) || { en: 'Package', ar: 'Package' };
@@ -46,6 +36,8 @@ export class OrderFulfillmentService {
     @InjectModel('Notification') private readonly notificationModel: Model<any>,
     private readonly orderPdfs: OrderPdfService,
     private readonly emails: EmailService,
+    private readonly coupons: CouponRulesService,
+    private readonly commissions: OrderCommissionService,
   ) {}
 
   async fulfillPaidOrder(type: OrderItemType, details: PaymentDetails) {
@@ -172,14 +164,14 @@ export class OrderFulfillmentService {
       { path: 'coursePackage', select: 'title' },
       { path: 'package', select: 'title' },
     ]);
-    if (details.couponName) await incrementCouponUsedTimes(details.couponName);
+    if (details.couponName) await this.coupons.incrementCouponUsedTimes(details.couponName);
     await this.createCourseProgress(user._id, course._id);
     await this.addUserToGroupChatAndNotify(user._id, course._id);
     if (packageDoc && course.freePackageSubscriptionInDays && course.freePackageSubscriptionInDays > 0) {
       await this.createOrUpdateSubscription(user._id, packageDoc._id, course.freePackageSubscriptionInDays);
     }
-    await availUserToReview(user._id);
-    await handleOrderCommissions(course, {
+    await this.markUserAvailableToReview(user._id);
+    await this.commissions.handleOrderCommissions(course, {
       email: user.email,
       invitor: user.invitor,
       amount: Number(details.price),
@@ -212,9 +204,9 @@ export class OrderFulfillmentService {
       { path: 'coursePackage', select: 'title' },
       { path: 'package', select: 'title' },
     ]);
-    if (details.couponName) await incrementCouponUsedTimes(details.couponName);
+    if (details.couponName) await this.coupons.incrementCouponUsedTimes(details.couponName);
     await this.createOrUpdateSubscription(user._id, packageDoc._id, packageDoc.subscriptionDurationDays);
-    await handleOrderCommissions(packageDoc, {
+    await this.commissions.handleOrderCommissions(packageDoc, {
       email: user.email,
       invitor: user.invitor,
       amount: Number(details.price),
@@ -246,7 +238,7 @@ export class OrderFulfillmentService {
       { path: 'coursePackage', select: 'title' },
       { path: 'package', select: 'title' },
     ]);
-    if (details.couponName) await incrementCouponUsedTimes(details.couponName);
+    if (details.couponName) await this.coupons.incrementCouponUsedTimes(details.couponName);
     await Promise.all(
       coursePackage.courses.map(async (courseId: string) => {
         await this.createCourseProgress(user._id, courseId);
@@ -255,8 +247,8 @@ export class OrderFulfillmentService {
         if (packageDoc) await this.createOrUpdateSubscription(user._id, packageDoc._id, 5 * 30);
       }),
     );
-    await availUserToReview(user._id);
-    await handleOrderCommissions(coursePackage, {
+    await this.markUserAvailableToReview(user._id);
+    await this.commissions.handleOrderCommissions(coursePackage, {
       email: user.email,
       invitor: user.invitor,
       amount: Number(details.price),
@@ -305,9 +297,9 @@ export class OrderFulfillmentService {
     } else if (!isPaid && packageDoc && (!packageDoc.price || packageDoc.price <= 0)) {
       await this.createOrUpdateSubscription(user._id, packageDoc._id, packageDoc.subscriptionDurationDays || 4 * 30);
     }
-    await availUserToReview(user._id);
+    await this.markUserAvailableToReview(user._id);
     if (isPaid) {
-      await handleOrderCommissions(course, {
+      await this.commissions.handleOrderCommissions(course, {
         email: user.email,
         invitor: user.invitor,
         amount: coursePrice,
@@ -337,7 +329,7 @@ export class OrderFulfillmentService {
     });
     await this.createOrUpdateSubscription(user._id, packageDoc._id, packageDoc.subscriptionDurationDays);
     if (isPaid) {
-      await handleOrderCommissions(packageDoc, {
+      await this.commissions.handleOrderCommissions(packageDoc, {
         email: user.email,
         invitor: user.invitor,
         amount: packagePrice,
@@ -372,9 +364,9 @@ export class OrderFulfillmentService {
         if (packageDoc) await this.createOrUpdateSubscription(user._id, packageDoc._id, packageDoc.subscriptionDurationDays);
       }),
     );
-    await availUserToReview(user._id);
+    await this.markUserAvailableToReview(user._id);
     if (isPaid) {
-      await handleOrderCommissions(coursePackage, {
+      await this.commissions.handleOrderCommissions(coursePackage, {
         email: user.email,
         invitor: user.invitor,
         amount: coursePackagePrice,
@@ -383,5 +375,10 @@ export class OrderFulfillmentService {
         item: coursePackage.title,
       });
     }
+  }
+
+  private async markUserAvailableToReview(userId: string) {
+    await this.userModel.findByIdAndUpdate({ _id: userId, authToReview: false }, { authToReview: true });
+    return true;
   }
 }
