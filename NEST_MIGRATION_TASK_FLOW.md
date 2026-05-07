@@ -165,22 +165,37 @@ Module-specific notes:
 
 Migrate auth and user after foundation modules because most later modules depend on user identity.
 
-Flow:
-1. Read old implementation:
-   - `routes/authRoute.js`
-   - `routes/userRoute.js`
-   - `services/authServices.js`
-   - `services/userService.js`
-   - `models/userModel.js`
-   - `utils/validators/authValidator.js`
-   - `utils/validators/userValidator.js`
-2. Migrate signup, login, Google auth, mobile Google auth, email verification, password reset, `getMe`, and admin issue-user-token.
-3. Convert `protect`, `optionalAuth`, `allowedTo`, admin checks, instructor checks, and current-user behavior into guards and decorators.
-4. Convert image upload behavior into Nest interceptors.
-5. Ensure sensitive fields are excluded consistently.
-6. Add smoke tests for login, protected route, role guard, email verification failure, and admin-only token issuing.
-7. Document any cleaned auth response shape in `FRONT_CHANGES.md`.
-8. Run tests, TypeScript build, review diff, and commit.
+Checklist:
+- [x] Read old auth/user routes, services, validators, model, uploads, and dependency side effects:
+  - `routes/authRoute.js`
+  - `routes/userRoute.js`
+  - `services/authServices.js`
+  - `services/userService.js`
+  - `models/userModel.js`
+  - `utils/validators/authValidator.js`
+  - `utils/validators/userValidator.js`
+- [x] Confirm migrated vs deferred endpoints.
+- [x] Add Nest `AuthModule` and `UserModule` with explicit `users` collection registration.
+- [x] Add DTOs and validation for signup, login, email verification, password reset, admin issue-token, and core user mutations.
+- [x] Add service logic without Express `req/res` for migrated endpoints.
+- [x] Add controller routes with guards/interceptors.
+- [x] Replace Task 2 temporary legacy auth wrappers with real JWT guards.
+- [x] Preserve upload/image behavior and sensitive-field stripping.
+- [x] Add smoke tests for auth/user migration behavior.
+- [x] Run build/tests/email check.
+- [x] Update `FRONT_CHANGES.md` if API behavior changes.
+- [x] Review diff and commit.
+
+Migrated in this task:
+- Auth routes: Google OAuth start/callback, signup, login, forgot/reset password, email verification, resend email code, `getMe`, admin issue-user-token, and mobile Google auth.
+- Core user routes: instructor lists, admin user list/create/update/delete/get, protected user detail, activate/deactivate, change my password/data, and admin change password.
+
+Deferred to later tasks through the legacy adapter:
+- Follow/unfollow and followers/following: Task 7.
+- Notification bell, FCM token, and push preferences: Task 7 or notifications follow-up.
+- Email marketing query, user move ownership, and instructor belongings: Task 6.
+- ID document AI verification/upload/action: Task 8.
+- Course/order purchaser reports and `users/:id/userData`: Task 4/5.
 
 ## Task 4: Learning Catalog Modules
 

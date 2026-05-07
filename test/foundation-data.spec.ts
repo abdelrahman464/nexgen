@@ -5,7 +5,7 @@ import request from 'supertest';
 import { setupNestApp } from '../src/app.setup';
 import { ParseObjectIdPipe } from '../src/common/pipes/parse-object-id.pipe';
 import { createMulterOptions } from '../src/common/upload/upload.helper';
-import { LegacyAuthGuard } from '../src/common/guards/legacy-auth.guard';
+import { JwtAuthGuard } from '../src/common/guards/jwt-auth.guard';
 import { RolesGuard } from '../src/common/guards/roles.guard';
 import { NotificationsController } from '../src/foundation-data/foundation-data.controller';
 import { CreateContactUsDto } from '../src/foundation-data/dto/foundation-data.dto';
@@ -57,7 +57,7 @@ describe('Foundation data migration smoke', () => {
       controllers: [NotificationsController],
       providers: [{ provide: FoundationDataService, useValue: service }],
     })
-      .overrideGuard(LegacyAuthGuard)
+      .overrideGuard(JwtAuthGuard)
       .useValue({
         canActivate: (context) => {
           context.switchToHttp().getRequest().user = {
@@ -86,4 +86,3 @@ describe('Foundation data migration smoke', () => {
     await app.close();
   });
 });
-

@@ -7,11 +7,13 @@ import { CommonModule } from './common/common.module';
 import { DatabaseModule } from './database/database.module';
 import { FoundationDataModule } from './foundation-data/foundation-data.module';
 import { HealthModule } from './health/health.module';
+import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
 
 const databaseImports =
   process.env.SKIP_DB_CONNECTION === 'true' || process.env.NODE_ENV === 'test'
     ? []
-    : [DatabaseModule, FoundationDataModule];
+    : [DatabaseModule, UsersModule, AuthModule, FoundationDataModule];
 
 @Module({
   imports: [

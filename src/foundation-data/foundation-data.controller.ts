@@ -15,8 +15,8 @@ import {
 import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
-import { LegacyAuthGuard } from '../common/guards/legacy-auth.guard';
-import { OptionalLegacyAuthGuard } from '../common/guards/optional-legacy-auth.guard';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../common/guards/optional-jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 import { createMulterOptions } from '../common/upload/upload.helper';
@@ -48,7 +48,7 @@ export class ContactInfoController {
   constructor(private readonly foundation: FoundationDataService) {}
 
   @Get()
-  @UseGuards(LegacyAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   getAll(@Query() query: Record<string, any>) {
     return this.foundation.getContacts(query);
@@ -60,14 +60,14 @@ export class ContactInfoController {
   }
 
   @Get(':id')
-  @UseGuards(LegacyAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   getOne(@Param('id', ParseObjectIdPipe) id: string) {
     return this.foundation.getContact(id);
   }
 
   @Delete(':id')
-  @UseGuards(LegacyAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   delete(@Param('id', ParseObjectIdPipe) id: string) {
     return this.foundation.deleteContact(id);
@@ -84,7 +84,7 @@ export class ContactUsController {
   }
 
   @Get()
-  @UseGuards(LegacyAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   getAll(@Query() query: Record<string, any>) {
     return this.foundation.getContactUs(query);
@@ -96,7 +96,7 @@ export class SystemReviewsController {
   constructor(private readonly foundation: FoundationDataService) {}
 
   @Get('myReviews')
-  @UseGuards(LegacyAuthGuard)
+  @UseGuards(JwtAuthGuard)
   getMyReviews(@Query() query: Record<string, any>, @CurrentUser() user: any) {
     return this.foundation.getSystemReviews(query, { user: user._id });
   }
@@ -107,7 +107,7 @@ export class SystemReviewsController {
   }
 
   @Post()
-  @UseGuards(LegacyAuthGuard)
+  @UseGuards(JwtAuthGuard)
   create(@Body() body: CreateSystemReviewDto, @CurrentUser() user: any) {
     return this.foundation.createSystemReview(body, user);
   }
@@ -118,20 +118,20 @@ export class SystemReviewsController {
   }
 
   @Put(':id')
-  @UseGuards(LegacyAuthGuard)
+  @UseGuards(JwtAuthGuard)
   update(@Param('id', ParseObjectIdPipe) id: string, @Body() body: UpdateSystemReviewDto, @CurrentUser() user: any) {
     return this.foundation.updateSystemReview(id, body, user);
   }
 
   @Delete(':id')
-  @UseGuards(LegacyAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'user')
   delete(@Param('id', ParseObjectIdPipe) id: string, @CurrentUser() user: any) {
     return this.foundation.deleteSystemReview(id, user);
   }
 
   @Put(':id/replay')
-  @UseGuards(LegacyAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   replay(@Param('id', ParseObjectIdPipe) id: string, @Body() body: ReplayDto) {
     return this.foundation.replaySystemReview(id, body.replay);
@@ -143,7 +143,7 @@ export class ReviewsController {
   constructor(private readonly foundation: FoundationDataService) {}
 
   @Get('myReview')
-  @UseGuards(LegacyAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('user')
   getMyReview(@Query() query: Record<string, any>, @CurrentUser() user: any) {
     return this.foundation.getReviews(query, { user: user._id });
@@ -155,14 +155,14 @@ export class ReviewsController {
   }
 
   @Post()
-  @UseGuards(LegacyAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'user')
   create(@Param('courseId') courseId: string | undefined, @Body() body: CreateReviewDto, @CurrentUser() user: any) {
     return this.foundation.createReview(body, user, courseId);
   }
 
   @Put(':id/reply')
-  @UseGuards(LegacyAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   reply(@Param('id', ParseObjectIdPipe) id: string, @Body() body: ReplyDto) {
     return this.foundation.replyToReview(id, body.reply);
@@ -174,14 +174,14 @@ export class ReviewsController {
   }
 
   @Put(':id')
-  @UseGuards(LegacyAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('user')
   update(@Param('id', ParseObjectIdPipe) id: string, @Body() body: UpdateReviewDto, @CurrentUser() user: any) {
     return this.foundation.updateReview(id, body, user);
   }
 
   @Delete(':id')
-  @UseGuards(LegacyAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'user')
   delete(@Param('id', ParseObjectIdPipe) id: string, @CurrentUser() user: any) {
     return this.foundation.deleteReview(id, user);
@@ -189,7 +189,7 @@ export class ReviewsController {
 }
 
 @Controller('wishlist')
-@UseGuards(LegacyAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('admin', 'user')
 export class WishlistController {
   constructor(private readonly foundation: FoundationDataService) {}
@@ -220,7 +220,7 @@ export class CategoriesController {
   }
 
   @Post()
-  @UseGuards(LegacyAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @UseInterceptors(FileInterceptor('image', createMulterOptions()))
   create(@Body() body: CreateCategoryDto, @UploadedFile() file?: Express.Multer.File) {
@@ -233,7 +233,7 @@ export class CategoriesController {
   }
 
   @Put(':id')
-  @UseGuards(LegacyAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @UseInterceptors(FileInterceptor('image', createMulterOptions()))
   update(@Param('id', ParseObjectIdPipe) id: string, @Body() body: UpdateCategoryDto, @UploadedFile() file?: Express.Multer.File) {
@@ -246,14 +246,14 @@ export class ArticalsController {
   constructor(private readonly foundation: FoundationDataService) {}
 
   @Post()
-  @UseGuards(LegacyAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileFieldsInterceptor([{ name: 'imageCover', maxCount: 1 }, { name: 'images', maxCount: 20 }], createMulterOptions()))
   create(@Body() body: CreateArticalDto, @UploadedFiles() files: { imageCover?: Express.Multer.File[]; images?: Express.Multer.File[] }, @CurrentUser() user: any) {
     return this.foundation.createArtical(body, user, files);
   }
 
   @Get('getAll')
-  @UseGuards(LegacyAuthGuard)
+  @UseGuards(JwtAuthGuard)
   getInstructorArticals(@Query() query: Record<string, any>, @CurrentUser() user: any) {
     return this.foundation.getArticals(query, user.role !== 'admin' ? { author: user._id } : {});
   }
@@ -269,7 +269,7 @@ export class ArticalsController {
   }
 
   @Put(':id')
-  @UseGuards(LegacyAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'moderator')
   @UseInterceptors(FileFieldsInterceptor([{ name: 'imageCover', maxCount: 1 }, { name: 'images', maxCount: 20 }], createMulterOptions()))
   update(@Param('id', ParseObjectIdPipe) id: string, @Body() body: UpdateArticalDto, @UploadedFiles() files?: { imageCover?: Express.Multer.File[]; images?: Express.Multer.File[] }) {
@@ -277,7 +277,7 @@ export class ArticalsController {
   }
 
   @Delete(':id')
-  @UseGuards(LegacyAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'moderator')
   delete(@Param('id', ParseObjectIdPipe) id: string) {
     return this.foundation.deleteArtical(id);
@@ -289,38 +289,38 @@ export class CouponsController {
   constructor(private readonly foundation: FoundationDataService) {}
 
   @Get('getCouponDetails/:couponName')
-  @UseGuards(OptionalLegacyAuthGuard)
+  @UseGuards(OptionalJwtAuthGuard)
   getCouponDetails(@Param('couponName') couponName: string, @CurrentUser() user: any) {
     return this.foundation.getCouponDetails(couponName, user);
   }
 
   @Get()
-  @UseGuards(LegacyAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('user', 'admin')
   getAll(@Query() query: Record<string, any>, @CurrentUser() user: any) {
     return this.foundation.getCoupons(query, user);
   }
 
   @Post()
-  @UseGuards(LegacyAuthGuard)
+  @UseGuards(JwtAuthGuard)
   create(@Body() body: CreateCouponDto, @CurrentUser() user: any) {
     return this.foundation.createCoupon(body, user);
   }
 
   @Get(':id')
-  @UseGuards(LegacyAuthGuard)
+  @UseGuards(JwtAuthGuard)
   getOne(@Param('id', ParseObjectIdPipe) id: string, @CurrentUser() user: any) {
     return this.foundation.getCoupon(id, user);
   }
 
   @Put(':id')
-  @UseGuards(LegacyAuthGuard)
+  @UseGuards(JwtAuthGuard)
   update(@Param('id', ParseObjectIdPipe) id: string, @Body() body: UpdateCouponDto, @CurrentUser() user: any) {
     return this.foundation.updateCoupon(id, body, user);
   }
 
   @Delete(':id')
-  @UseGuards(LegacyAuthGuard)
+  @UseGuards(JwtAuthGuard)
   delete(@Param('id', ParseObjectIdPipe) id: string, @CurrentUser() user: any) {
     return this.foundation.deleteCoupon(id, user);
   }
@@ -336,7 +336,7 @@ export class EventsController {
   }
 
   @Post()
-  @UseGuards(LegacyAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @UseInterceptors(FileInterceptor('image', createMulterOptions()))
   create(@Body() body: CreateEventDto, @UploadedFile() file?: Express.Multer.File) {
@@ -349,14 +349,14 @@ export class EventsController {
   }
 
   @Put(':id')
-  @UseGuards(LegacyAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   update(@Param('id', ParseObjectIdPipe) id: string, @Body() body: UpdateEventDto) {
     return this.foundation.updateEvent(id, body);
   }
 
   @Delete(':id')
-  @UseGuards(LegacyAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   delete(@Param('id', ParseObjectIdPipe) id: string) {
     return this.foundation.deleteEvent(id);
@@ -364,7 +364,7 @@ export class EventsController {
 }
 
 @Controller('notifications')
-@UseGuards(LegacyAuthGuard)
+@UseGuards(JwtAuthGuard)
 export class NotificationsController {
   constructor(private readonly foundation: FoundationDataService) {}
 
