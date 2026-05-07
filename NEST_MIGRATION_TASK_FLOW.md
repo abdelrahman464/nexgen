@@ -247,14 +247,36 @@ Order:
 7. PayPal if still used.
 8. Marketing invoice dependencies used by orders.
 
-Flow:
-1. Read old order routes, order services, payment provider services, validators, models, and webhook behavior.
-2. Create isolated payment provider services behind a common interface.
-3. Ensure raw body support before moving Stripe.
-4. Add idempotency checks where missing.
-5. Add smoke tests for order creation, free order, paid webhook success, duplicate webhook, failed payment, and subscription creation.
-6. Update `FRONT_CHANGES.md` for checkout/payment response changes.
-7. Run tests, TypeScript build, review diff, and commit.
+Checklist:
+- [x] Read old order routes, order services, payment provider services, validators, models, and webhook behavior.
+- [x] Confirm route paths, auth rules, response shapes, collections, and webhook signature behavior.
+- [x] Add `CommerceModule` after auth/users/catalog modules.
+- [x] Register explicit collection names: `orders`, `usersubscriptions`, and `paymentwebhookevents`.
+- [x] Patch matching legacy model files to reuse existing Mongoose models while legacy routes remain mounted.
+- [x] Add DTOs and validation for manual purchases, checkout coupon bodies, subscription creation, and query params.
+- [x] Add service logic without Express `req/res`.
+- [x] Add `OrderFulfillmentService` for paid/free/manual order completion.
+- [x] Add `CommerceAccessService` for order filtering, authorization, item lookup, and one-hour paid-order throttling.
+- [x] Add payment provider abstraction and Stripe, Plisio, and Lahza implementations.
+- [x] Ensure webhook handlers use raw body where required.
+- [x] Add idempotency checks for provider webhooks.
+- [x] Keep Cryptomus and PayPal inactive unless active route mounts are found.
+- [x] Add smoke tests for subscription creation, order creation, free order, paid webhook success, duplicate webhook, failed payment, raw body, and validation.
+- [x] Update `FRONT_CHANGES.md` only for frontend-impacting checkout/payment response changes.
+- [x] Run `npm run build`, `npm test`, `npm run email:check`, and `node --check` for touched legacy JS files.
+- [x] Review diff and commit.
+
+Task 5 security note:
+- [x] Preserve current `PUT /api/v1/orders/purchaseForUser` auth behavior for compatibility. The legacy route has auth middleware commented out, so this migration must not silently harden the route. Revisit this in a later security cleanup.
+
+Progress:
+- [x] User subscriptions.
+- [x] Orders core.
+- [x] Stripe.
+- [x] Plisio.
+- [x] Lahza.
+- [x] Cryptomus inactive/deferred note.
+- [x] PayPal inactive/deferred note.
 
 ## Task 6: Marketing And Revenue
 

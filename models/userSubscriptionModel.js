@@ -27,4 +27,4 @@ userSubscriptionSchema.pre(/^find/, function (next) {
   });
   next();
 });
-module.exports = mongoose.model('UserSubscription', userSubscriptionSchema);
+module.exports = mongoose.models.UserSubscription || mongoose.model('UserSubscription', userSubscriptionSchema);
