@@ -46,4 +46,4 @@ LiveSchema.pre(/^find/, function (next) {
   next();
 });
 
-module.exports = mongoose.model("Live", LiveSchema);
+module.exports = mongoose.models.Live || mongoose.model("Live", LiveSchema);

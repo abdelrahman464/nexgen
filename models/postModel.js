@@ -85,5 +85,5 @@ PostSchema.post('init', (doc) => {
 PostSchema.post('save', (doc) => {
   setImageURL(doc);
 });
-const Post = mongoose.model('Post', PostSchema);
+const Post = mongoose.models.Post || mongoose.model('Post', PostSchema);
 module.exports = Post;

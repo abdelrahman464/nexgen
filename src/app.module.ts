@@ -12,11 +12,12 @@ import { UsersModule } from './users/users.module';
 import { LearningCatalogModule } from './learning-catalog/learning-catalog.module';
 import { CommerceModule } from './commerce/commerce.module';
 import { MarketingRevenueModule } from './marketing-revenue/marketing-revenue.module';
+import { CommunityRealtimeModule } from './community-realtime/community-realtime.module';
 
 const databaseImports =
   process.env.SKIP_DB_CONNECTION === 'true' || process.env.NODE_ENV === 'test'
     ? []
-    : [DatabaseModule, UsersModule, AuthModule, LearningCatalogModule, CommerceModule, MarketingRevenueModule, FoundationDataModule];
+    : [DatabaseModule, UsersModule, AuthModule, LearningCatalogModule, CommerceModule, MarketingRevenueModule, CommunityRealtimeModule, FoundationDataModule];
 
 @Module({
   imports: [

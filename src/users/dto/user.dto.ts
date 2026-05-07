@@ -1,5 +1,5 @@
 import { PartialType } from '@nestjs/swagger';
-import { IsBoolean, IsEmail, IsIn, IsMongoId, IsOptional, IsString, MaxLength, MinLength, registerDecorator, ValidationArguments, ValidationOptions } from 'class-validator';
+import { IsBoolean, IsEmail, IsIn, IsMongoId, IsNotEmpty, IsOptional, IsString, MaxLength, MinLength, registerDecorator, ValidationArguments, ValidationOptions } from 'class-validator';
 
 function Match(property: string, validationOptions?: ValidationOptions) {
   return (object: object, propertyName: string) => {
@@ -118,4 +118,18 @@ export class UpdateMeDto {
 export class MongoIdDto {
   @IsMongoId()
   id!: string;
+}
+
+export class FcmTokenDto {
+  @IsString()
+  @IsNotEmpty()
+  fcmToken!: string;
+
+  @IsIn(['register', 'unregister'])
+  method!: string;
+}
+
+export class PushNotificationsDto {
+  @IsBoolean()
+  enabled!: boolean;
 }

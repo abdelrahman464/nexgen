@@ -54,6 +54,6 @@ import { FoundationDataService } from './foundation-data.service';
     NotificationsController,
   ],
   providers: [FoundationDataService],
-  exports: [FoundationDataService],
+  exports: [FoundationDataService, MongooseModule],
 })
 export class FoundationDataModule {}

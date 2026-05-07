@@ -324,23 +324,37 @@ Progress:
 Migrate social and realtime features after auth/user and notifications are stable.
 
 Order:
-1. Posts.
-2. Comments.
-3. Reactions.
-4. Chats.
-5. Messages.
-6. Live.
-7. Socket.IO gateway.
+1. [x] Posts.
+2. [x] Comments.
+3. [x] Reactions.
+4. [x] Chats.
+5. [x] Messages.
+6. [x] Live.
+7. [x] Socket.IO gateway.
+8. [x] Deferred user community routes: follow/unfollow, followers/following, notification bell, FCM token, and push preferences.
 
-Flow:
-1. Read old route, service, model, validator, notification, and socket behavior.
-2. Convert Socket.IO `initSocket` into a Nest gateway.
-3. Preserve events: `addUser`, `joinRoom`, `leaveRoom`, `sendMessage`, `receiveMessage`, `notification`, and `errorMessage`.
-4. Move in-memory user socket tracking into a gateway service.
-5. Preserve time-spent updates on disconnect.
-6. Add tests for post/comment CRUD and gateway events where practical. If gateway tests are not practical, add a documented manual test script.
-7. Update `FRONT_CHANGES.md` for API cleanup.
-8. Run tests, TypeScript build, review diff, and commit.
+Checklist:
+- [x] Read old route, service, model, validator, upload, notification, and socket behavior.
+- [x] Confirm route paths, auth rules, response shape, collection name, upload folders, and socket event names.
+- [x] Add Nest schema registration with explicit collection names: `posts`, `comments`, `reactions`, `chats`, `messages`, and `lives`.
+- [x] Add DTOs and validation for community, chat, message, live, FCM, and push-notification payloads.
+- [x] Add service logic without Express `req/res`.
+- [x] Add controller routes with guards and upload interceptors.
+- [x] Preserve historical paths, including `/api/v1/reacts`.
+- [x] Avoid copying duplicate legacy routes for `posts/topPosters` and `chats/customerService`.
+- [x] Convert Socket.IO `initSocket` into a Nest gateway.
+- [x] Preserve events: `addUser`, `joinRoom`, `leaveRoom`, `sendMessage`, `receiveMessage`, `notification`, and `errorMessage`.
+- [x] Move in-memory user socket tracking into `RealtimePresenceService`.
+- [x] Preserve time-spent updates on disconnect.
+- [x] Add smoke tests for post/comment/reaction validation, chat/message behavior, user community routes, and gateway/presence behavior.
+- [x] Update `FRONT_CHANGES.md` only if API behavior changes.
+- [x] Run TypeScript build, tests, email check, syntax checks, review diff, and commit.
+
+Task 7 notes for later cleanup:
+- No intentional frontend path or response-shape changes were made.
+- Presence remains process-local; Redis/shared presence is deferred.
+- AI chat is still Task 8.
+- Legacy JS files remain until Task 9 cleanup, but migrated model exports now reuse `mongoose.models.*`.
 
 ## Task 8: AI And Knowledge Features
 

@@ -80,5 +80,5 @@ MessageSchema.post("init", (doc) => {
 MessageSchema.post("save", (doc) => {
   setImageURL(doc);
 });
-const Message = mongoose.model("Message", MessageSchema);
+const Message = mongoose.models.Message || mongoose.model("Message", MessageSchema);
 module.exports = Message;

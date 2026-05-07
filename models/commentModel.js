@@ -48,5 +48,5 @@ CommentSchema.post("init", (doc) => {
 CommentSchema.post("save", (doc) => {
   setImageURL(doc);
 });
-const Comment = mongoose.model("Comment", CommentSchema);
+const Comment = mongoose.models.Comment || mongoose.model("Comment", CommentSchema);
 module.exports = Comment;

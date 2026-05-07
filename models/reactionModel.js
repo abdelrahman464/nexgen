@@ -23,4 +23,4 @@ ReactionSchema.pre(/^find/, function (next) {
   this.populate({ path: "user", select: "name profileImg" });
   next();
 });
-module.exports = mongoose.model("Reaction", ReactionSchema);
+module.exports = mongoose.models.Reaction || mongoose.model("Reaction", ReactionSchema);

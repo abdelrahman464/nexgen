@@ -260,6 +260,73 @@ export class UsersService {
     return { status: 'success', results: data.length, data };
   }
 
+  async followUser(id: string, user: any) {
+    if (user._id.toString() === id.toString()) throw new ApiException('You cannot follow yourself', 400);
+    const userToFollow = await this.userModel.findById(id);
+    if (!userToFollow) throw new NotFoundException('User not found');
+    const alreadyFollowing = await this.userModel.findOne({ _id: user._id, following: { $elemMatch: { user: id } } });
+    if (alreadyFollowing) throw new ApiException('You are already following this user', 400);
+    await this.userModel.findByIdAndUpdate(user._id, { $addToSet: { following: { user: id, notificationBell: false } } });
+    await this.userModel.findByIdAndUpdate(id, { $addToSet: { followers: user._id } });
+    await Notification.create({
+      user: id,
+      message: { ar: ` ${user.name} قام بمتابعتك`, en: `${user.name} followed you` },
+      type: 'follow',
+      followedUser: user._id,
+    });
+    return { status: 'success', message: 'You followed this user' };
+  }
+
+  async unFollowUser(id: string, user: any) {
+    if (user._id.toString() === id.toString()) throw new ApiException('You cannot unfollow yourself', 400);
+    const userToUnfollow = await this.userModel.findById(id);
+    if (!userToUnfollow) throw new NotFoundException('User not found');
+    const isFollowing = await this.userModel.findOne({ _id: user._id, following: { $elemMatch: { user: id } } });
+    if (!isFollowing) throw new ApiException('You are not following this user', 400);
+    await this.userModel.findByIdAndUpdate(user._id, { $pull: { following: { user: id } } });
+    await this.userModel.findByIdAndUpdate(id, { $pull: { followers: user._id } });
+    return { status: 'success', message: 'You unfollowed this user' };
+  }
+
+  async setNotificationBell(id: string, user: any, enabled: boolean) {
+    const currentUser = await this.userModel.findOne({ _id: user._id, following: { $elemMatch: { user: id } } });
+    if (!currentUser) throw new ApiException('You are not following this user', 400);
+    await this.userModel.updateOne({ _id: user._id, 'following.user': id }, { $set: { 'following.$.notificationBell': enabled } });
+    return { success: true, message: `Notification bell ${enabled ? 'activated' : 'deactivated'}` };
+  }
+
+  async getMyFollowersAndFollowing(user: any) {
+    const currentUser = await this.userModel
+      .findById(user._id)
+      .populate('followers', 'name email profileImg')
+      .populate('following', 'name email profileImg');
+    return {
+      status: 'success',
+      data: {
+        followers: currentUser.followers,
+        following: currentUser.following,
+      },
+    };
+  }
+
+  async registerFcmToken(body: { fcmToken: string; method: string }, user: any) {
+    if (body.method === 'register') {
+      await this.userModel.findByIdAndUpdate(user._id, { $addToSet: { fcmTokens: body.fcmToken } }, { new: true });
+      return { status: 'success', message: 'FCM token registered successfully' };
+    }
+    await this.userModel.findByIdAndUpdate(user._id, { $pull: { fcmTokens: body.fcmToken } }, { new: true });
+    return { status: 'success', message: 'FCM token unregistered successfully' };
+  }
+
+  async togglePushNotifications(enabled: boolean, user: any) {
+    const updatedUser = await this.userModel.findByIdAndUpdate(user._id, { pushNotificationsEnabled: enabled }, { new: true });
+    return {
+      status: 'success',
+      message: `Push notifications ${enabled ? 'enabled' : 'disabled'}`,
+      data: { pushNotificationsEnabled: updatedUser.pushNotificationsEnabled },
+    };
+  }
+
   async findById(id: string) {
     return this.userModel.findById(id);
   }

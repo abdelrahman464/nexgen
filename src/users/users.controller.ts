@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Next, Param, Post, Put, Query, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -7,7 +7,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 import { TokenService } from '../common/services/token.service';
 import { createMulterOptions } from '../common/upload/upload.helper';
-import { ChangePasswordDto, CreateUserDto, UpdateMeDto, UpdateUserDto } from './dto/user.dto';
+import { ChangePasswordDto, CreateUserDto, FcmTokenDto, PushNotificationsDto, UpdateMeDto, UpdateUserDto } from './dto/user.dto';
 import { UserUploadFiles, UsersService } from './users.service';
 import { EmailMarketingQueryDto } from '../marketing-revenue/dto/marketing-revenue.dto';
 
@@ -86,9 +86,46 @@ export class UsersController {
     return this.users.getAllInstructorsWithBelongings();
   }
 
+  @Get('follow/followersAndFollowing')
+  @UseGuards(JwtAuthGuard)
+  getMyFollowersAndFollowing(@CurrentUser() user: any) {
+    return this.users.getMyFollowersAndFollowing(user);
+  }
+
+  @Post('follow/:id')
+  @UseGuards(JwtAuthGuard)
+  follow(@Param('id', ParseObjectIdPipe) id: string, @CurrentUser() user: any) {
+    return this.users.followUser(id, user);
+  }
+
+  @Delete('follow/:id')
+  @UseGuards(JwtAuthGuard)
+  unfollow(@Param('id', ParseObjectIdPipe) id: string, @CurrentUser() user: any) {
+    return this.users.unFollowUser(id, user);
+  }
+
+  @Post('notificationBell/:id')
+  @UseGuards(JwtAuthGuard)
+  activeNotificationBell(@Param('id', ParseObjectIdPipe) id: string, @CurrentUser() user: any) {
+    return this.users.setNotificationBell(id, user, true);
+  }
+
+  @Delete('notificationBell/:id')
+  @UseGuards(JwtAuthGuard)
+  deActiveNotificationBell(@Param('id', ParseObjectIdPipe) id: string, @CurrentUser() user: any) {
+    return this.users.setNotificationBell(id, user, false);
+  }
+
+  @Patch('fcm-token')
+  @UseGuards(JwtAuthGuard)
+  registerFcmToken(@Body() body: FcmTokenDto, @CurrentUser() user: any) {
+    return this.users.registerFcmToken(body, user);
+  }
+
   @Put('push-notifications')
-  passPushNotificationsToLegacy(@Next() next: Function) {
-    return next();
+  @UseGuards(JwtAuthGuard)
+  togglePushNotifications(@Body() body: PushNotificationsDto, @CurrentUser() user: any) {
+    return this.users.togglePushNotifications(body.enabled, user);
   }
 
   @Put('changePassword/:id')
