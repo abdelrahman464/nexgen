@@ -77,6 +77,6 @@ ReviewSchema.post("save", async function () {
   await this.constructor.calcAverageRatingsAndQuantity(this.course._id);
 });
 
-const ReviewModel = mongoose.model("Review", ReviewSchema);
+const ReviewModel = mongoose.models.Review || mongoose.model("Review", ReviewSchema);
 
 module.exports = ReviewModel;

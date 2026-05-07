@@ -14,9 +14,15 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const request = ctx.getRequest();
     const response = ctx.getResponse();
+    const legacyStatusCode =
+      typeof (exception as { statusCode?: unknown })?.statusCode === 'number'
+        ? ((exception as { statusCode: number }).statusCode)
+        : undefined;
     const statusCode =
       exception instanceof HttpException
         ? exception.getStatus()
+        : legacyStatusCode
+          ? legacyStatusCode
         : HttpStatus.INTERNAL_SERVER_ERROR;
     const message = this.getMessage(exception);
     const status = statusCode >= 500 ? 'error' : 'fail';

@@ -33,6 +33,7 @@ categorySchema.post("save", (doc) => {
   setImageURL(doc);
 });
 //2- create model
-const CategoryModel = mongoose.model('Category', categorySchema);
+const CategoryModel =
+  mongoose.models.Category || mongoose.model('Category', categorySchema);
 
 module.exports = CategoryModel;

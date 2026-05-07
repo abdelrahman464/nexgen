@@ -42,4 +42,4 @@ eventSchema.post('save', (doc) => {
   setImageURL(doc);
 });
 //2- create model
-module.exports = mongoose.model('Event', eventSchema);
+module.exports = mongoose.models.Event || mongoose.model('Event', eventSchema);

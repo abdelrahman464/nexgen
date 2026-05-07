@@ -28,4 +28,5 @@ systemReviewSchema.pre(/^find/, function (next) {
 });
 
 //2- create model
-module.exports = mongoose.model("SystemReview", systemReviewSchema);
+module.exports =
+  mongoose.models.SystemReview || mongoose.model("SystemReview", systemReviewSchema);

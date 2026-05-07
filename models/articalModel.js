@@ -76,4 +76,4 @@ ArticalSchema.pre(/^find/, function (next) {
   next();
 });
 
-module.exports = mongoose.model("Artical", ArticalSchema);
+module.exports = mongoose.models.Artical || mongoose.model("Artical", ArticalSchema);

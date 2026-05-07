@@ -68,4 +68,4 @@ couponSchema.pre(/^find/, function (next) {
 });
 
 //2- create model
-module.exports = mongoose.model('Coupon', couponSchema);
+module.exports = mongoose.models.Coupon || mongoose.model('Coupon', couponSchema);

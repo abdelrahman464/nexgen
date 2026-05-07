@@ -12,7 +12,7 @@ const allowedTypes = [
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ];
 
-export function createMulterOptions() {
+export function createMulterOptions(): any {
   const maxFileSize = Number(process.env.MAX_UPLOAD_FILE_SIZE) || 20 * 1024 * 1024;
   return {
     storage: multer.memoryStorage(),
@@ -20,7 +20,10 @@ export function createMulterOptions() {
       if (allowedTypes.includes(file.mimetype)) {
         callback(null, true);
       } else {
-        callback(new ApiException('Unsupported file type.', 400));
+        (callback as (error: Error | null, acceptFile: boolean) => void)(
+          new ApiException('Unsupported file type.', 400),
+          false,
+        );
       }
     },
     limits: { fileSize: maxFileSize },

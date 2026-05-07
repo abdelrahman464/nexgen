@@ -116,7 +116,7 @@ Flow:
 
 ## Task 2: Foundation Data Modules
 
-Migrate low-risk CRUD modules first.
+Migrate low-risk data modules first. Keep public route paths and Mongo collection names stable. Do not remove old route/service/model files yet; legacy cleanup waits until Task 9.
 
 Order:
 1. Contact info and contact us.
@@ -129,13 +129,37 @@ Order:
 8. Events.
 9. Notifications.
 
-For each module:
-1. Read old route, service, model, validator, and any helper imports.
-2. Create Nest module, controller, service, DTOs, schema registration, and tests.
-3. Preserve collection names and Mongoose schema behavior.
-4. Replace `express-validator` with DTO validation.
-5. Update `FRONT_CHANGES.md` only when route, payload, status code, or response shape changes.
-6. Run tests, TypeScript build, review diff, and commit.
+Shared Task 2 checklist:
+- [ ] Add `FoundationDataModule` and import it from `AppModule`.
+- [ ] Add temporary legacy auth wrappers: `LegacyAuthGuard`, `OptionalLegacyAuthGuard`, `RolesGuard`, `@Roles()`, and `@CurrentUser()`.
+- [ ] Add `ParseObjectIdPipe`, reusable localized-string DTOs, shared pagination/query behavior, and shared Sharp upload helpers.
+- [ ] Register explicit collection names: `contacts`, `contactus`, `systemreviews`, `reviews`, `categories`, `articals`, `coupons`, `events`, and `notifications`.
+- [ ] Ensure migrated Nest routes are registered before legacy routes.
+- [ ] Make migrated legacy model files reuse existing Mongoose models to avoid model overwrite conflicts while the legacy adapter still exists.
+
+Per-module checklist:
+- [ ] Read old route/service/model/validator.
+- [ ] Confirm route paths, auth rules, response shape, and collection name.
+- [ ] Add Nest schema with explicit collection name.
+- [ ] Add DTOs and validation.
+- [ ] Add service logic without Express `req`/`res`.
+- [ ] Add controller routes with guards/interceptors.
+- [ ] Add smoke tests.
+- [ ] Run `npm run build`, `npm test`, and `npm run email:check`.
+- [ ] Update `FRONT_CHANGES.md` if API behavior changes.
+- [ ] Review diff and commit.
+
+Module-specific notes:
+- [ ] Contact info: preserve public create and admin-only list/get/delete.
+- [ ] Contact us: preserve public create and admin-only list.
+- [ ] System reviews: preserve public list/detail, protected create/update/delete, admin replay, and `myReviews`.
+- [ ] Reviews: preserve nested course review behavior, `myReview`, ownership checks, duplicate-review checks, and course rating recalculation hooks.
+- [ ] Wishlist: preserve protected user/admin add/remove/list.
+- [ ] Categories: preserve i18n fields, image upload, Sharp webp conversion, image URL transform, and active course count.
+- [ ] Articals: preserve misspelled `/api/v1/articals` path, image uploads, status filtering, instructor filtering, slug generation, and image URL transform.
+- [ ] Coupons: preserve optional auth coupon details, marketer/admin/instructor permission checks, and active/expired/rejected behavior.
+- [ ] Events: preserve i18n fields, image upload, Sharp webp conversion, and image URL transform.
+- [ ] Notifications: preserve user-filtered list, read/read-all, unread count, admin system sends, admin push-only sends, socket/push side effects, and make `/unreadCount` resolve before `/:id`.
 
 ## Task 3: User And Auth Core
 
@@ -293,4 +317,3 @@ Flow:
 - Frontend-impacting changes are recorded in `FRONT_CHANGES.md`.
 - `git diff` was reviewed.
 - A focused commit was created.
-

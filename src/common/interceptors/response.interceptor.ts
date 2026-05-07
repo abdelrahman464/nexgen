@@ -10,8 +10,7 @@ export class ResponseInterceptor implements NestInterceptor {
         if (typeof body !== 'object' || Array.isArray(body)) {
           return { status: 'success', data: body };
         }
-        if ('status' in body || 'data' in body) return body;
-        return { status: 'success', data: body };
+        return body;
       }),
     );
   }

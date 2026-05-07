@@ -129,4 +129,5 @@ NotificationSchema.post('save', async (doc) => {
   }
 });
 
-module.exports = mongoose.model('Notification', NotificationSchema);
+module.exports =
+  mongoose.models.Notification || mongoose.model('Notification', NotificationSchema);
