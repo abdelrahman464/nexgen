@@ -394,19 +394,28 @@ Task 8 notes:
 
 Finish only after all modules are migrated and tested.
 
-Flow:
-1. Read all remaining legacy Express files and verify whether each is still used.
-2. Remove legacy `routes/`, old Express middleware, `express-async-handler`, unused service wrappers, and obsolete order service variants only when behavior is covered.
-3. Regenerate Swagger from Nest decorators.
-4. Run dependency audit and update vulnerable packages.
-5. Ensure scripts use Nest:
-   - `npm run start:dev`
-   - `npm start`
-   - `npm run build`
-   - `npm test`
-6. Review `FRONT_CHANGES.md` and mark entries as `done` or `deferred`.
-7. Run full smoke suite, TypeScript build, audit, and manual checks for Swagger, uploads, Socket.IO, cron boot, and webhooks.
-8. Review final diff and commit.
+Checklist:
+- [x] Use conservative cleanup: remove legacy Express routing/bootstrap, but keep JS models/services/helpers still imported by Nest.
+- [x] Search `src/`, `test/`, `emails/`, `scripts/`, and retained JS helpers before deleting files or dependencies.
+- [x] Remove legacy route mounting from `src/main.ts`.
+- [x] Remove `src/legacy/legacy-support.ts`.
+- [x] Remove temporary `LegacyAuthGuard` and `OptionalLegacyAuthGuard`.
+- [x] Remove old `server.js` and the `start:legacy` script.
+- [x] Delete legacy `routes/`.
+- [x] Delete old Express-only middleware files that are no longer imported by retained code.
+- [x] Keep `middlewares/validatorMiddleware.js` and `middlewares/uploadImageMiddleware.js` because retained validators/services still import them.
+- [x] Keep `socket/index.js` because the Nest notification schema still uses it as the emitter bridge.
+- [x] Delete stale Swagger YAML docs and rely on Nest Swagger at `/api-docs` and `/api-docs.json`.
+- [x] Remove unused packages with no retained references: `express-rate-limit`, `morgan`, `swagger-jsdoc`, `swagger-ui-express`, and `nodemon`.
+- [x] Keep `express-validator`, `express-async-handler`, and `node-cron` because retained validators/services/cron utilities still reference them.
+- [x] Review `FRONT_CHANGES.md`; all entries are `done` or `deferred`.
+- [x] Run `npm run build`, `npm test`, `npm run email:check`, `npm audit --omit=dev`, and syntax checks for touched JS files.
+- [x] Review final diff and commit.
+
+Task 9 notes:
+- [x] No frontend path or response-shape changes were intended.
+- [x] Full JS service/model/helper purge is deferred to a later hardening task after remaining TypeScript services no longer import legacy JS.
+- [x] Production audit still reports vulnerabilities whose available fixes require breaking upgrades (`Nest 11`, `@nestjs/swagger 11`, `multer 2.1.1`, `nodemailer 8`, and related transitive packages). Defer those to an explicit dependency-upgrade task.
 
 ## Definition Of Done For Each Task
 
