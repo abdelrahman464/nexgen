@@ -129,6 +129,18 @@ exports.checkUserSubscription = async (req, res, next) => {
 exports.filterOnUserRole = asyncHandler(async (req, res, next) => {
   const { course, forceRole } = req.query;
 
+  if (req.user.role === 'admin') {
+    if (course && !mongoose.isValidObjectId(course)) {
+      return next(new ApiError('Invalid course id', 400));
+    }
+
+    req.filterObj = course ? { course } : {};
+    req.newQuery = { ...req.query };
+    delete req.newQuery.course;
+    delete req.newQuery.forceRole;
+    return next();
+  }
+
   if (!course) {
     return next(new ApiError('course is required', 400));
   }
