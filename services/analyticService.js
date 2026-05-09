@@ -262,22 +262,49 @@ exports.createOne = async (req, res, next) => {
       );
     }
     //step 2: check if the lesson is required to have an analytic
+    const lessonCourseId = lesson.course?._id || lesson.course;
     const userCourseProgress = await CourseProgress.findOne({
       user: req.user._id,
-      course: lesson.course._id,
+      course: lessonCourseId,
     }).populate('progress.lesson');
 
     //step 3 update it's course progress object
-    let flag = false;
-    if (userCourseProgress && userCourseProgress.progress.length !== 0) {
-      userCourseProgress.progress.map((obj) => {
-        if (obj.lesson?._id?.toString() === lessonId.toString()) {
+    let shouldSaveProgress = false;
+    let hasLessonProgress = false;
+    if (userCourseProgress) {
+      userCourseProgress.progress.forEach((obj) => {
+        const progressLessonId = obj.lesson?._id || obj.lesson;
+        if (progressLessonId?.toString() === lessonId.toString()) {
           obj.passAnalytics = true;
-          flag = true;
+          hasLessonProgress = true;
+          shouldSaveProgress = true;
         }
       });
+
+      if (!hasLessonProgress && lesson.isRequireAnalytic && !lesson.hasQuiz) {
+        userCourseProgress.progress.push({
+          lesson: lesson._id,
+          status: 'Completed',
+          passAnalytics: true,
+          attemptDate: new Date(),
+        });
+        shouldSaveProgress = true;
+      }
+    } else if (lesson.isRequireAnalytic && !lesson.hasQuiz) {
+      await CourseProgress.create({
+        user: req.user._id,
+        course: lessonCourseId,
+        progress: [
+          {
+            lesson: lesson._id,
+            status: 'Completed',
+            passAnalytics: true,
+            attemptDate: new Date(),
+          },
+        ],
+      });
     }
-    if (flag) await userCourseProgress.save();
+    if (shouldSaveProgress) await userCourseProgress.save();
     req.body.lesson = lessonId;
   }
   return factory.createOne(Analytic)(req, res, next);

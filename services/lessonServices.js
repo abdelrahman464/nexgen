@@ -15,6 +15,7 @@ const { uploadMixOfFiles } = require("../middlewares/uploadImageMiddleware");
 const ApiFeatures = require("../utils/apiFeatures");
 const Exam = require("../models/examModel");
 const Course = require("../models/courseModel");
+const Analytic = require("../models/analyticsModel");
 
 exports.uploadFiles = uploadMixOfFiles([
   {
@@ -377,21 +378,16 @@ exports.getSectionLessons = async (req, res, next) => {
       });
     }
 
-    let firstLockedLessonOrder = 0;
-    for (const lesson of lessons) {
-      if (!lesson.hasQuiz) {
-        firstLockedLessonOrder = lesson.order;
-      } else {
-        break;
-      }
-    }
     const localizedLessons = Lesson.schema.methods.toJSONLocalizedOnly(
       lessons,
       req.locale
     );
 
     // Define a variable to hold the modified lessons with restricted access as needed
-    let accessibleLessons = [...localizedLessons];
+    let accessibleLessons = localizedLessons;
+    accessibleLessons.forEach((lesson) => {
+      lesson.isUnlocked = true;
+    });
     let canTakeFinalExam = false;
     let currentLessonOrder;
     let passedFinalExam = false;
@@ -401,67 +397,83 @@ exports.getSectionLessons = async (req, res, next) => {
         course: courseId,
       }).populate("progress.lesson");
 
-      if (!userCourseProgress || userCourseProgress.progress.length === 0) {
-        // If no progress, user should only access the first lesson
-        accessibleLessons = localizedLessons.map((lesson, index) => {
-          if (lesson.order > firstLockedLessonOrder + 1) {
-            lesson.videoUrl = undefined;
-          }
-          return lesson;
+      passedFinalExam = userCourseProgress?.status === "Completed";
+
+      const progressByLessonId = new Map();
+      if (userCourseProgress?.progress?.length) {
+        userCourseProgress.progress.forEach((progress) => {
+          const lessonId = progress.lesson?._id || progress.lesson;
+          if (!lessonId) return;
+
+          const key = lessonId.toString();
+          const existing = progressByLessonId.get(key) || {
+            passedExam: false,
+            passedAnalyticsTask: false,
+          };
+
+          existing.passedExam =
+            existing.passedExam || progress.status === "Completed";
+          existing.passedAnalyticsTask =
+            existing.passedAnalyticsTask || progress.passAnalytics === true;
+          progressByLessonId.set(key, existing);
         });
-      } else {
-        // Find the last lesson in progress
-        passedFinalExam = userCourseProgress.status === "Completed";
-        let lastLessonProgress = this.getLastLessonExamOrder(
-          userCourseProgress.progress
-        );
-        lastLessonProgress = lastLessonProgress.toObject();
+      }
 
-        // Add null checks for lesson and order
-        currentLessonOrder = lastLessonProgress.lesson.order || 0;
-        const conditions = {
-          isCompleted: lastLessonProgress.status === "Completed",
-          hasPassedAnalytics: _.has(lastLessonProgress, "passAnalytics")
-            ? lastLessonProgress.passAnalytics
-            : undefined,
-        };
-        const canProgressToNextLesson =
-          conditions.isCompleted &&
-          (conditions.hasPassedAnalytics === undefined ||
-            conditions.hasPassedAnalytics);
+      const analyticsLessonIds = await Analytic.find({
+        user: req.user._id,
+        lesson: { $in: lessons.map((lesson) => lesson._id) },
+      }).distinct("lesson");
+      const submittedAnalyticsLessonIds = new Set(
+        analyticsLessonIds.map((lessonId) => lessonId.toString())
+      );
 
-        if (canProgressToNextLesson) {
-          currentLessonOrder += 1;
+      let canAccessCurrentLesson = true;
+      accessibleLessons = localizedLessons.map((lesson) => {
+        const lessonId = lesson._id.toString();
+        const progressStatus = progressByLessonId.get(lessonId) || {};
+        const passedExam = !!progressStatus.passedExam;
+        const passedAnalyticsTask =
+          !!progressStatus.passedAnalyticsTask ||
+          submittedAnalyticsLessonIds.has(lessonId);
+
+        lesson.isUnlocked = canAccessCurrentLesson;
+        if (!canAccessCurrentLesson) {
+          lesson.videoUrl = undefined;
         }
-        
-        // Update accessibleLessons based on currentLessonOrder
-        accessibleLessons = localizedLessons.map((lesson) => {
-          if (
-            lesson.order > _.max([firstLockedLessonOrder + 1,currentLessonOrder]) 
-          ) {
-            lesson.videoUrl = undefined;
-          }
 
-          if (lesson.order < currentLessonOrder) {
-            lesson.passedExam = true;
-            if (lesson.isRequireAnalytic) lesson.passedAnalyticsTask = true; // check if lesson require analytics (hashMap lessons by order)
-          }
-
-          if (lesson.order === currentLessonOrder && !canProgressToNextLesson) {
-            lesson.passedExam = conditions.isCompleted;
-            if (conditions.hasPassedAnalytics !== undefined) {
-              lesson.passedAnalyticsTask = conditions.hasPassedAnalytics;
-            }
-          } else if (lesson.order === currentLessonOrder) {
-            lesson.passedExam = false;
-            if (lesson.isRequireAnalytic) lesson.passedAnalyticsTask = false; // check if lesson require analytics (hashMap lessons by order)
-          }
-
-          return lesson;
-        });
-        if (lessons.length < currentLessonOrder) {
-          canTakeFinalExam = true;
+        if (lesson.hasQuiz) {
+          lesson.passedExam = passedExam;
         }
+        if (lesson.isRequireAnalytic) {
+          lesson.passedAnalyticsTask = passedAnalyticsTask;
+        }
+
+        if (!currentLessonOrder && canAccessCurrentLesson) {
+          const isBlockedByQuiz = lesson.hasQuiz && !passedExam;
+          const isBlockedByAnalytics =
+            lesson.isRequireAnalytic && !passedAnalyticsTask;
+
+          if (isBlockedByQuiz || isBlockedByAnalytics) {
+            currentLessonOrder = lesson.order;
+          }
+        }
+
+        if (canAccessCurrentLesson) {
+          const canPassQuizBlock = !lesson.hasQuiz || passedExam;
+          const canPassAnalyticsBlock =
+            !lesson.isRequireAnalytic || passedAnalyticsTask;
+
+          if (!canPassQuizBlock || !canPassAnalyticsBlock) {
+            canAccessCurrentLesson = false;
+          }
+        }
+
+        return lesson;
+      });
+
+      if (canAccessCurrentLesson) {
+        canTakeFinalExam = true;
+        currentLessonOrder = lessons[lessons.length - 1].order + 1;
       }
     }
 
