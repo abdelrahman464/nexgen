@@ -126,6 +126,13 @@ exports.convertToArray = (req, res, next) => {
       req.body.highlights = [req.body.highlights];
     }
   }
+  if (Object.prototype.hasOwnProperty.call(req.body, 'nextCourses')) {
+    if (req.body.nextCourses === '') {
+      req.body.nextCourses = [];
+    } else if (!Array.isArray(req.body.nextCourses)) {
+      req.body.nextCourses = [req.body.nextCourses];
+    }
+  }
   next();
 };
 // Create a new course

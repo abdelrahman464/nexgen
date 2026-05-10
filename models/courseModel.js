@@ -122,6 +122,14 @@ const courseSchema = new mongoose.Schema(
     },
     courseWelcomeMessage: { type: String, i18n: true },
     goodByeMessage: { type: String, i18n: true },
+    whatIsNextTitle: { type: String, i18n: true },
+    whatIsNextDescription: { type: String, i18n: true },
+    nextCourses: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Course',
+      },
+    ],
     hasQuiz: Boolean,
     freePackageSubscriptionInDays: Number,
     // SEO fields
@@ -195,6 +203,11 @@ courseSchema.pre(/^find/, function (next) {
       path: 'accessibleCourses',
       select: 'title image price priceAfterDiscount status slug',
       options: { skipPopulate: true }  // Prevent recursive population
+    })
+  .populate({
+      path: 'nextCourses',
+      select: 'title description image price priceAfterDiscount slug type courseDuration rating ratingsAverage ratingsQuantity category instructor status createdAt',
+      options: { skipPopulate: true },
     })
   next();
 });

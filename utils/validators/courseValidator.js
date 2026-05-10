@@ -1,4 +1,5 @@
 const { body, check } = require('express-validator');
+const mongoose = require('mongoose');
 const slugify = require('slugify');
 const validatorMiddleware = require('../../middlewares/validatorMiddleware');
 const Category = require('../../models/categoryModel');
@@ -7,6 +8,76 @@ const Course = require('../../models/courseModel');
 const Section = require('../../models/sectionModel');
 const CourseProgress = require('../../models/courseProgressModel');
 const User = require('../../models/userModel');
+
+const normalizeNextCourseIds = (value) => {
+  if (value === undefined || value === null || value === '') return [];
+  const values = Array.isArray(value) ? value : [value];
+  return values.map((courseId) => String(courseId)).filter(Boolean);
+};
+
+const courseCanReachCourse = async (startCourseId, targetCourseId, visited = new Set()) => {
+  const startId = String(startCourseId);
+  const targetId = String(targetCourseId);
+
+  if (startId === targetId) return true;
+  if (visited.has(startId)) return false;
+
+  visited.add(startId);
+
+  const course = await Course.findById(startId)
+    .select('nextCourses')
+    .setOptions({ skipPopulate: true })
+    .lean();
+
+  const nextCourseIds = (course?.nextCourses || []).map((id) => String(id));
+
+  for (const nextCourseId of nextCourseIds) {
+    if (await courseCanReachCourse(nextCourseId, targetId, visited)) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+const validateNextCourses = async (value, req) => {
+  const nextCourseIds = normalizeNextCourseIds(value);
+  if (nextCourseIds.length === 0) return true;
+
+  const uniqueNextCourseIds = [...new Set(nextCourseIds)];
+  if (uniqueNextCourseIds.length !== nextCourseIds.length) {
+    throw new Error('nextCourses cannot contain duplicate courses');
+  }
+
+  uniqueNextCourseIds.forEach((courseId) => {
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      throw new Error(`Invalid next course ID format: ${courseId}`);
+    }
+  });
+
+  const existingCoursesCount = await Course.countDocuments({
+    _id: { $in: uniqueNextCourseIds },
+  });
+
+  if (existingCoursesCount !== uniqueNextCourseIds.length) {
+    throw new Error('One or more next courses were not found');
+  }
+
+  const currentCourseId = req.params.id;
+  if (!currentCourseId) return true;
+
+  if (uniqueNextCourseIds.includes(String(currentCourseId))) {
+    throw new Error('A course cannot point to itself as a next course');
+  }
+
+  for (const nextCourseId of uniqueNextCourseIds) {
+    if (await courseCanReachCourse(nextCourseId, currentCourseId)) {
+      throw new Error('nextCourses cannot create a course loop');
+    }
+  }
+
+  return true;
+};
 
 exports.createCourseValidator = [
   body('title').optional().isObject().withMessage('Title must be an object.'),
@@ -47,6 +118,40 @@ exports.createCourseValidator = [
     .withMessage(`ar description must be a string.`)
     .isLength({ min: 10 })
     .withMessage(`ar description must at least 10 chars`),
+
+  body('whatIsNextTitle')
+    .optional()
+    .isObject()
+    .withMessage('whatIsNextTitle must be an object.'),
+
+  body('whatIsNextTitle.en')
+    .optional()
+    .isString()
+    .withMessage(`en whatIsNextTitle must be a string.`),
+
+  body('whatIsNextTitle.ar')
+    .optional()
+    .isString()
+    .withMessage(`ar whatIsNextTitle must be a string.`),
+
+  body('whatIsNextDescription')
+    .optional()
+    .isObject()
+    .withMessage('whatIsNextDescription must be an object.'),
+
+  body('whatIsNextDescription.en')
+    .optional()
+    .isString()
+    .withMessage(`en whatIsNextDescription must be a string.`),
+
+  body('whatIsNextDescription.ar')
+    .optional()
+    .isString()
+    .withMessage(`ar whatIsNextDescription must be a string.`),
+
+  body('nextCourses')
+    .optional()
+    .custom((value, { req }) => validateNextCourses(value, req)),
 
   body('highlights')
     .optional()
@@ -286,6 +391,40 @@ exports.updateCourseValidator = [
     .withMessage(`ar description must be a string.`)
     .isLength({ min: 10 })
     .withMessage(`ar description must at least 10 chars`),
+
+  body('whatIsNextTitle')
+    .optional()
+    .isObject()
+    .withMessage('whatIsNextTitle must be an object.'),
+
+  body('whatIsNextTitle.en')
+    .optional()
+    .isString()
+    .withMessage(`en whatIsNextTitle must be a string.`),
+
+  body('whatIsNextTitle.ar')
+    .optional()
+    .isString()
+    .withMessage(`ar whatIsNextTitle must be a string.`),
+
+  body('whatIsNextDescription')
+    .optional()
+    .isObject()
+    .withMessage('whatIsNextDescription must be an object.'),
+
+  body('whatIsNextDescription.en')
+    .optional()
+    .isString()
+    .withMessage(`en whatIsNextDescription must be a string.`),
+
+  body('whatIsNextDescription.ar')
+    .optional()
+    .isString()
+    .withMessage(`ar whatIsNextDescription must be a string.`),
+
+  body('nextCourses')
+    .optional()
+    .custom((value, { req }) => validateNextCourses(value, req)),
 
   body('highlights')
     .optional()

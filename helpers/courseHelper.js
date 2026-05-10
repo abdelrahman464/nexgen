@@ -77,5 +77,12 @@ exports.addTranslationFields = (document, localizedResult) => {
     localizedResult.translationCourseWelcomeMessage =
       document.courseWelcomeMessage;
   }
+  if (document.whatIsNextTitle) {
+    localizedResult.translationWhatIsNextTitle = document.whatIsNextTitle;
+  }
+  if (document.whatIsNextDescription) {
+    localizedResult.translationWhatIsNextDescription =
+      document.whatIsNextDescription;
+  }
   return localizedResult;
 };
