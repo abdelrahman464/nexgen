@@ -10,6 +10,14 @@ const errorLogSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  internalMessage: {
+    type: String,
+    default: null,
+  },
+  details: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null,
+  },
   stack: {
     type: String,
     required: true,

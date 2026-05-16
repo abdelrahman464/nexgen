@@ -60,6 +60,7 @@ const coursePackageSchema = new mongoose.Schema(
       default: 0,
       index: true,
     },
+    promotionVideo: String,
     description: { type: String, i18n: true },
     highlights: [{ type: Object, i18n: true }],
     whatWillLearn: [

@@ -75,6 +75,7 @@ const packageSchema = new mongoose.Schema(
       default: 0,
       index: true,
     },
+    promotionVideo: String,
     price: {
       type: Number,
       trim: true,

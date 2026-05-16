@@ -295,6 +295,203 @@ exports.getMyCourses = asyncHandler(async (req, res, next) => {
     data: coursesWithProgress,
   });
 });
+
+const getCourseIdString = (value) => {
+  if (!value) return '';
+  return String(value._id || value);
+};
+
+const getLocalizedCourse = (course, locale) =>
+  Course.schema.methods.toJSONLocalizedOnly(course, locale);
+
+const getLocalizedLesson = (lesson, locale) =>
+  Lesson.schema.methods.toJSONLocalizedOnly(lesson, locale);
+
+const getLocalizedCourseProgress = (courseProgress, locale) =>
+  CourseProgress.schema.methods.toJSONLocalizedOnly(courseProgress, locale);
+
+const buildUserLearningSummary = async (
+  userId,
+  locale,
+  { includeAllActiveCourses = false } = {},
+) => {
+  const coursesProgress = await CourseProgress.find({ user: userId }).select(
+    'course progress score status certificate attemptDate modelExam',
+  );
+  const courseIds = coursesProgress
+    .map((courseProgress) => courseProgress.course)
+    .filter(Boolean);
+
+  if (courseIds.length === 0 && !includeAllActiveCourses) return [];
+
+  const coursesDetails = await Course.find(
+    includeAllActiveCourses
+      ? { status: 'active' }
+      : { _id: { $in: courseIds } },
+  );
+  const summaryCourseIds = coursesDetails.map((course) => course._id);
+  const courseLessons = await Lesson.find(
+    { course: { $in: summaryCourseIds } },
+    '_id course title description order lessonDuration section hasQuiz',
+  )
+    .populate({ path: 'section', select: 'title' })
+    .sort({ course: 1, order: 1 });
+
+  const progressByCourse = new Map(
+    coursesProgress.map((courseProgress) => [
+      getCourseIdString(courseProgress.course),
+      courseProgress,
+    ]),
+  );
+  const lessonsByCourse = new Map();
+
+  courseLessons.forEach((lesson) => {
+    const courseId = getCourseIdString(lesson.course);
+    const lessons = lessonsByCourse.get(courseId) || [];
+    lessons.push(lesson);
+    lessonsByCourse.set(courseId, lessons);
+  });
+
+  return coursesDetails.map((course) => {
+    const courseId = getCourseIdString(course._id);
+    const localizedCourse = getLocalizedCourse(course, locale);
+    const courseProgress = progressByCourse.get(courseId);
+    const allLessons = lessonsByCourse.get(courseId) || [];
+
+    if (!courseProgress) {
+      return {
+        ...localizedCourse,
+        totalProgress: 0,
+        userScore: {
+          totalProgress: '0',
+          lessonsScores: [],
+          completionStatus: 'Course in progress',
+        },
+        courseProgress: null,
+        lastLesson: null,
+        users: [],
+      };
+    }
+
+    const localizedCourseProgress = getLocalizedCourseProgress(
+      courseProgress,
+      locale,
+    );
+    const completedLessons = [];
+    const seenCompletedLessons = new Set();
+
+    localizedCourseProgress.progress.forEach((item) => {
+      if (!item.lesson || item.status !== 'Completed') return;
+      const lessonId = getCourseIdString(item.lesson);
+      if (seenCompletedLessons.has(lessonId)) return;
+      seenCompletedLessons.add(lessonId);
+      completedLessons.push(item);
+    });
+
+    const totalLessons = allLessons.length;
+    const examsCompletedPercentage =
+      totalLessons > 0 ? (completedLessons.length / totalLessons) * 100 : 0;
+    const finalExamCompletionPercentage =
+      localizedCourseProgress.status === 'Completed' ? 100 : 0;
+    const totalProgress = Number(
+      (
+        examsCompletedPercentage * 0.8 +
+        finalExamCompletionPercentage * 0.2
+      ).toFixed(2),
+    );
+
+    const lessonsWithProgress = localizedCourseProgress.progress
+      .filter((item) => item.lesson)
+      .map((item) => item.lesson);
+
+    let lastLesson = null;
+    if (lessonsWithProgress.length > 0) {
+      const lastLessonFromProgress = lessonsWithProgress.reduce(
+        (prev, current) => (current.order > prev.order ? current : prev),
+      );
+      const fullLesson = allLessons.find(
+        (lesson) =>
+          getCourseIdString(lesson._id) ===
+          getCourseIdString(lastLessonFromProgress._id),
+      );
+      if (fullLesson) lastLesson = getLocalizedLesson(fullLesson, locale);
+    } else if (allLessons.length > 0) {
+      lastLesson = getLocalizedLesson(allLessons[0], locale);
+    }
+
+    const lessonsScores = completedLessons.map((item) => ({
+      lessonId: item.lesson._id,
+      lessonTitle: item.lesson.title,
+      percentage: 0,
+      attemptDate: item.attemptDate,
+      modelExam: item.modelExam,
+    }));
+
+    return {
+      ...localizedCourse,
+      totalProgress,
+      lastLesson,
+      userScore: {
+        totalProgress: String(totalProgress),
+        lessonsScores,
+        completionStatus:
+          localizedCourseProgress.status === 'Completed'
+            ? 'Course completed'
+            : 'Course in progress',
+      },
+      courseProgress: {
+        ...localizedCourseProgress,
+        totalProgress: String(totalProgress),
+      },
+      users: [],
+    };
+  });
+};
+
+exports.getMyOwnedCourseIds = asyncHandler(async (req, res) => {
+  const coursesProgress = await CourseProgress.find({
+    user: req.user._id,
+  }).select('course');
+
+  res.status(200).json({
+    status: 'success',
+    total: coursesProgress.length,
+    data: coursesProgress
+      .map((courseProgress) => getCourseIdString(courseProgress.course))
+      .filter(Boolean),
+  });
+});
+
+exports.getMyLearningSummary = asyncHandler(async (req, res) => {
+  const data = await buildUserLearningSummary(req.user._id, req.locale);
+
+  res.status(200).json({
+    status: 'success',
+    total: data.length,
+    data,
+  });
+});
+
+exports.getAnalyticsLearningSummary = asyncHandler(async (req, res, next) => {
+  const { userId } = req.params;
+  const isSameUser = req.user._id.toString() === userId;
+  const canInspectUsers =
+    req.user.role === 'admin' || req.user.isInstructor || req.user.isMarketer;
+
+  if (!isSameUser && !canInspectUsers) {
+    return next(new ApiError('You are not allowed to view this user data', 403));
+  }
+
+  const data = await buildUserLearningSummary(userId, req.locale, {
+    includeAllActiveCourses: req.query.includeAllCourses === 'true',
+  });
+
+  res.status(200).json({
+    status: 'success',
+    total: data.length,
+    data,
+  });
+});
 exports.applyFilter = (req, res, next) => {
   req.filterObj = req.filterObj || {};
   const { title, description, keyword, category, status } = req.query;

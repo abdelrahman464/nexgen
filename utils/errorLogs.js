@@ -6,6 +6,8 @@ async function logErrorToDatabase(err, url = null) {
   const errorLog = {
     name: err.name ? err.name : "Error",
     message: err.message ? err.message : "An error occurred",
+    internalMessage: err.internalMessage || null,
+    details: err.details || null,
     stack: err.stack ? err.stack : "",
     url: url || null,
     timestamp: new Date(),

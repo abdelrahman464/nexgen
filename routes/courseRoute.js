@@ -22,6 +22,9 @@ const {
   getCourseDetails,
   getCourseUsers,
   getMyCourses,
+  getMyOwnedCourseIds,
+  getMyLearningSummary,
+  getAnalyticsLearningSummary,
   setCategoryIdToBody,
   uploadCourseImage,
   resizeImage,
@@ -47,6 +50,14 @@ const router = express.Router({ mergeParams: true });
 
 router.use('/:courseId/reviews', reviewsRoute);
 router.use('/:courseId/lessons', lessonRoute);
+
+router.get('/my-owned-ids', authServices.protect, getMyOwnedCourseIds);
+router.get('/my-learning-summary', authServices.protect, getMyLearningSummary);
+router.get(
+  '/analytics-learning-summary/:userId',
+  authServices.protect,
+  getAnalyticsLearningSummary,
+);
 
 router.get(
   '/MyCourses/:id?', //user id
