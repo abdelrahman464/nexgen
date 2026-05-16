@@ -39,6 +39,11 @@ const {
   packageCheckoutSessionStripe,
   stripeWebhook,
 } = require('../services/orders/stripe');
+// ---------------------  Apple In-App Purchase  ---------------------
+const {
+  applePurchaseVerify,
+  appleWebhook,
+} = require('../services/orders/apple');
 // ---------------------  purchase For User  ---------------------
 const {
   purchaseForUser,
@@ -185,4 +190,15 @@ router.post(
   express.raw({ type: "application/json" }),
   stripeWebhook,
 );
+//-----------------APPLE IN-APP PURCHASE-----------------
+// iOS app calls this right after a successful StoreKit transaction.
+router.post(
+  '/apple/verifyReceipt',
+  authServices.protect,
+  authServices.allowedTo('user', 'admin'),
+  applePurchaseVerify,
+);
+// App Store Server Notifications V2 (renewals, refunds, expirations).
+// JWS signature is verified inside the handler, so no auth middleware here.
+router.post('/webhook/apple', appleWebhook);
 module.exports = router;

@@ -459,6 +459,127 @@ paths:
               schema:
                 type: object
 
+  /orders/apple/verifyReceipt:
+    post:
+      tags:
+        - Orders
+      summary: Verify an Apple StoreKit receipt
+      description: |
+        Called by the iOS app immediately after a successful StoreKit purchase.
+
+        The server verifies the receipt with Apple (production with sandbox
+        fallback), looks up the matching Course / Package / CoursePackage by
+        its `appleProductId`, and then runs the same fulfillment pipeline as
+        the Stripe / Lahza / Plisio webhooks (creates the Order, grants
+        access, generates the invoice PDF, creates the Notification).
+
+        The endpoint is idempotent: re-sending the same receipt for a
+        transaction that has already been fulfilled returns the existing
+        order id without creating a duplicate.
+      operationId: applePurchaseVerify
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - receiptData
+              properties:
+                receiptData:
+                  type: string
+                  description: Base64-encoded `appStoreReceiptURL` contents from StoreKit
+                  example: "MIITuwYJKoZIhvcNAQcCoIIT..."
+                productId:
+                  type: string
+                  description: |
+                    Optional. The product identifier the user just purchased.
+                    When supplied, the server only fulfills the matching
+                    transaction in the receipt (useful when a single receipt
+                    contains multiple products).
+                  example: "com.nexgen.academy.package.monthly"
+      responses:
+        "200":
+          description: Purchase verified and access granted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: success }
+                  message: { type: string, example: "Purchase verified and access granted" }
+                  data:
+                    type: object
+                    properties:
+                      productId: { type: string }
+                      transactionId: { type: string }
+                      originalTransactionId: { type: string }
+                      type:
+                        type: string
+                        enum: [course, package, coursePackage]
+        "400":
+          description: Missing receiptData / Apple verification failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: No product is configured with this appleProductId
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /orders/webhook/apple:
+    post:
+      tags:
+        - Orders
+      summary: App Store Server Notifications V2 webhook
+      description: |
+        Receives signed JWS notifications from Apple for events such as
+        `SUBSCRIBED`, `DID_RENEW`, `REFUND`, `REVOKE`, `EXPIRED`,
+        `DID_FAIL_TO_RENEW`, `GRACE_PERIOD_EXPIRED`, `ONE_TIME_CHARGE`.
+
+        The JWS is verified using the leaf certificate from the `x5c`
+        chain. When `APPLE_ROOT_CERT` is set, the chain is also pinned to
+        AppleRootCA-G3.
+
+        Renewals extend the matching `UserSubscription`. Refunds / revokes
+        flip the original Order's `isPaid` to `false` and end the user's
+        subscription early. The endpoint always responds 200 to prevent
+        Apple from retrying for non-recoverable errors (errors are logged).
+      operationId: appleWebhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - signedPayload
+              properties:
+                signedPayload:
+                  type: string
+                  description: JWS-signed notification payload from Apple
+                  example: "eyJhbGciOiJFUzI1NiIsIng1YyI6Wy4uLl19.ey..."
+      responses:
+        "200":
+          description: Notification processed (or accepted with logged errors)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: success }
+        "400":
+          description: Missing or invalid signedPayload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     Order:

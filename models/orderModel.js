@@ -53,6 +53,10 @@ const OrderSchema = new mongoose.Schema(
     coupon: String,
     paidAt: Date,
     paypalOrderId: String,
+    // Apple In-App Purchase identifiers (used to dedupe StoreKit transactions
+    // and reconcile App Store Server Notifications for renewals/refunds).
+    appleTransactionId: { type: String, index: true, sparse: true },
+    appleOriginalTransactionId: { type: String, index: true, sparse: true },
   },
   { timestamps: true }
 );

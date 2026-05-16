@@ -1,0 +1,604 @@
+{
+  "info": {
+    "name": "Nexgen — Auth & Orders",
+    "description": "Postman collection for Nexgen API. Set `baseUrl` first. Run **Auth → Login**; the test script auto-populates the `token` collection variable, so all bearer requests will work afterwards. Replace example IDs (`courseId`, `packageId`, `coursePackageId`, `orderId`, `userId`) with real Mongo IDs from your DB.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000/api/v1" },
+    { "key": "token", "value": "" },
+    { "key": "userId", "value": "507f1f77bcf86cd799439011" },
+    { "key": "courseId", "value": "507f1f77bcf86cd799439012" },
+    { "key": "packageId", "value": "507f1f77bcf86cd799439013" },
+    { "key": "coursePackageId", "value": "507f1f77bcf86cd799439014" },
+    { "key": "orderId", "value": "507f1f77bcf86cd799439015" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Signup",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"P@ssw0rd123\",\n  \"passwordConfirm\": \"P@ssw0rd123\",\n  \"country\": \"Palestine\",\n  \"invitationKey\": \"defaultKey\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/auth/signup",
+            "description": "Validators (`utils/validators/authValidator.js`) require `name`, `email` (unique), `password` (8-32 chars matching `passwordConfirm`), `country`. `invitationKey` is optional and must exist in `MarketLog.invitationKeys` if provided.\n\nIf you want to upload `profileImg` / `coverImg` / `signatureImage` / `idDocuments`, switch Body → form-data and add file fields with those names (handled by `uploadImages` multer middleware)."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  if (json && json.token) {",
+                  "    pm.collectionVariables.set('token', json.token);",
+                  "    if (json.data && json.data._id) {",
+                  "      pm.collectionVariables.set('userId', json.data._id);",
+                  "    }",
+                  "    console.log('token + userId saved to collection variables');",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"P@ssw0rd123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/auth/login",
+            "description": "Test script auto-saves `token` and `userId` to collection variables so every other request works."
+          }
+        },
+        {
+          "name": "Google OAuth — start",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/auth/google",
+            "description": "Browser redirect flow — open in a browser, not Postman."
+          }
+        },
+        {
+          "name": "Google OAuth — callback",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/auth/google/callback?code=GOOGLE_AUTH_CODE&state=STATE",
+            "description": "Called by Google after user consent; not invoked manually."
+          }
+        },
+        {
+          "name": "Google mobile",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idToken\": \"eyJhbGciOiJSUzI1NiIsImtpZCI6IjEyMzQ1Njc4OTAiLCJ0eXAiOiJKV1QifQ.PASTE_GOOGLE_ID_TOKEN_FROM_MOBILE_SDK_HERE.signature\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/auth/google/mobile",
+            "description": "`idToken` is the Google ID token returned by the iOS / Android Google Sign-In SDK."
+          }
+        },
+        {
+          "name": "Forgot password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.doe@example.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/auth/forgotPassword",
+            "description": "Sends a 6-digit reset code to the user's email."
+          }
+        },
+        {
+          "name": "Verify reset code",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resetCode\": \"123456\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/auth/verifyResetCode",
+            "description": "Lookup is by hashed reset code (no email needed). Valid for 10 minutes."
+          }
+        },
+        {
+          "name": "Reset password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"newPassword\": \"NewP@ssw0rd456\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/auth/resetPassword",
+            "description": "Requires `verifyResetCode` to have succeeded first (sets `passwordResetVerified=true`)."
+          }
+        },
+        {
+          "name": "Verify email",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"123456\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/auth/verifyEmail",
+            "description": "Lookup is by hashed email-verification code (no email needed)."
+          }
+        },
+        {
+          "name": "Resend email code",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.doe@example.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/auth/resendEmailCode",
+            "description": "Only works if the account exists and `emailVerified === false`."
+          }
+        },
+        {
+          "name": "Get me (current user)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/auth/getMe"
+          }
+        },
+        {
+          "name": "Admin — issue user token",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/auth/admin/issue-user-token",
+            "description": "Admin-only impersonation/support endpoint. `userId` must be a valid Mongo ObjectId."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Purchase for user (admin manual grant)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"course\",\n  \"id\": \"{{courseId}}\",\n  \"userId\": \"{{userId}}\",\n  \"isPaid\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/orders/purchaseForUser",
+            "description": "Manually create an order for a user. `type` ∈ `course` | `package` | `coursePackage`; `id` is the corresponding item id; `isPaid` is a boolean.\n\nNote: in `routes/OrderRoute.js` the `protect`, `allowedTo('admin')` and `purchaseForUserValidator` middlewares are currently commented out — confirm before exposing in production."
+          }
+        },
+        {
+          "name": "Create unpaid order (free course)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "PUT",
+            "header": [],
+            "url": "{{baseUrl}}/orders/createUnPaidOrder/{{courseId}}",
+            "description": "Enroll the current user in a free course (price must be 0)."
+          }
+        },
+        {
+          "name": "List orders",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders?page=1&limit=10&sort=-createdAt&isPaid=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "sort", "value": "-createdAt" },
+                { "key": "isPaid", "value": "true" },
+                { "key": "userId", "value": "{{userId}}", "disabled": true, "description": "Admin-only: filter by another user's id" },
+                { "key": "startDate", "value": "2026-01-01", "disabled": true },
+                { "key": "endDate", "value": "2026-12-31", "disabled": true },
+                { "key": "day", "value": "2026-05-10", "disabled": true }
+              ]
+            },
+            "description": "Regular users always see only their own orders. Admins (or the user's invitor) can pass `userId` to filter by another user."
+          }
+        },
+        {
+          "name": "Get order by id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/orders/{{orderId}}"
+          }
+        },
+        {
+          "name": "Statistics (admin)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/statistics",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "statistics"],
+              "query": [
+                { "key": "courseId", "value": "{{courseId}}", "disabled": true },
+                { "key": "packageId", "value": "{{packageId}}", "disabled": true },
+                { "key": "coursePackageId", "value": "{{coursePackageId}}", "disabled": true }
+              ]
+            },
+            "description": "Optional product filter via one of `courseId` / `packageId` / `coursePackageId`."
+          }
+        },
+        {
+          "name": "By month (admin)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/byMonth?month=5&year=2026",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "byMonth"],
+              "query": [
+                { "key": "month", "value": "5" },
+                { "key": "year", "value": "2026" },
+                { "key": "courseId", "value": "{{courseId}}", "disabled": true },
+                { "key": "packageId", "value": "{{packageId}}", "disabled": true },
+                { "key": "coursePackageId", "value": "{{coursePackageId}}", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Plisio — payment callback",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/plisio/payment/callback?status=success&order_number=COURSE_507f1f77bcf86cd799439012_1715000000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "plisio", "payment", "callback"],
+              "query": [
+                { "key": "status", "value": "success" },
+                { "key": "order_number", "value": "COURSE_507f1f77bcf86cd799439012_1715000000000" }
+              ]
+            },
+            "description": "Browser redirect from Plisio after checkout. Sends user to `${FRONTEND_URL}/payment-success` or `/payment-failed`."
+          }
+        },
+        {
+          "name": "Plisio — course checkout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"couponName\": null\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/orders/plisio/courseCheckout/{{courseId}}",
+            "description": "Returns `{ status, redirectUrl }` — open `redirectUrl` in a browser to pay. Set `couponName` (string) to apply a coupon."
+          }
+        },
+        {
+          "name": "Plisio — course package checkout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"couponName\": null\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/orders/plisio/coursePackageCheckout/{{coursePackageId}}"
+          }
+        },
+        {
+          "name": "Plisio — package checkout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"couponName\": null\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/orders/plisio/packageCheckout/{{packageId}}"
+          }
+        },
+        {
+          "name": "Webhook — Plisio",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"txn_id\": \"PLI-TXN-1234567890\",\n  \"status\": \"completed\",\n  \"order_number\": \"COURSE_507f1f77bcf86cd799439012_1715000000000\",\n  \"order_name\": \"course\",\n  \"order_description\": \"507f1f77bcf86cd799439012|john.doe@example.com|null\",\n  \"amount\": \"49.99\",\n  \"currency\": \"USDT_TRX\",\n  \"verify_hash\": \"PUT_VALID_SHA1_HMAC_HERE\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/orders/webhook/plisio",
+            "description": "Real Plisio webhooks are signed with `verify_hash = HMAC-SHA1(JSON_without_verify_hash, PLISIO_SECRET_KEY)`. Without a valid hash, the server rejects with 400. `order_description` must be `\"<itemId>|<userEmail>|<couponName>\"` and `order_name` ∈ `course` | `package` | `coursepackage`."
+          }
+        },
+        {
+          "name": "Lahza — payment callback",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/lahza/payment/callback?reference=LHZ_REF_1234567890",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "lahza", "payment", "callback"],
+              "query": [{ "key": "reference", "value": "LHZ_REF_1234567890" }]
+            },
+            "description": "Browser redirect from Lahza after checkout. Server verifies the reference with Lahza API and redirects."
+          }
+        },
+        {
+          "name": "Lahza — course checkout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"couponName\": null\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/orders/lahza/courseCheckout/{{courseId}}",
+            "description": "Returns `{ status, redirectUrl }` — Lahza-hosted payment page."
+          }
+        },
+        {
+          "name": "Lahza — course package checkout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"couponName\": null\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/orders/lahza/coursePackageCheckout/{{coursePackageId}}"
+          }
+        },
+        {
+          "name": "Lahza — package checkout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"couponName\": null\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/orders/lahza/packageCheckout/{{packageId}}"
+          }
+        },
+        {
+          "name": "Webhook — Lahza",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"charge.success\",\n  \"data\": {\n    \"reference\": \"LHZ_REF_1234567890\",\n    \"amount\": 4999,\n    \"currency\": \"USD\",\n    \"metadata\": {\n      \"id\": \"507f1f77bcf86cd799439012\",\n      \"email\": \"john.doe@example.com\",\n      \"type\": \"course\",\n      \"couponName\": null\n    }\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/orders/webhook/lahza",
+            "description": "Lahza posts `charge.success` / `charge.failed`. `data.metadata.type` ∈ `course` | `package` | `coursePackage`. `data.amount` is in cents (server divides by 100)."
+          }
+        },
+        {
+          "name": "Stripe — course checkout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"couponName\": null\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/orders/stripe/courseCheckout/{{courseId}}",
+            "description": "Returns `{ status, session }` — open `session.url` in a browser."
+          }
+        },
+        {
+          "name": "Stripe — course package checkout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"couponName\": null\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/orders/stripe/coursePackageCheckout/{{coursePackageId}}"
+          }
+        },
+        {
+          "name": "Stripe — package checkout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"couponName\": null\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/orders/stripe/packageCheckout/{{packageId}}"
+          }
+        },
+        {
+          "name": "Webhook — Stripe",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Stripe-Signature", "value": "t=1715000000,v1=PUT_VALID_HMAC_SHA256_HERE" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"evt_1Test\",\n  \"object\": \"event\",\n  \"type\": \"checkout.session.completed\",\n  \"data\": {\n    \"object\": {\n      \"id\": \"cs_test_123\",\n      \"client_reference_id\": \"507f1f77bcf86cd799439012\",\n      \"customer_email\": \"john.doe@example.com\",\n      \"amount_total\": 4999,\n      \"metadata\": {\n        \"type\": \"course\",\n        \"couponName\": null\n      }\n    }\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/orders/webhook/stripe",
+            "description": "Real Stripe webhooks must be signed and the body must match the bytes Stripe sent (Postman re-encodes JSON, so signatures will not validate). Use the **Stripe CLI** (`stripe listen --forward-to localhost:8000/api/v1/orders/webhook/stripe`) for real testing.\n\n`metadata.type` ∈ `course` | `package` | `coursePackage`. `client_reference_id` = item id, `amount_total` in cents."
+          }
+        },
+        {
+          "name": "Apple — verify receipt",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"receiptData\": \"MIITuwYJKoZIhvcNAQcCoIITrDCCE6gCAQExCzAJBgUrDgMCGgUAMIIDXAYJKoZIhvcNAQcBoIIDTQSCA0kxggNFMAoCAQgCAQEEAhYAMAoCARQ...PASTE_BASE64_RECEIPT_FROM_appStoreReceiptURL_HERE\",\n  \"productId\": \"com.nexgen.academy.package.monthly\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/orders/apple/verifyReceipt",
+            "description": "Called by the iOS app immediately after StoreKit returns a successful transaction.\n\n- `receiptData` (required): base64 of `appStoreReceiptURL` contents from StoreKit.\n- `productId` (optional): if you know which IAP triggered this, pass it so the server picks the right transaction from the receipt. Must match `appleProductId` on a `Course` / `Package` / `CoursePackage` document.\n\nIdempotent: re-sending the same receipt returns the existing order id."
+          }
+        },
+        {
+          "name": "Webhook — Apple",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"signedPayload\": \"eyJhbGciOiJFUzI1NiIsIng1YyI6WyJBUFBMRV9MRUFGX0NFUlRfQkFTRTY0IiwiQVBQTEVfSU5UX0NFUlRfQkFTRTY0IiwiQVBQTEVfUk9PVF9DRVJUX0JBU0U2NCJdfQ.eyJub3RpZmljYXRpb25UeXBlIjoiU1VCU0NSSUJFRCIsInN1YnR5cGUiOiJJTklUSUFMX0JVWSIsImRhdGEiOnsiYnVuZGxlSWQiOiJjb20ubmV4Z2VuLmFjYWRlbXkiLCJzaWduZWRUcmFuc2FjdGlvbkluZm8iOiJBTk9USEVSX0pXU19GUk9NX0FQUExFIn19.PASTE_REAL_APPLE_JWS_HERE\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/orders/webhook/apple",
+            "description": "App Store Server Notifications V2. Apple posts `{ \"signedPayload\": \"<JWS>\" }`. The handler verifies the JWS with the `x5c` chain and (when `APPLE_ROOT_CERT` is set) pins to AppleRootCA-G3.\n\nFor real testing, use the **App Store Server API** sandbox `RequestATestNotification` endpoint, or your iOS app's sandbox account, so Apple sends an actual signed payload to your URL."
+          }
+        }
+      ]
+    }
+  ]
+}
